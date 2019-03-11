@@ -1,6 +1,6 @@
 {
   "name": "Interference",
-  "version": "2.0.1",
+  "version": "0.1.0",
   "engines": {
     "node": ">=8.0.0"
   },
@@ -40,12 +40,7 @@
     "url": ""
   },
   "keywords": [
-    "game",
-    "lance",
-    "lance-gg",
-    "multiplayer",
-    "websockets"
   ],
-  "author": "Gary Weiss",
+  "author": "Matthew Wang",
   "license": "Apache-2.0"
 }
