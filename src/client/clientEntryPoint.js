@@ -27,9 +27,6 @@ document.addEventListener('DOMContentLoaded', function(e) { clientEngine.start()
 
 console.log('init sound');
 
-var context = new Tone.Context()
-context.clockSource = 'offline';
-
 var synth = new Tone.Synth({
     oscillator: {
         type: 'sine',
