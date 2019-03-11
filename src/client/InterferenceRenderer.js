@@ -9,8 +9,7 @@ let w = 0;
 let h = 0;
 let game = null;
 let c = 0;
-let synth = null;
-let lastPlay = 0;
+let count = 0;
 
 export default class InterferenceRenderer extends Renderer {
 
@@ -25,32 +24,18 @@ export default class InterferenceRenderer extends Renderer {
         h = game.h = canvas.height;
         ctx = canvas.getContext('2d');
         ctx.lineWidth = 5
-
-        synth = new Tone.Synth({
-            oscillator: {
-                type: 'sine',
-                modulationFrequency: 0.2
-            },
-            envelope: {
-                attack: 0,
-                decay: 0.1,
-                sustain: 0,
-                release: 0.1,
-            }
-        }).toMaster();
     }
 
     draw(t, dt) {
         super.draw(t, dt);
 
-        Tone.Transport.seconds = t/1000;
+        if (count > 200) {
+            Tone.Transport.seconds = t*0.001;
+            count = 0;
+        }
+        count++;
 
-        /*
-        if (t > (2000*lastPlay) + 2000) {
-            synth.triggerAttackRelease(this.gameEngine.playerId*200, '8n');
-            lastPlay = Math.floor(t/2000);
-        } */
-        /*
+        
         // Clear the canvas
         ctx.clearRect(0, 0, w, h);
 
@@ -71,7 +56,7 @@ export default class InterferenceRenderer extends Renderer {
         ctx.fillText(t, 50, 50);
         ctx.fillText(Tone.Transport.position, 50, 75);
 
-        ctx.restore(); */
+        ctx.restore();
 
     }
 
