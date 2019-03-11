@@ -26,10 +26,10 @@ const clientEngine = new InterferenceClientEngine(gameEngine, options);
 document.addEventListener('DOMContentLoaded', function(e) { clientEngine.start(); });
 
 console.log('init sound');
-Tone.setTimeSource(() => { return clientEngine.syncClient.getSyncTime() });
+
 var context = new Tone.Context()
 context.clockSource = 'offline';
-context.lookAhead = 1.0;
+
 var synth = new Tone.Synth({
     oscillator: {
         type: 'sine',

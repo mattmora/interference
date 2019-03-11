@@ -39,8 +39,7 @@
     "type": "git",
     "url": ""
   },
-  "keywords": [
-  ],
+  "keywords": [],
   "author": "Matthew Wang",
   "license": "Apache-2.0"
 }

@@ -43,14 +43,12 @@ export default class InterferenceRenderer extends Renderer {
     draw(t, dt) {
         super.draw(t, dt);
 
-        Tone.Transport.seconds = t/1000;
-
         /*
         if (t > (2000*lastPlay) + 2000) {
             synth.triggerAttackRelease(this.gameEngine.playerId*200, '8n');
             lastPlay = Math.floor(t/2000);
         } */
-        /*
+        
         // Clear the canvas
         ctx.clearRect(0, 0, w, h);
 
@@ -67,11 +65,16 @@ export default class InterferenceRenderer extends Renderer {
             //else if (obj instanceof Food) this.drawFood(obj);
         });
         ctx.fillStyle = 'black';
+        if (this.gameEngine.playerId < 5) {
+            Tone.Transport.seconds = t/1000;
+            ctx.fillStyle = 'red';
+        }
         ctx.font = "20px Georgia";
+        ctx.fillText(this.gameEngine.playerId, 50, 25);
         ctx.fillText(t, 50, 50);
         ctx.fillText(Tone.Transport.position, 50, 75);
 
-        ctx.restore(); */
+        ctx.restore(); 
 
     }
 
