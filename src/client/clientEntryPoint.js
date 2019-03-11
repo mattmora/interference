@@ -27,6 +27,9 @@ document.addEventListener('DOMContentLoaded', function(e) { clientEngine.start()
 
 console.log('init sound');
 Tone.setTimeSource(() => { return clientEngine.syncClient.getSyncTime() });
+var context = new Tone.Context()
+context.clockSource = 'offline';
+context.lookAhead = 1.0;
 var synth = new Tone.Synth({
     oscillator: {
         type: 'sine',
@@ -39,7 +42,7 @@ var synth = new Tone.Synth({
         release: 0.1,
     }
 }).toMaster();
-var loop = new Tone.Loop(
-    () => { synth.triggerAttackRelease(440, '8n') }, 
-    '4n').start(0);
-Tone.Transport.start(); 
+var f = Math.random()*400+200;
+Tone.Transport.scheduleRepeat(() => { synth.triggerAttackRelease(f, '8n'); console.log(Tone.Transport.position); }, '4n', '12:0:0');
+Tone.Transport.start();
+

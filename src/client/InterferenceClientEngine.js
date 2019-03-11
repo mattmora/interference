@@ -36,14 +36,6 @@ export default class InterferenceClientEngine extends ClientEngine {
         this.mouseY = e.pageY;
     }
 
-    updatePerformerTime() {
-        this.gameEngine.world.forEachObject((id, obj) => {
-            if (obj instanceof Performer) {
-                obj.time = this.scheduler.getTime();
-            }
-        });
-    }
-
     sendMouseAngle() {
         let player = this.gameEngine.world.queryObject({ playerId: this.gameEngine.playerId });
         if (this.mouseY === null || player === null) return;
