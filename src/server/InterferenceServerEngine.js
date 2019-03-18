@@ -4,6 +4,7 @@ import Performer from '../common/Performer';
 import Egg from '../common/Egg';
 
 let idCount = 0;
+let transportSyncCount = 0;
 
 export default class InterferenceServerEngine extends ServerEngine {
 
@@ -25,6 +26,7 @@ export default class InterferenceServerEngine extends ServerEngine {
 
     onPlayerConnected(socket) {
         super.onPlayerConnected(socket);
+
         let player = new Performer(this.gameEngine, null, {});
         player.number = this.gameEngine.world.playerCount;
         console.log(this.gameEngine.world.playerCount);
@@ -65,11 +67,11 @@ export default class InterferenceServerEngine extends ServerEngine {
     }
     */
     stepLogic() {
-        /*
-        let wiggles = this.gameEngine.world.queryObjects({ instanceType: Performer });
-        let foodObjects = this.gameEngine.world.queryObjects({ instanceType: Egg });
-        for (let w of wiggles) {
 
+        let players = this.gameEngine.world.queryObjects({ instanceType: Performer });
+        let eggs = this.gameEngine.world.queryObjects({ instanceType: Egg });
+        for (let p of players) {
+            /*
             // check for collision
             for (let w2 of wiggles) {
                 if (w === w2)
@@ -101,7 +103,9 @@ export default class InterferenceServerEngine extends ServerEngine {
                 if (w.direction > Math.PI * 2) w.direction -= Math.PI * 2;
                 if (w.direction < 0) w.direction += Math.PI * 2;
             }
+            */
         }
-        */
+
+    
     }
 }

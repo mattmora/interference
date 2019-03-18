@@ -12,7 +12,7 @@ const defaults = {
     scheduler: 'fixed',
     syncOptions: {
         sync: qsOptions.sync || 'extrapolate',
-        localObjBending: 0.8,
+        localObjBending: 0.0,
         remoteObjBending: 0.8,
         bendingIncrements: 6
     }
@@ -24,22 +24,3 @@ const gameEngine = new InterferenceGameEngine(options);
 const clientEngine = new InterferenceClientEngine(gameEngine, options);
 
 document.addEventListener('DOMContentLoaded', function(e) { clientEngine.start(); });
-
-console.log('init sound');
-
-var synth = new Tone.Synth({
-    oscillator: {
-        type: 'sine',
-        modulationFrequency: 0.2
-    },
-    envelope: {
-        attack: 0,
-        decay: 0.1,
-        sustain: 0,
-        release: 0.1,
-    }
-}).toMaster();
-var f = Math.random()*400+200;
-Tone.Transport.scheduleRepeat(() => { synth.triggerAttackRelease(f, '8n'); console.log(Tone.Transport.position); }, '4n', '12:0:0');
-Tone.Transport.start();
-

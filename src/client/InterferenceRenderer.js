@@ -3,37 +3,42 @@ import TwoVector from 'lance/serialize/TwoVector';
 import Performer from '../common/Performer';
 import Egg from '../common/Egg';
 
+let transportSyncCount = 0;
+let game = null;
+let client = null;
 let ctx = null;
-let canvas = null;
 let w = 0;
 let h = 0;
-let game = null;
-let c = 0;
-let count = 0;
 
 export default class InterferenceRenderer extends Renderer {
 
     constructor(gameEngine, clientEngine) {
         super(gameEngine, clientEngine);
-        game = gameEngine;
-        canvas = document.createElement('canvas');
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
-        document.body.insertBefore(canvas, document.getElementById('logo'));
-        w = game.w = canvas.width;
-        h = game.h = canvas.height;
-        ctx = canvas.getContext('2d');
-        ctx.lineWidth = 5
+
+        game = this.gameEngine;
+        client = this.clientEngine;
+
+        this.canvas = document.createElement('canvas');
+        w = this.canvas.width = window.innerWidth;
+        h = this.canvas.height = window.innerHeight;
+        document.body.insertBefore(this.canvas, document.getElementById('logo'));
+        ctx = this.ctx = this.canvas.getContext('2d');
+        this.ctx.lineWidth = 5;
+
+        window.addEventListener('resize', ()=>{ this.setRendererSize(); });
     }
 
     draw(t, dt) {
         super.draw(t, dt);
 
-        if (count > 200) {
-            Tone.Transport.seconds = t*0.001;
-            count = 0;
+        if (client.transport.state === 'started') {
+            if (transportSyncCount >= game.transportSyncInterval) {
+                client.transport.seconds = t*0.001;
+                transportSyncCount = 0;
+                console.log(client.transport.state);
+            }
+            transportSyncCount++
         }
-        count++
         
         // Clear the canvas
         ctx.clearRect(0, 0, w, h);
@@ -43,8 +48,6 @@ export default class InterferenceRenderer extends Renderer {
         // goes from top to bottom, while physics does the opposite.
         ctx.save();
         //ctx.scale(this.clientEngine.zoom, this.clientEngine.zoom);  // Zoom in and flip y axis
-        ctx.fillStyle = 'white';
-        ctx.fillRect(0, 0, 400, 400);
         // Draw all things
         game.world.forEachObject((id, obj) => {
             if (obj instanceof Performer) this.drawPerformers(obj, t, dt);
@@ -57,29 +60,27 @@ export default class InterferenceRenderer extends Renderer {
             ctx.fillStyle = 'red';
         } */
         ctx.font = "20px Georgia";
-        ctx.fillText(this.gameEngine.playerId, 50, 25);
+        ctx.fillText(game.playerId, 50, 25);
         ctx.fillText(t, 50, 50);
-        ctx.fillText(Tone.Transport.position, 50, 75);
+        ctx.fillText(client.transport.position, 50, 75);
 
         ctx.restore(); 
-
-    }
-
-    rainbowColors() {
-        c += 0.005;
-        let zeroTo240 = Math.floor((Math.cos(c) + 1) * 120);
-        return `rgb(${zeroTo240},100,200)`;
     }
 
     drawPerformers(p, t, dt) {
         // draw head and body
-        let thisIsPerformer = p.playerId === this.gameEngine.playerId;
+        let thisIsPerformer = p.playerId === game.playerId;
         let i = p.number - 1;
-        let n = this.gameEngine.world.playerCount;
+        let n = game.world.playerCount;
+        console.log(n);
         let x = (i / n) * w;
         let y = (i / n) * h;
+        ctx.fillStyle = 'black';
+        ctx.fillText(p.state, x + 20, 100);
+        ctx.fillStyle = 'white';
         ctx.fillRect(x, 0,  w / n, h / n)
         if (thisIsPerformer) {
+            client.notestack = p.notestack;
             ctx.strokeStyle = 'black';
             ctx.strokeRect(x, 0, w / n, h / n)
         }
@@ -109,6 +110,11 @@ export default class InterferenceRenderer extends Renderer {
         if (isPerformer) {
             document.getElementById('wiggle-length').innerHTML = 'Wiggle Length: ' + Math.floor(t) + ' ' + Math.floor(dt);
         } */
+    }
+
+    setRendererSize() {
+        w = this.canvas.width = window.innerWidth;
+        h = this.canvas.height = window.innerHeight;
     }
 
     drawFood(f) {

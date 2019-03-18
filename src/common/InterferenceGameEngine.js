@@ -4,6 +4,8 @@ import TwoVector from 'lance/serialize/TwoVector';
 import Performer from './Performer';
 import Egg from './Egg';
 
+const scales = [ [60, 62, 64, 67, 69], [62, 64, 65, 69, 70], [57, 59, 60, 64, 65] ];
+
 export default class InterferenceGameEngine extends GameEngine {
 
     constructor(options) {
@@ -16,8 +18,9 @@ export default class InterferenceGameEngine extends GameEngine {
 
         // game variables
         Object.assign(this, {
-            playerWidth: 16, playerHeight: 9
+            playerWidth: 16, playerHeight: 9, transportSyncInterval: 200
         });
+
         /*
         Object.assign(this, {
             foodRadius: 0.1, headRadius: 0.15, bodyRadius: 0.1,
@@ -41,6 +44,18 @@ export default class InterferenceGameEngine extends GameEngine {
         let x = (Math.random() - 0.5) * this.spaceWidth;
         let y = (Math.random() - 0.5) * this.spaceHeight;
         return new TwoVector(x, y);
+    }
+
+    startPerformance(startTime) {
+        console.log('starting');
+        var context = new Tone.Context()
+        context.resume();
+        
+        var f = Math.random()*400+200;
+        Tone.Transport.scheduleRepeat(() => { synth.triggerAttackRelease(f, '8n'); console.log(Tone.Transport.position); }, '4n', '0:0:0');
+        Tone.Transport.start(startTime, '0:0:0');
+        this.startTime = startTime;
+        this.performing = true;
     }
 
     moveAll(stepInfo) {
@@ -72,15 +87,16 @@ export default class InterferenceGameEngine extends GameEngine {
         });
     }
 
-    processInput(inputData, playerId) {
+    processInput(inputData, playerId, isServer) {
 
         super.processInput(inputData, playerId);
-        /*
+        
         // get the player's primary object
         let player = this.world.queryObject({ playerId });
         if (player) {
-            player.direction = inputData.input;
+            if (inputData.input == 'space') {
+                player.notestack.push(Tone.Midi.toFrequency(scales[player.number%scales.length][Math.floor(Math.random() * scales[0].length)]));
+            }
         }
-        */
     }
 }

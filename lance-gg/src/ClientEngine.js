@@ -201,7 +201,7 @@ class ClientEngine {
                     tick: this.step.bind(this),
                     delay: STEP_DELAY_MSEC
                 }, 
-                () => { this.syncClient.getSyncTime() * 1000 });
+                () => { return this.syncClient.getSyncTime() * 1000 });
                 this.scheduler.start();
             }
 

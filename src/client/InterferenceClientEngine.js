@@ -1,24 +1,50 @@
 import ClientEngine from 'lance/ClientEngine';
 import InterferenceRenderer from '../client/InterferenceRenderer';
+import KeyboardControls from 'lance/controls/KeyboardControls'
+
+const durs = ['4n', '8n', '6n'];
 
 export default class InterferenceClientEngine extends ClientEngine {
 
     constructor(gameEngine, options) {
         super(gameEngine, options, InterferenceRenderer);
+        this.transport = Tone.Transport;
+        this.notestack = [];
+    }
 
+    start() {
+        super.start()
+
+        this.synth = new Tone.Synth({
+            oscillator: {
+                type: 'sine',
+                modulationFrequency: 0.2
+            },
+            envelope: {
+                attack: 0,
+                decay: 0.1,
+                sustain: 0,
+                release: 0.1,
+            }
+        }).toMaster();
+
+        this.sequence = new Tone.Sequence((time, note) => { this.synth.triggerAttackRelease(note, '8n', time) },
+            this.notestack, durs[Math.floor(Math.random() * durs.length)]);
+
+        console.log('binding keys');
+        this.controls = new KeyboardControls(this);
+        this.controls.bindKey('space', 'space');
+ 
+        /*
         // show try-again button
-        gameEngine.on('objectDestroyed', (obj) => {
+        this.gameEngine.on('objectDestroyed', (obj) => {
             if (obj.playerId === gameEngine.playerId) {
                 document.body.classList.add('lostGame');
                 document.querySelector('#tryAgain').disabled = false;
             }
         });
-
-        // restart game
-        document.querySelector('#tryAgain').addEventListener('click', () => {
-            window.location.reload();
-        });
-
+        */
+        /*
         this.mouseX = null;
         this.mouseY = null;
 
@@ -27,8 +53,45 @@ export default class InterferenceClientEngine extends ClientEngine {
         document.addEventListener('touchmove', this.updateMouseXY.bind(this), false);
         document.addEventListener('touchenter', this.updateMouseXY.bind(this), false);
         this.gameEngine.on('client__preStep', this.sendMouseAngle.bind(this));
+        */
+        
+        /*
+        // click event for "try again" button
+        document.querySelector('#tryAgain').addEventListener('click', () => {
+            this.socket.emit('requestRestart');
+        }); */
+        
+        document.querySelector('#transportButton').addEventListener('click', (clickEvent) => {
+            if (this.transport.state !== 'started') {
+                this.transport.start();
+                this.transport.seconds = this.syncClient.getSyncTime();
+                clickEvent.currentTarget.value = 'Stop Transport'
+            }   
+            else {
+                this.transport.pause();
+                clickEvent.currentTarget.value = 'Start Transport'
+            }
+            //this.socket.emit('requestRestart');
+        });
+        /*
+        document.querySelector('#reconnect').addEventListener('click', () => {
+            window.location.reload();
+        }); */
+
+        //this.controls.bindKey('left', 'left', { repeat: true });
+        //this.controls.bindKey('right', 'right', { repeat: true });
+        //this.controls.bindKey('up', 'up', { repeat: true } );
     }
 
+    connect(options = {}) {
+        return super.connect().then(() => {
+            this.socket.on('startPerformance', startTime => { 
+                this.gameEngine.startPerformance(startTime); 
+            });
+        });
+    }
+
+    /*
     updateMouseXY(e) {
         e.preventDefault();
         if (e.touches) e = e.touches.item(0);
@@ -52,4 +115,5 @@ export default class InterferenceClientEngine extends ClientEngine {
         let angle = Math.atan2(dx, dy);
         this.sendInput(angle, { movement: true });
     }
+    */
 }

@@ -11,19 +11,19 @@ export default class Performer extends DynamicObject {
 
     constructor(gameEngine, options, props) {
         super(gameEngine, options, props);
-        // position, velocity, width, height
+
         this.class = Performer;
-        this.noteStack = [];
-        this.rhythmStack = [];
+        this.notestack = [];
+        this.rhythmstack = [];
     }
 
     syncTo(other) {
         super.syncTo(other);
-        this.noteStack = other.noteStack;
-        this.rhythmStack = other.rhythmStack;
+        this.notestack = other.notestack;
+        this.rhythmstack = other.rhythmstack;
     }
 
     toString() {
-        return `Performer::${super.toString()} number=${this.number}`;
+        return `Performer::${super.toString()} number=${this.number} `;
     }
 }
