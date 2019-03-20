@@ -218,9 +218,7 @@ function (_ClientEngine) {
     _classCallCheck(this, InterferenceClientEngine);
 
     _this = _possibleConstructorReturn(this, _getPrototypeOf(InterferenceClientEngine).call(this, gameEngine, options, _InterferenceRenderer.default));
-    _this.syncClient = new _client.default(function () {
-      return performance.now() / 1000;
-    });
+    _this.syncClient = null;
     _this.transport = _tone.Transport;
     _this.notestack = [];
     _this.rhythmstack = ['4n'];
@@ -347,38 +345,42 @@ function (_ClientEngine) {
 
       var options = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
       return _get(_getPrototypeOf(InterferenceClientEngine.prototype), "connect", this).call(this).then(function () {
-        _this3.syncClient.start( // send function
-        function (pingId, clientPingTime) {
-          var request = [];
-          request[0] = 0; // we send a ping
-
-          request[1] = pingId;
-          request[2] = clientPingTime; //console.log('[ping] - id: %s, pingTime: %s', request[1], request[2]);
-
-          _this3.socket.emit('syncClientData', request);
-        }, // receive function  
-        function (callback) {
-          // unpack args before executing the callback
-          _this3.socket.on('syncServerData', function (data) {
-            var response = data;
-
-            if (response[0] === 1) {
-              // this is a pong
-              var pingId = response[1];
-              var clientPingTime = response[2];
-              var serverPingTime = response[3];
-              var serverPongTime = response[4]; //console.log('[pong] - id: %s, clientPingTime: %s, serverPingTime: %s, serverPongTime: %s',
-              //pingId, clientPingTime, serverPingTime, serverPongTime);
-
-              callback(pingId, clientPingTime, serverPingTime, serverPongTime);
-            }
-          });
-        }, // status report function
-        function (status) {} //console.log(status); }
-        );
-
         _this3.socket.on('assignedRoom', function (roomName) {
           _this3.room = roomName;
+          var startTime = performance.now();
+          _this3.syncClient = new _client.default(function () {
+            return (performance.now() - startTime) / 1000;
+          });
+
+          _this3.syncClient.start( // send function
+          function (pingId, clientPingTime) {
+            var request = [];
+            request[0] = 0; // we send a ping
+
+            request[1] = pingId;
+            request[2] = clientPingTime; //console.log('[ping] - id: %s, pingTime: %s', request[1], request[2]);
+
+            _this3.socket.emit('syncClientData', request);
+          }, // receive function  
+          function (callback) {
+            // unpack args before executing the callback
+            _this3.socket.on('syncServerData', function (data) {
+              var response = data;
+
+              if (response[0] === 1) {
+                // this is a pong
+                var pingId = response[1];
+                var clientPingTime = response[2];
+                var serverPingTime = response[3];
+                var serverPongTime = response[4]; //console.log('[pong] - id: %s, clientPingTime: %s, serverPingTime: %s, serverPongTime: %s',
+                //pingId, clientPingTime, serverPingTime, serverPongTime);
+
+                callback(pingId, clientPingTime, serverPingTime, serverPongTime);
+              }
+            });
+          }, // status report function
+          function (status) {} //console.log(status); }
+          );
         });
       });
     }

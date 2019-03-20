@@ -3,8 +3,6 @@ import SyncServer from '@ircam/sync/server';
 import Performer from '../common/Performer';
 import Egg from '../common/Egg';
 
-let transportSyncCount = 0;
-let rooms = {};
 const palettes = ['rain', 'celeste', 'pyre', 'journey', 'kirby'];
 
 export default class InterferenceServerEngine extends ServerEngine {
@@ -12,13 +10,8 @@ export default class InterferenceServerEngine extends ServerEngine {
     constructor(io, gameEngine, inputOptions) {
         super(io, gameEngine, inputOptions);
 
-        // MJW: sync init
-        this.startTime = process.hrtime();
-
-        this.syncServer = new SyncServer(() => {
-            let now = process.hrtime(this.startTime);
-            return now[0] + now[1] * 1e-9;
-        });
+        this.myRooms = {}; //roomName: [players in the room]
+        this.syncServers = {} //roomName: syncServer
 
         this.gameEngine.on('postStep', this.stepLogic.bind(this));
     }
@@ -37,7 +30,42 @@ export default class InterferenceServerEngine extends ServerEngine {
     onPlayerConnected(socket) {
         super.onPlayerConnected(socket);
 
-        this.syncServer.start(
+        socket.on('assignToRoom', roomName => {
+            if (!Object.keys(this.myRooms).includes(roomName)) {
+                this.createRoom(roomName);
+                this.createSyncServer(roomName);
+                this.myRooms[roomName] = [];
+            }
+            player.number = this.myRooms[roomName].length;
+            player.palette = palettes[player.number%palettes.length];
+            console.log(player.number);
+            this.myRooms[roomName].push(player);
+            this.assignPlayerToRoom(player.playerId, roomName);
+            this.assignObjectToRoom(player, roomName);
+            this.assignPlayerToSyncServer(socket, roomName);
+            socket.emit('assignedRoom', roomName);
+        });
+
+        let player = new Performer(this.gameEngine, null, {});
+        player.number = -1;
+        player.palette = 'default';
+        player.notestack = '';
+        player.rhythmstack = '';
+        console.log(player.number);
+        player.playerId = socket.playerId;
+        this.gameEngine.addObjectToWorld(player);
+    }
+
+    createSyncServer(roomName) {
+        const startTime = process.hrtime();
+        this.syncServers[roomName] = new SyncServer(() => {
+            let now = process.hrtime(startTime);
+            return now[0] + now[1] * 1e-9;
+        });
+    }
+
+    assignPlayerToSyncServer(socket, roomName) {
+        this.syncServers[roomName].start(
         // sync send function
         (pingId, clientPingTime, serverPingTime, serverPongTime) => {
             //console.log(`[pong] - id: %s, clientPingTime: %s, serverPingTime: %s, serverPongTime: %s`,
@@ -65,29 +93,6 @@ export default class InterferenceServerEngine extends ServerEngine {
                 }
             });
         });
-        //let numPlayers = this.gameEngine.world.queryObjects({ instanceType: Performer }).length;
-        let player = new Performer(this.gameEngine, null, {});
-        player.number = -1;
-        player.palette = 'default';
-        player.notestack = '';
-        player.rhythmstack = '';
-        console.log(player.number);
-        player.playerId = socket.playerId;
-        this.gameEngine.addObjectToWorld(player);
-
-        socket.on('assignToRoom', roomName => {
-            if (!Object.keys(rooms).includes(roomName)) {
-                this.createRoom(roomName);
-                rooms[roomName] = [];
-            }
-            player.number = rooms[roomName].length;
-            player.palette = palettes[player.number%palettes.length];
-            console.log(player.number);
-            rooms[roomName].push(player);
-            this.assignPlayerToRoom(player.playerId, roomName);
-            this.assignObjectToRoom(player, roomName);
-            socket.emit('assignedRoom', roomName);
-        });
     }
 
     onPlayerDisconnected(socketId, playerId) {
@@ -96,10 +101,10 @@ export default class InterferenceServerEngine extends ServerEngine {
         if (player) { 
             let removed = player.number;
             this.gameEngine.removeObjectFromWorld(player.id);
-            for (let k of Object.keys(rooms)) {
-                if (rooms[k].includes(player)) {
-                    rooms[k].splice(rooms[k].indexOf(player), 1);
-                    for (let p of rooms[k]) if (p.number > removed) p.number--; 
+            for (let k of Object.keys(this.myRooms)) {
+                if (this.myRooms[k].includes(player)) {
+                    this.myRooms[k].splice(this.myRooms[k].indexOf(player), 1);
+                    for (let p of this.myRooms[k]) if (p.number > removed) p.number--; 
                 }
             }
         }

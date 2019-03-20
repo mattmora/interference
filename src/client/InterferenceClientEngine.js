@@ -178,8 +178,7 @@ export default class InterferenceClientEngine extends ClientEngine {
     constructor(gameEngine, options) {
         super(gameEngine, options, InterferenceRenderer);
 
-        this.syncClient = new SyncClient(() => { return performance.now() / 1000 });
-
+        this.syncClient = null;
         this.transport = Transport;
         this.notestack = [];
         this.rhythmstack = ['4n'];
@@ -297,42 +296,44 @@ export default class InterferenceClientEngine extends ClientEngine {
 
     connect(options = {}) {
         return super.connect().then(() => {
-            this.syncClient.start(
-                // send function
-                (pingId, clientPingTime) => {
-                    var request = [];
-                    request[0] = 0; // we send a ping
-                    request[1] = pingId;
-                    request[2] = clientPingTime;
-
-                    //console.log('[ping] - id: %s, pingTime: %s', request[1], request[2]);
-
-                    this.socket.emit('syncClientData', request);
-                },       
-                // receive function  
-                callback => {
-                    // unpack args before executing the callback
-                    this.socket.on('syncServerData', function (data) {
-                        var response = data;
-
-                        if (response[0] === 1) { // this is a pong
-                            var pingId = response[1];
-                            var clientPingTime = response[2];
-                            var serverPingTime = response[3];
-                            var serverPongTime = response[4];
-
-                            //console.log('[pong] - id: %s, clientPingTime: %s, serverPingTime: %s, serverPongTime: %s',
-                            //pingId, clientPingTime, serverPingTime, serverPongTime);
-
-                            callback(pingId, clientPingTime, serverPingTime, serverPongTime);
-                        }
-                    });
-                }, 
-                // status report function
-                status => { }//console.log(status); }
-            );
             this.socket.on('assignedRoom', roomName => { 
                 this.room = roomName;
+                const startTime = performance.now();
+                this.syncClient = new SyncClient(() => { return (performance.now() - startTime) / 1000 });
+                this.syncClient.start(
+                    // send function
+                    (pingId, clientPingTime) => {
+                        var request = [];
+                        request[0] = 0; // we send a ping
+                        request[1] = pingId;
+                        request[2] = clientPingTime;
+
+                        //console.log('[ping] - id: %s, pingTime: %s', request[1], request[2]);
+
+                        this.socket.emit('syncClientData', request);
+                    },       
+                    // receive function  
+                    callback => {
+                        // unpack args before executing the callback
+                        this.socket.on('syncServerData', function (data) {
+                            var response = data;
+
+                            if (response[0] === 1) { // this is a pong
+                                var pingId = response[1];
+                                var clientPingTime = response[2];
+                                var serverPingTime = response[3];
+                                var serverPongTime = response[4];
+
+                                //console.log('[pong] - id: %s, clientPingTime: %s, serverPingTime: %s, serverPongTime: %s',
+                                //pingId, clientPingTime, serverPingTime, serverPongTime);
+
+                                callback(pingId, clientPingTime, serverPingTime, serverPongTime);
+                            }
+                        });
+                    }, 
+                    // status report function
+                    status => { }//console.log(status); }
+                );
             });
         });
     }

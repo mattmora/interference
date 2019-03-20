@@ -37,8 +37,6 @@ function _inherits(subClass, superClass) { if (typeof superClass !== "function" 
 
 function _setPrototypeOf(o, p) { _setPrototypeOf = Object.setPrototypeOf || function _setPrototypeOf(o, p) { o.__proto__ = p; return o; }; return _setPrototypeOf(o, p); }
 
-var transportSyncCount = 0;
-var rooms = {};
 var palettes = ['rain', 'celeste', 'pyre', 'journey', 'kirby'];
 
 var InterferenceServerEngine =
@@ -51,13 +49,10 @@ function (_ServerEngine) {
 
     _classCallCheck(this, InterferenceServerEngine);
 
-    _this = _possibleConstructorReturn(this, _getPrototypeOf(InterferenceServerEngine).call(this, io, gameEngine, inputOptions)); // MJW: sync init
+    _this = _possibleConstructorReturn(this, _getPrototypeOf(InterferenceServerEngine).call(this, io, gameEngine, inputOptions));
+    _this.myRooms = {}; //roomName: [players in the room]
 
-    _this.startTime = process.hrtime();
-    _this.syncServer = new _server.default(function () {
-      var now = process.hrtime(_this.startTime);
-      return now[0] + now[1] * 1e-9;
-    });
+    _this.syncServers = {}; //roomName: syncServer
 
     _this.gameEngine.on('postStep', _this.stepLogic.bind(_assertThisInitialized(_this)));
 
@@ -84,7 +79,51 @@ function (_ServerEngine) {
 
       _get(_getPrototypeOf(InterferenceServerEngine.prototype), "onPlayerConnected", this).call(this, socket);
 
-      this.syncServer.start( // sync send function
+      socket.on('assignToRoom', function (roomName) {
+        if (!Object.keys(_this2.myRooms).includes(roomName)) {
+          _this2.createRoom(roomName);
+
+          _this2.createSyncServer(roomName);
+
+          _this2.myRooms[roomName] = [];
+        }
+
+        player.number = _this2.myRooms[roomName].length;
+        player.palette = palettes[player.number % palettes.length];
+        console.log(player.number);
+
+        _this2.myRooms[roomName].push(player);
+
+        _this2.assignPlayerToRoom(player.playerId, roomName);
+
+        _this2.assignObjectToRoom(player, roomName);
+
+        _this2.assignPlayerToSyncServer(socket, roomName);
+
+        socket.emit('assignedRoom', roomName);
+      });
+      var player = new _Performer.default(this.gameEngine, null, {});
+      player.number = -1;
+      player.palette = 'default';
+      player.notestack = '';
+      player.rhythmstack = '';
+      console.log(player.number);
+      player.playerId = socket.playerId;
+      this.gameEngine.addObjectToWorld(player);
+    }
+  }, {
+    key: "createSyncServer",
+    value: function createSyncServer(roomName) {
+      var startTime = process.hrtime();
+      this.syncServers[roomName] = new _server.default(function () {
+        var now = process.hrtime(startTime);
+        return now[0] + now[1] * 1e-9;
+      });
+    }
+  }, {
+    key: "assignPlayerToSyncServer",
+    value: function assignPlayerToSyncServer(socket, roomName) {
+      this.syncServers[roomName].start( // sync send function
       function (pingId, clientPingTime, serverPingTime, serverPongTime) {
         //console.log(`[pong] - id: %s, clientPingTime: %s, serverPingTime: %s, serverPongTime: %s`,
         //  pingId, clientPingTime, serverPingTime, serverPongTime);
@@ -109,33 +148,6 @@ function (_ServerEngine) {
             callback(pingId, clientPingTime);
           }
         });
-      }); //let numPlayers = this.gameEngine.world.queryObjects({ instanceType: Performer }).length;
-
-      var player = new _Performer.default(this.gameEngine, null, {});
-      player.number = -1;
-      player.palette = 'default';
-      player.notestack = '';
-      player.rhythmstack = '';
-      console.log(player.number);
-      player.playerId = socket.playerId;
-      this.gameEngine.addObjectToWorld(player);
-      socket.on('assignToRoom', function (roomName) {
-        if (!Object.keys(rooms).includes(roomName)) {
-          _this2.createRoom(roomName);
-
-          rooms[roomName] = [];
-        }
-
-        player.number = rooms[roomName].length;
-        player.palette = palettes[player.number % palettes.length];
-        console.log(player.number);
-        rooms[roomName].push(player);
-
-        _this2.assignPlayerToRoom(player.playerId, roomName);
-
-        _this2.assignObjectToRoom(player, roomName);
-
-        socket.emit('assignedRoom', roomName);
       });
     }
   }, {
@@ -151,19 +163,19 @@ function (_ServerEngine) {
         var removed = player.number;
         this.gameEngine.removeObjectFromWorld(player.id);
 
-        var _arr = Object.keys(rooms);
+        var _arr = Object.keys(this.myRooms);
 
         for (var _i = 0; _i < _arr.length; _i++) {
           var k = _arr[_i];
 
-          if (rooms[k].includes(player)) {
-            rooms[k].splice(rooms[k].indexOf(player), 1);
+          if (this.myRooms[k].includes(player)) {
+            this.myRooms[k].splice(this.myRooms[k].indexOf(player), 1);
             var _iteratorNormalCompletion = true;
             var _didIteratorError = false;
             var _iteratorError = undefined;
 
             try {
-              for (var _iterator = rooms[k][Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
+              for (var _iterator = this.myRooms[k][Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
                 var p = _step.value;
                 if (p.number > removed) p.number--;
               }
