@@ -5,7 +5,7 @@ import Egg from '../common/Egg';
 
 let transportSyncCount = 0;
 let rooms = {};
-const palettes = ['rain'];
+const palettes = ['rain', 'celeste', 'pyre', 'journey', 'kirby'];
 
 export default class InterferenceServerEngine extends ServerEngine {
 

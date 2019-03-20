@@ -11,6 +11,34 @@ const paletteTable = {
         c3: '#457eac',
         c4: '#748386' 
     },
+    'celeste': {   
+        bg: '#a5d8ff', 
+        c1: '#ff8266',
+        c2: '#4381af',
+        c3: '#ac86b0',
+        c4: '#4b719c' 
+    },
+    'pyre': {   
+        bg: '#a32323', 
+        c1: '#2375a8',
+        c2: '#fbf6f7',
+        c3: '#f0ae62',
+        c4: '#011936' 
+    },
+    'journey': {   
+        bg: '#fad68a', 
+        c1: '#7f2819',
+        c2: '#a25a11',
+        c3: '#d5a962',
+        c4: '#fef8e8' 
+    },
+    'kirby': {   
+        bg: '#a8c256', 
+        c1: '#f4a4a7',
+        c2: '#e84c41',
+        c3: '#f9df6a',
+        c4: '#fa8334' 
+    },
     'default': {
         bg: 'black',
         c1: 'white',
@@ -108,32 +136,38 @@ export default class InterferenceRenderer extends Renderer {
     }
 
     drawField() {
-        let n = players.length;
-        for (let p of players) {
-            let i = p.number;
-            let x = (i / n) * w;
-            let y = (i / n) * h;
-            ctx.fillStyle = paletteTable[p.palette].bg;
-            ctx.fillRect(x, 0, w / n, h / n)
+        if (client.performanceView) {
+
+
         }
-        if (thisPlayer) {
-            let i = thisPlayer.number;
-            let x = (i / n) * w;
-            let y = (i / n) * h;
-            ctx.strokeStyle = 'black';
-            ctx.strokeRect(x, 0, w / n, h / n)   
-            if (thisPlayer.notestack !== prevNotestack) {
-                client.notestack = [];
-                for (let c = 0; c < thisPlayer.notestack.length; c++) {
-                    client.notestack.push(Frequency(thisPlayer.notestack.charCodeAt(c), 'midi').toNote());
-                }
-                prevNotestack = thisPlayer.notestack;
-                console.log(client.notestack);
+        else {
+            let n = players.length;
+            for (let p of players) {
+                let i = p.number;
+                let x = (i / n) * w;
+                let y = (i / n) * h;
+                ctx.fillStyle = paletteTable[p.palette].bg;
+                ctx.fillRect(x, 0, w / n, h / n)
             }
-            if (thisPlayer.rhythmstack !== prevRhythmstack) {
-                client.rhythmstack = thisPlayer.rhythmstack.split(' ');
-                prevRhythmstack = thisPlayer.rhythmstack;
-                console.log(client.rhythmstack);
+            if (thisPlayer) {
+                let i = thisPlayer.number;
+                let x = (i / n) * w;
+                let y = (i / n) * h;
+                ctx.strokeStyle = 'black';
+                ctx.strokeRect(x, 0, w / n, h / n)   
+                if (thisPlayer.notestack !== prevNotestack) {
+                    client.notestack = [];
+                    for (let c = 0; c < thisPlayer.notestack.length; c++) {
+                        client.notestack.push(Frequency(thisPlayer.notestack.charCodeAt(c), 'midi').toNote());
+                    }
+                    prevNotestack = thisPlayer.notestack;
+                    console.log(client.notestack);
+                }
+                if (thisPlayer.rhythmstack !== prevRhythmstack) {
+                    client.rhythmstack = thisPlayer.rhythmstack.split(' ');
+                    prevRhythmstack = thisPlayer.rhythmstack;
+                    console.log(client.rhythmstack);
+                }
             }
         }
     }

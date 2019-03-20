@@ -171,6 +171,7 @@ const keyCodeTable = {
 const durs = ['4n', '8n', '6n'];
 let noteIndex = 0;
 let rhythmIndex = 0;
+let viewLock = false;
 
 export default class InterferenceClientEngine extends ClientEngine {
 
@@ -183,6 +184,7 @@ export default class InterferenceClientEngine extends ClientEngine {
         this.notestack = [];
         this.rhythmstack = ['4n'];
         this.room = null;
+        this.performanceView = false;
     }
 
     start() {
@@ -201,6 +203,8 @@ export default class InterferenceClientEngine extends ClientEngine {
             }
         };
 
+        // LOCAL CONTROLS
+        // Any inputs that do nothing server-side (i.e. doesn't need to be known by other players)
         document.addEventListener('keypress', e => {
             if (document.activeElement === roomNameInput) {
                 if (keyCodeTable[e.keyCode] === 'enter') {
@@ -224,13 +228,23 @@ export default class InterferenceClientEngine extends ClientEngine {
                         this.transport.pause();
                     }
                 }
+                if (keyCodeTable[e.keyCode] === 'v') {
+                    if (!viewLock) this.performanceView = !this.performanceView;
+                }
+                if (keyCodeTable[e.keyCode] === 'forward slash / ç') {
+                    viewLock = !viewLock;
+                }
             }
         });
 
+        // NETWORKED CONTROLS
+        // These inputs will also be processed on the server
         console.log('binding keys');
         this.controls = new KeyboardControls(this);
         //this.controls.bindKey('space', 'space');
         this.controls.bindKey('n', 'n');
+        this.controls.bindKey('c', 'c');
+
 
         this.synth = new Synth({
             oscillator: {

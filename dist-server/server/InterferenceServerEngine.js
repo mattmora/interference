@@ -39,7 +39,7 @@ function _setPrototypeOf(o, p) { _setPrototypeOf = Object.setPrototypeOf || func
 
 var transportSyncCount = 0;
 var rooms = {};
-var palettes = ['rain'];
+var palettes = ['rain', 'celeste', 'pyre', 'journey', 'kirby'];
 
 var InterferenceServerEngine =
 /*#__PURE__*/

@@ -35,7 +35,15 @@ function _inherits(subClass, superClass) { if (typeof superClass !== "function" 
 
 function _setPrototypeOf(o, p) { _setPrototypeOf = Object.setPrototypeOf || function _setPrototypeOf(o, p) { o.__proto__ = p; return o; }; return _setPrototypeOf(o, p); }
 
-var scales = [[60, 62, 64, 67, 69], [62, 64, 65, 69, 70], [57, 59, 60, 64, 65]];
+var scaleTable = {
+  'rain': [60, 64, 66, 69, 71],
+  'celeste': [60, 62, 63, 65, 67],
+  'pyre': [60, 62, 63, 67, 70],
+  'journey': [60, 62, 64, 67, 69],
+  'kirby': [60, 62, 64, 65, 67],
+  'default': [60, 62, 64, 65, 67]
+};
+var palettes = ['rain', 'celeste', 'pyre', 'journey', 'kirby'];
 
 var InterferenceGameEngine =
 /*#__PURE__*/
@@ -128,15 +136,18 @@ function (_GameEngine) {
         playerId: playerId
       });
 
-      if (isServer) {
-        if (player) {
-          if (inputData.input == 'n') {
-            console.log(player.number);
-            player.notestack = player.notestack.concat(String.fromCharCode(scales[player.number % scales.length][Math.floor(Math.random() * scales[0].length)]));
-            console.log(player.notestack);
-          }
+      if (player) {
+        if (inputData.input == 'n') {
+          var scale = scaleTable[player.palette];
+          player.notestack = player.notestack.concat(String.fromCharCode(scale[Math.floor(Math.random() * scale.length)]));
+          console.log(player.notestack);
+        } else if (inputData.input == 'c') {
+          player.palette = palettes[(palettes.indexOf(player.palette) + 1) % palettes.length];
+          console.log(player.palette);
         }
-      } else {
+      }
+
+      if (isServer) {} else {
         if (player) {
           if (inputData.input == 'space') {}
         }

@@ -45,6 +45,34 @@ var paletteTable = {
     c3: '#457eac',
     c4: '#748386'
   },
+  'celeste': {
+    bg: '#a5d8ff',
+    c1: '#ff8266',
+    c2: '#4381af',
+    c3: '#ac86b0',
+    c4: '#4b719c'
+  },
+  'pyre': {
+    bg: '#a32323',
+    c1: '#2375a8',
+    c2: '#fbf6f7',
+    c3: '#f0ae62',
+    c4: '#011936'
+  },
+  'journey': {
+    bg: '#fad68a',
+    c1: '#7f2819',
+    c2: '#a25a11',
+    c3: '#d5a962',
+    c4: '#fef8e8'
+  },
+  'kirby': {
+    bg: '#a8c256',
+    c1: '#f4a4a7',
+    c2: '#e84c41',
+    c3: '#f9df6a',
+    c4: '#fa8334'
+  },
   'default': {
     bg: 'black',
     c1: 'white',
@@ -151,60 +179,62 @@ function (_Renderer) {
   }, {
     key: "drawField",
     value: function drawField() {
-      var n = players.length;
-      var _iteratorNormalCompletion = true;
-      var _didIteratorError = false;
-      var _iteratorError = undefined;
+      if (client.performanceView) {} else {
+        var n = players.length;
+        var _iteratorNormalCompletion = true;
+        var _didIteratorError = false;
+        var _iteratorError = undefined;
 
-      try {
-        for (var _iterator = players[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
-          var p = _step.value;
-          var _i = p.number;
-
-          var _x = _i / n * w;
-
-          var _y = _i / n * h;
-
-          ctx.fillStyle = paletteTable[p.palette].bg;
-          ctx.fillRect(_x, 0, w / n, h / n);
-        }
-      } catch (err) {
-        _didIteratorError = true;
-        _iteratorError = err;
-      } finally {
         try {
-          if (!_iteratorNormalCompletion && _iterator.return != null) {
-            _iterator.return();
+          for (var _iterator = players[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
+            var p = _step.value;
+            var _i = p.number;
+
+            var _x = _i / n * w;
+
+            var _y = _i / n * h;
+
+            ctx.fillStyle = paletteTable[p.palette].bg;
+            ctx.fillRect(_x, 0, w / n, h / n);
           }
+        } catch (err) {
+          _didIteratorError = true;
+          _iteratorError = err;
         } finally {
-          if (_didIteratorError) {
-            throw _iteratorError;
+          try {
+            if (!_iteratorNormalCompletion && _iterator.return != null) {
+              _iterator.return();
+            }
+          } finally {
+            if (_didIteratorError) {
+              throw _iteratorError;
+            }
           }
         }
-      }
 
-      if (thisPlayer) {
-        var i = thisPlayer.number;
-        var x = i / n * w;
-        var y = i / n * h;
-        ctx.strokeStyle = 'black';
-        ctx.strokeRect(x, 0, w / n, h / n);
+        if (thisPlayer) {
+          var i = thisPlayer.number;
+          var x = i / n * w;
+          var y = i / n * h;
+          ctx.strokeStyle = 'black';
+          ctx.strokeRect(x, 0, w / n, h / n);
 
-        if (thisPlayer.notestack !== prevNotestack) {
-          client.notestack = [];
+          if (thisPlayer.notestack !== prevNotestack) {
+            client.notestack = [];
 
-          for (var c = 0; c < thisPlayer.notestack.length; c++) {
-            client.notestack.push((0, _tone.Frequency)(thisPlayer.notestack.charCodeAt(c), 'midi').toNote());
+            for (var c = 0; c < thisPlayer.notestack.length; c++) {
+              client.notestack.push((0, _tone.Frequency)(thisPlayer.notestack.charCodeAt(c), 'midi').toNote());
+            }
+
+            prevNotestack = thisPlayer.notestack;
+            console.log(client.notestack);
           }
 
-          prevNotestack = thisPlayer.notestack;
-          console.log(client.notestack);
-        }
-
-        if (thisPlayer.rhythmstack !== prevRhythmstack) {
-          client.rhythmstack = thisPlayer.rhythmstack.split(' ');
-          prevRhythmstack = thisPlayer.rhythmstack;
-          console.log(client.rhythmstack);
+          if (thisPlayer.rhythmstack !== prevRhythmstack) {
+            client.rhythmstack = thisPlayer.rhythmstack.split(' ');
+            prevRhythmstack = thisPlayer.rhythmstack;
+            console.log(client.rhythmstack);
+          }
         }
       }
     }

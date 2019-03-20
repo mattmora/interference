@@ -205,6 +205,7 @@ var keyCodeTable = {
 var durs = ['4n', '8n', '6n'];
 var noteIndex = 0;
 var rhythmIndex = 0;
+var viewLock = false;
 
 var InterferenceClientEngine =
 /*#__PURE__*/
@@ -224,6 +225,7 @@ function (_ClientEngine) {
     _this.notestack = [];
     _this.rhythmstack = ['4n'];
     _this.room = null;
+    _this.performanceView = false;
     return _this;
   }
 
@@ -246,7 +248,9 @@ function (_ClientEngine) {
         } else {
           roomNameErrorText.style.display = 'inline';
         }
-      };
+      }; // LOCAL CONTROLS
+      // Any inputs that do nothing server-side (i.e. doesn't need to be known by other players)
+
 
       document.addEventListener('keypress', function (e) {
         if (document.activeElement === roomNameInput) {
@@ -273,12 +277,23 @@ function (_ClientEngine) {
               _this2.transport.pause();
             }
           }
+
+          if (keyCodeTable[e.keyCode] === 'v') {
+            if (!viewLock) _this2.performanceView = !_this2.performanceView;
+          }
+
+          if (keyCodeTable[e.keyCode] === 'forward slash / ç') {
+            viewLock = !viewLock;
+          }
         }
-      });
+      }); // NETWORKED CONTROLS
+      // These inputs will also be processed on the server
+
       console.log('binding keys');
       this.controls = new _lanceGg.KeyboardControls(this); //this.controls.bindKey('space', 'space');
 
       this.controls.bindKey('n', 'n');
+      this.controls.bindKey('c', 'c');
       this.synth = new _tone.Synth({
         oscillator: {
           type: 'sine',
