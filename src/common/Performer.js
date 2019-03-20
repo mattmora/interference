@@ -1,11 +1,13 @@
-import BaseTypes from 'lance/serialize/BaseTypes';
-import DynamicObject from 'lance/serialize/DynamicObject';
+import { BaseTypes, DynamicObject } from 'lance-gg';
 
 export default class Performer extends DynamicObject {
 
     static get netScheme() {
         return Object.assign({
             number: { type: BaseTypes.TYPES.INT16 },
+            palette: { type: BaseTypes.TYPES.STRING },
+            notestack: { type: BaseTypes.TYPES.STRING },
+            rhythmstack: { type: BaseTypes.TYPES.STRING }
         }, super.netScheme);
     }
 
@@ -13,14 +15,10 @@ export default class Performer extends DynamicObject {
         super(gameEngine, options, props);
 
         this.class = Performer;
-        this.notestack = [];
-        this.rhythmstack = [];
     }
 
     syncTo(other) {
         super.syncTo(other);
-        this.notestack = other.notestack;
-        this.rhythmstack = other.rhythmstack;
     }
 
     toString() {

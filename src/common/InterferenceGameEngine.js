@@ -1,6 +1,4 @@
-import GameEngine from 'lance/GameEngine';
-import SimplePhysicsEngine from 'lance/physics/SimplePhysicsEngine';
-import TwoVector from 'lance/serialize/TwoVector';
+import { GameEngine, SimplePhysicsEngine, TwoVector } from 'lance-gg';
 import Performer from './Performer';
 import Egg from './Egg';
 
@@ -46,18 +44,6 @@ export default class InterferenceGameEngine extends GameEngine {
         return new TwoVector(x, y);
     }
 
-    startPerformance(startTime) {
-        console.log('starting');
-        var context = new Tone.Context()
-        context.resume();
-        
-        var f = Math.random()*400+200;
-        Tone.Transport.scheduleRepeat(() => { synth.triggerAttackRelease(f, '8n'); console.log(Tone.Transport.position); }, '4n', '0:0:0');
-        Tone.Transport.start(startTime, '0:0:0');
-        this.startTime = startTime;
-        this.performing = true;
-    }
-
     moveAll(stepInfo) {
 
         if (stepInfo.isReenact)
@@ -91,11 +77,23 @@ export default class InterferenceGameEngine extends GameEngine {
 
         super.processInput(inputData, playerId);
         
-        // get the player's primary object
         let player = this.world.queryObject({ playerId });
-        if (player) {
-            if (inputData.input == 'space') {
-                player.notestack.push(Tone.Midi.toFrequency(scales[player.number%scales.length][Math.floor(Math.random() * scales[0].length)]));
+        if (isServer) {
+            if (player) {
+                if (inputData.input == 'n') {
+                    console.log(player.number);
+                    player.notestack = player.notestack.concat(
+                        String.fromCharCode(scales[player.number%scales.length][Math.floor(Math.random() * scales[0].length)])
+                    );
+                    console.log(player.notestack);
+                }
+            }
+        }
+        else {
+            if (player) {
+                if (inputData.input == 'space') {
+
+                }
             }
         }
     }

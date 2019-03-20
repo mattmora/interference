@@ -1,7 +1,24 @@
-import Renderer from 'lance/render/Renderer';
-import TwoVector from 'lance/serialize/TwoVector';
+import { Renderer, TwoVector } from 'lance-gg';
 import Performer from '../common/Performer';
 import Egg from '../common/Egg';
+import { Frequency } from 'tone';
+
+const paletteTable = {
+    'rain': {   
+        bg: '#3e2f5b', 
+        c1: '#d7dedc',
+        c2: '#706563',
+        c3: '#457eac',
+        c4: '#748386' 
+    },
+    'default': {
+        bg: 'black',
+        c1: 'white',
+        c2: 'white',
+        c3: 'white',
+        c4: 'white'
+    }
+}
 
 let transportSyncCount = 0;
 let game = null;
@@ -9,6 +26,19 @@ let client = null;
 let ctx = null;
 let w = 0;
 let h = 0;
+let time = 0;
+let players = []; 
+let playerId = 0;
+let thisPlayer = null;
+
+let prevNotestack = '';
+let prevRhythmstack = '';
+
+let bg = paletteTable['default'].bg;
+let c1 = paletteTable['default'].c1;
+let c2 = paletteTable['default'].c2;
+let c3 = paletteTable['default'].c3;
+let c4 = paletteTable['default'].c4;
 
 export default class InterferenceRenderer extends Renderer {
 
@@ -31,9 +61,22 @@ export default class InterferenceRenderer extends Renderer {
     draw(t, dt) {
         super.draw(t, dt);
 
+        if (client.room === null) return
+
+        time = client.syncClient.getSyncTime();
+        players = game.world.queryObjects({ instanceType: Performer });
+        playerId = game.playerId;
+        thisPlayer = game.world.queryObject({ playerId });
+
+        bg = paletteTable[thisPlayer.palette].bg;
+        c1 = paletteTable[thisPlayer.palette].c1;
+        c2 = paletteTable[thisPlayer.palette].c2;
+        c3 = paletteTable[thisPlayer.palette].c3;
+        c4 = paletteTable[thisPlayer.palette].c4;
+
         if (client.transport.state === 'started') {
             if (transportSyncCount >= game.transportSyncInterval) {
-                client.transport.seconds = t*0.001;
+                client.transport.seconds = time;
                 transportSyncCount = 0;
                 console.log(client.transport.state);
             }
@@ -49,41 +92,53 @@ export default class InterferenceRenderer extends Renderer {
         ctx.save();
         //ctx.scale(this.clientEngine.zoom, this.clientEngine.zoom);  // Zoom in and flip y axis
         // Draw all things
-        game.world.forEachObject((id, obj) => {
-            if (obj instanceof Performer) this.drawPerformers(obj, t, dt);
-            //else if (obj instanceof Food) this.drawFood(obj);
-        });
-        ctx.fillStyle = 'black';
+        this.drawField();
         /*
         if (this.gameEngine.playerId < 5) {
             Tone.Transport.seconds = t/1000;
             ctx.fillStyle = 'red';
         } */
+        ctx.fillStyle = 'black';
         ctx.font = "20px Georgia";
-        ctx.fillText(game.playerId, 50, 25);
-        ctx.fillText(t, 50, 50);
+        ctx.fillText(playerId, 50, 25);
+        ctx.fillText(time, 50, 50);
         ctx.fillText(client.transport.position, 50, 75);
 
         ctx.restore(); 
     }
 
-    drawPerformers(p, t, dt) {
-        // draw head and body
-        let thisIsPerformer = p.playerId === game.playerId;
-        let i = p.number - 1;
-        let n = game.world.playerCount;
-        console.log(n);
-        let x = (i / n) * w;
-        let y = (i / n) * h;
-        ctx.fillStyle = 'black';
-        ctx.fillText(p.state, x + 20, 100);
-        ctx.fillStyle = 'white';
-        ctx.fillRect(x, 0,  w / n, h / n)
-        if (thisIsPerformer) {
-            client.notestack = p.notestack;
-            ctx.strokeStyle = 'black';
-            ctx.strokeRect(x, 0, w / n, h / n)
+    drawField() {
+        let n = players.length;
+        for (let p of players) {
+            let i = p.number;
+            let x = (i / n) * w;
+            let y = (i / n) * h;
+            ctx.fillStyle = paletteTable[p.palette].bg;
+            ctx.fillRect(x, 0, w / n, h / n)
         }
+        if (thisPlayer) {
+            let i = thisPlayer.number;
+            let x = (i / n) * w;
+            let y = (i / n) * h;
+            ctx.strokeStyle = 'black';
+            ctx.strokeRect(x, 0, w / n, h / n)   
+            if (thisPlayer.notestack !== prevNotestack) {
+                client.notestack = [];
+                for (let c = 0; c < thisPlayer.notestack.length; c++) {
+                    client.notestack.push(Frequency(thisPlayer.notestack.charCodeAt(c), 'midi').toNote());
+                }
+                prevNotestack = thisPlayer.notestack;
+                console.log(client.notestack);
+            }
+            if (thisPlayer.rhythmstack !== prevRhythmstack) {
+                client.rhythmstack = thisPlayer.rhythmstack.split(' ');
+                prevRhythmstack = thisPlayer.rhythmstack;
+                console.log(client.rhythmstack);
+            }
+        }
+    }
+
+    drawPerformers(p, t, dt) {
         /*
         this.drawCircle(x, y, game.headRadius, true);
         for (let i = 0; i < p.bodyParts.length; i++) {
