@@ -37,16 +37,15 @@ function (_DynamicObject) {
   _createClass(Egg, [{
     key: "syncTo",
     value: function syncTo(other) {
-      _get(_getPrototypeOf(Egg.prototype), "syncTo", this).call(this, other);
+      _get(_getPrototypeOf(Egg.prototype), "syncTo", this).call(this, other); //this.direction = other.direction;
 
-      this.direction = other.direction;
     }
   }], [{
     key: "netScheme",
     get: function get() {
       return Object.assign({
-        direction: {
-          type: _lanceGg.BaseTypes.TYPES.FLOAT32
+        hp: {
+          type: _lanceGg.BaseTypes.TYPES.UINT8
         }
       }, _get(_getPrototypeOf(Egg), "netScheme", this));
     }
@@ -59,14 +58,13 @@ function (_DynamicObject) {
 
     _this = _possibleConstructorReturn(this, _getPrototypeOf(Egg).call(this, gameEngine, options, props));
     _this.class = Egg;
-    _this.contents = null;
     return _this;
   }
 
   _createClass(Egg, [{
     key: "toString",
     value: function toString() {
-      return "Egg::".concat(_get(_getPrototypeOf(Egg.prototype), "toString", this).call(this), " direction=").concat(this.direction);
+      return "Egg::".concat(_get(_getPrototypeOf(Egg.prototype), "toString", this).call(this), " position=").concat(this.position);
     }
   }]);
 

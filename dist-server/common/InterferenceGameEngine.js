@@ -61,24 +61,30 @@ function (_GameEngine) {
       collisions: {
         autoResolve: false
       }
-    });
-
-    _this.on('preStep', _this.moveAll.bind(_assertThisInitialized(_this))); // game variables
-
+    }); // game constants
 
     Object.assign(_assertThisInitialized(_this), {
+      cellSize: 1,
       playerWidth: 16,
       playerHeight: 9,
-      transportSyncInterval: 200
+      leftBound: 0,
+      topBound: 0,
+      bottomBound: 9,
+      transportSyncInterval: 200,
+      eggRadius: 1,
+      eggBaseXVelocity: 0.1
+    }); // game variables
+
+    Object.assign(_assertThisInitialized(_this), {
+      rooms: [],
+      playersByRoom: {},
+      eggsByRoom: {},
+      rightBoundByRoom: {}
     });
-    /*
-    Object.assign(this, {
-        foodRadius: 0.1, headRadius: 0.15, bodyRadius: 0.1,
-        eyeDist: 0.08, eyeRadius: 0.03, eyeAngle: 0.5,
-        spaceWidth: 16, spaceHeight: 9, moveDist: 0.06,
-        foodCount: 16, eatDistance: 0.3, collideDistance: 0.3,
-        startBodyLength: 10, aiCount: 3, directionStop: 100
-    }); */
+
+    _this.on('preStep', _this.preStepLogic.bind(_assertThisInitialized(_this)));
+
+    _this.on('postStep', _this.postStepLogic.bind(_assertThisInitialized(_this)));
 
     return _this;
   }
@@ -96,36 +102,161 @@ function (_GameEngine) {
     }
   }, {
     key: "randPos",
-    value: function randPos() {
-      var x = (Math.random() - 0.5) * this.spaceWidth;
-      var y = (Math.random() - 0.5) * this.spaceHeight;
+    value: function randPos(roomName) {
+      var x = Math.random() * this.playerWidth * this.playersByRoom[roomName].length;
+      var y = Math.random() * this.playerHeight;
       return new _lanceGg.TwoVector(x, y);
     }
   }, {
-    key: "moveAll",
-    value: function moveAll(stepInfo) {
-      if (stepInfo.isReenact) return;
-      this.world.forEachObject(function (id, obj) {
-        if (obj instanceof _Performer.default) {
-          /*
-          // if the position changed, add a body part and trim the length
-          let pos = obj.position.clone();
-          if (obj.bodyParts.length === 0 || pos.subtract(obj.bodyParts[obj.bodyParts.length-1]).length() > 0.05) {
-              obj.bodyParts.push(obj.position.clone());
-              while (obj.bodyLength < obj.bodyParts.length) obj.bodyParts.shift();
-          }
-           // if not stopped, move along
-          if (obj.direction === this.directionStop) return;
-          let move = new TwoVector(Math.cos(obj.direction), Math.sin(obj.direction));
-          move.multiplyScalar(0.05);
-          obj.position.add(move);
-          obj.position.y = Math.min(obj.position.y, this.spaceHeight / 2);
-          obj.position.y = Math.max(obj.position.y, -this.spaceHeight / 2);
-          obj.position.x = Math.min(obj.position.x, this.spaceWidth / 2);
-          obj.position.x = Math.max(obj.position.x, -this.spaceWidth / 2);
-          */
+    key: "velRandY",
+    value: function velRandY() {
+      var y = (Math.random() - 0.5) * this.eggBaseXVelocity;
+      return new _lanceGg.TwoVector(this.eggBaseXVelocity, y);
+    }
+  }, {
+    key: "preStepLogic",
+    value: function preStepLogic(stepInfo) {
+      this.playersByRoom = this.groupBy(this.world.queryObjects({
+        instanceType: _Performer.default
+      }), "_roomName");
+      this.rooms = Object.keys(this.playersByRoom);
+      this.eggsByRoom = this.groupBy(this.world.queryObjects({
+        instanceType: _Egg.default
+      }), "_roomName");
+      this.rightBoundByRoom = {};
+      var _iteratorNormalCompletion = true;
+      var _didIteratorError = false;
+      var _iteratorError = undefined;
+
+      try {
+        for (var _iterator = this.rooms[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
+          var r = _step.value;
+          this.rightBoundByRoom[r] = this.playersByRoom[r].length * this.playerWidth;
         }
-      });
+      } catch (err) {
+        _didIteratorError = true;
+        _iteratorError = err;
+      } finally {
+        try {
+          if (!_iteratorNormalCompletion && _iterator.return != null) {
+            _iterator.return();
+          }
+        } finally {
+          if (_didIteratorError) {
+            throw _iteratorError;
+          }
+        }
+      }
+    }
+  }, {
+    key: "postStepLogic",
+    value: function postStepLogic(stepInfo) {
+      var _iteratorNormalCompletion2 = true;
+      var _didIteratorError2 = false;
+      var _iteratorError2 = undefined;
+
+      try {
+        for (var _iterator2 = this.rooms[Symbol.iterator](), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
+          var r = _step2.value;
+          this.resolveCollisions(r);
+          this.gameLogic(r);
+        }
+      } catch (err) {
+        _didIteratorError2 = true;
+        _iteratorError2 = err;
+      } finally {
+        try {
+          if (!_iteratorNormalCompletion2 && _iterator2.return != null) {
+            _iterator2.return();
+          }
+        } finally {
+          if (_didIteratorError2) {
+            throw _iteratorError2;
+          }
+        }
+      }
+    }
+  }, {
+    key: "resolveCollisions",
+    value: function resolveCollisions(r) {
+      /*
+      if (stepInfo.isReenact)
+          return;
+      */
+      if (this.eggsByRoom[r]) {
+        var _iteratorNormalCompletion3 = true;
+        var _didIteratorError3 = false;
+        var _iteratorError3 = undefined;
+
+        try {
+          for (var _iterator3 = this.eggsByRoom[r][Symbol.iterator](), _step3; !(_iteratorNormalCompletion3 = (_step3 = _iterator3.next()).done); _iteratorNormalCompletion3 = true) {
+            var e = _step3.value;
+            console.log(e.position); // bounce off walls
+
+            if (e.position.x - this.eggRadius < this.leftBound) {
+              e.velocity.x *= -1;
+              e.position.x = this.leftBound + this.eggRadius;
+            } else if (e.position.x + this.eggRadius > this.rightBoundByRoom[r]) {
+              e.velocity.x *= -1;
+              e.position.x = this.rightBoundByRoom[r] - this.eggRadius;
+            }
+
+            if (e.position.y - this.eggRadius < this.topBound) {
+              e.velocity.y *= -1;
+              e.position.y = this.topBound + this.eggRadius;
+            } else if (e.position.y + this.eggRadius > this.bottomBound) {
+              e.velocity.y *= -1;
+              e.position.y = this.bottomBound - this.eggRadius;
+            }
+          }
+        } catch (err) {
+          _didIteratorError3 = true;
+          _iteratorError3 = err;
+        } finally {
+          try {
+            if (!_iteratorNormalCompletion3 && _iterator3.return != null) {
+              _iterator3.return();
+            }
+          } finally {
+            if (_didIteratorError3) {
+              throw _iteratorError3;
+            }
+          }
+        }
+      }
+      /*
+      this.world.forEachObject((id, obj) => {
+      if (obj instanceof Egg) {
+      // if the position changed, add a body part and trim the length
+      let pos = obj.position.clone();
+      if (obj.bodyParts.length === 0 || pos.subtract(obj.bodyParts[obj.bodyParts.length-1]).length() > 0.05) {
+      obj.bodyParts.push(obj.position.clone());
+      while (obj.bodyLength < obj.bodyParts.length) obj.bodyParts.shift();
+      }
+      // if not stopped, move along
+      if (obj.direction === this.directionStop) return;
+      let move = new TwoVector(Math.cos(obj.direction), Math.sin(obj.direction));
+      move.multiplyScalar(0.05);
+      obj.position.add(move);
+      obj.position.y = Math.min(obj.position.y, this.spaceHeight / 2);
+      obj.position.y = Math.max(obj.position.y, -this.spaceHeight / 2);
+      obj.position.x = Math.min(obj.position.x, this.spaceWidth / 2);
+      obj.position.x = Math.max(obj.position.x, -this.spaceWidth / 2);
+      }
+      });                */
+
+    }
+  }, {
+    key: "gameLogic",
+    value: function gameLogic(r) {}
+  }, {
+    key: "groupBy",
+    value: function groupBy(arr, property) {
+      return arr.reduce(function (grouped, current) {
+        if (!grouped[current[property]]) grouped[current[property]] = [];
+        grouped[current[property]].push(current);
+        return grouped;
+      }, {});
     }
   }, {
     key: "processInput",
@@ -137,19 +268,22 @@ function (_GameEngine) {
       });
 
       if (player) {
-        if (inputData.input == 'n') {
-          var scale = scaleTable[player.palette];
-          player.notestack = player.notestack.concat(String.fromCharCode(scale[Math.floor(Math.random() * scale.length)]));
-          console.log(player.notestack);
-        } else if (inputData.input == 'c') {
+        if (inputData.input == 'c') {
           player.palette = palettes[(palettes.indexOf(player.palette) + 1) % palettes.length];
           console.log(player.palette);
         }
       }
 
-      if (isServer) {} else {
-        if (player) {
-          if (inputData.input == 'space') {}
+      if (isServer) {
+        // stuff that should only be processed on the server, such as randomness, which would otherwise cause discrepancies
+        if (inputData.input == 'n') {
+          var scale = scaleTable[player.palette];
+          player.notestack = player.notestack.concat(String.fromCharCode(scale[Math.floor(Math.random() * scale.length)]));
+          console.log(player.notestack);
+        }
+
+        if (inputData.input == 'b') {
+          this.emit('beginPerformance', player);
         }
       }
     }

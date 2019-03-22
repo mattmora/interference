@@ -56,6 +56,10 @@ function (_ServerEngine) {
 
     _this.gameEngine.on('postStep', _this.stepLogic.bind(_assertThisInitialized(_this)));
 
+    _this.gameEngine.on('beginPerformance', function (player) {
+      _this.onBeginPerformance(player);
+    });
+
     return _this;
   } // create food and AI robots
 
@@ -79,6 +83,14 @@ function (_ServerEngine) {
 
       _get(_getPrototypeOf(InterferenceServerEngine.prototype), "onPlayerConnected", this).call(this, socket);
 
+      var player = new _Performer.default(this.gameEngine, null, {});
+      player.number = -1;
+      player.palette = 'default';
+      player.notestack = '';
+      player.rhythmstack = '';
+      console.log(player.number);
+      player.playerId = socket.playerId;
+      this.gameEngine.addObjectToWorld(player);
       socket.on('assignToRoom', function (roomName) {
         if (!Object.keys(_this2.myRooms).includes(roomName)) {
           _this2.createRoom(roomName);
@@ -102,14 +114,6 @@ function (_ServerEngine) {
 
         socket.emit('assignedRoom', roomName);
       });
-      var player = new _Performer.default(this.gameEngine, null, {});
-      player.number = -1;
-      player.palette = 'default';
-      player.notestack = '';
-      player.rhythmstack = '';
-      console.log(player.number);
-      player.playerId = socket.playerId;
-      this.gameEngine.addObjectToWorld(player);
     }
   }, {
     key: "createSyncServer",
@@ -194,8 +198,40 @@ function (_ServerEngine) {
               }
             }
           }
+
+          if (this.myRooms[k].length === 0) {
+            delete this.myRooms[k];
+            delete this.syncServers[k];
+          }
         }
       }
+    }
+  }, {
+    key: "onBeginPerformance",
+    value: function onBeginPerformance(player) {
+      console.log('beginning');
+
+      var _arr2 = Object.keys(this.myRooms);
+
+      for (var _i2 = 0; _i2 < _arr2.length; _i2++) {
+        var k = _arr2[_i2];
+
+        if (this.myRooms[k].includes(player)) {
+          this.addEgg(k);
+        }
+      }
+    }
+  }, {
+    key: "addEgg",
+    value: function addEgg(roomName) {
+      var newEgg = new _Egg.default(this.gameEngine, null, {
+        position: this.gameEngine.randPos(roomName),
+        velocity: this.gameEngine.velRandY()
+      });
+      var numPlayers = this.myRooms[roomName].length;
+      newEgg.hp = Math.random() * numPlayers * 5 + numPlayers * 3;
+      this.assignObjectToRoom(newEgg, roomName);
+      this.gameEngine.addObjectToWorld(newEgg);
     }
     /*
     // Eating Egg:

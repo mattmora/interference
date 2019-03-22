@@ -5,7 +5,7 @@ import { Lib } from 'lance-gg';
 import InterferenceServerEngine from './server/InterferenceServerEngine';
 import InterferenceGameEngine from './common/InterferenceGameEngine';
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 8080;
 const INDEX = path.join(__dirname, '../dist/index.html');
 
 // define routes and socket

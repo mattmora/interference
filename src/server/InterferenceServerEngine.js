@@ -11,9 +11,10 @@ export default class InterferenceServerEngine extends ServerEngine {
         super(io, gameEngine, inputOptions);
 
         this.myRooms = {}; //roomName: [players in the room]
-        this.syncServers = {} //roomName: syncServer
+        this.syncServers = {}; //roomName: syncServer
 
         this.gameEngine.on('postStep', this.stepLogic.bind(this));
+        this.gameEngine.on('beginPerformance', player => { this.onBeginPerformance(player) });
     }
 
     // create food and AI robots
@@ -30,6 +31,15 @@ export default class InterferenceServerEngine extends ServerEngine {
     onPlayerConnected(socket) {
         super.onPlayerConnected(socket);
 
+        let player = new Performer(this.gameEngine, null, {});
+        player.number = -1;
+        player.palette = 'default';
+        player.notestack = '';
+        player.rhythmstack = '';
+        console.log(player.number);
+        player.playerId = socket.playerId;
+        this.gameEngine.addObjectToWorld(player);
+
         socket.on('assignToRoom', roomName => {
             if (!Object.keys(this.myRooms).includes(roomName)) {
                 this.createRoom(roomName);
@@ -45,15 +55,6 @@ export default class InterferenceServerEngine extends ServerEngine {
             this.assignPlayerToSyncServer(socket, roomName);
             socket.emit('assignedRoom', roomName);
         });
-
-        let player = new Performer(this.gameEngine, null, {});
-        player.number = -1;
-        player.palette = 'default';
-        player.notestack = '';
-        player.rhythmstack = '';
-        console.log(player.number);
-        player.playerId = socket.playerId;
-        this.gameEngine.addObjectToWorld(player);
     }
 
     createSyncServer(roomName) {
@@ -106,8 +107,30 @@ export default class InterferenceServerEngine extends ServerEngine {
                     this.myRooms[k].splice(this.myRooms[k].indexOf(player), 1);
                     for (let p of this.myRooms[k]) if (p.number > removed) p.number--; 
                 }
+                if (this.myRooms[k].length === 0) {
+                    delete this.myRooms[k];
+                    delete this.syncServers[k];
+                }
             }
         }
+    }
+
+    onBeginPerformance(player) {
+        console.log('beginning');
+        for (let k of Object.keys(this.myRooms)) {
+            if (this.myRooms[k].includes(player)) {
+                this.addEgg(k);
+            }
+        }
+    }
+
+    addEgg(roomName) {
+        let newEgg = new Egg(this.gameEngine, null, {   position: this.gameEngine.randPos(roomName), 
+                                                        velocity: this.gameEngine.velRandY() });
+        let numPlayers = this.myRooms[roomName].length;
+        newEgg.hp = (Math.random() * numPlayers * 5) + (numPlayers * 3);
+        this.assignObjectToRoom(newEgg, roomName)
+        this.gameEngine.addObjectToWorld(newEgg);
     }
 
     /*

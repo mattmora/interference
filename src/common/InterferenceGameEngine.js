@@ -20,21 +20,21 @@ export default class InterferenceGameEngine extends GameEngine {
             gameEngine: this,
             collisions: { autoResolve: false }
         });
-        this.on('preStep', this.moveAll.bind(this));
+
+        // game constants
+        Object.assign(this, {
+            cellSize: 1, playerWidth: 16, playerHeight: 9,
+            leftBound: 0, topBound: 0, bottomBound: 9,
+            transportSyncInterval: 200, eggRadius: 1, eggBaseXVelocity: 0.1
+        });
 
         // game variables
         Object.assign(this, {
-            playerWidth: 16, playerHeight: 9, transportSyncInterval: 200
+            rooms: [], playersByRoom: {}, eggsByRoom: {}, rightBoundByRoom: {}
         });
 
-        /*
-        Object.assign(this, {
-            foodRadius: 0.1, headRadius: 0.15, bodyRadius: 0.1,
-            eyeDist: 0.08, eyeRadius: 0.03, eyeAngle: 0.5,
-            spaceWidth: 16, spaceHeight: 9, moveDist: 0.06,
-            foodCount: 16, eatDistance: 0.3, collideDistance: 0.3,
-            startBodyLength: 10, aiCount: 3, directionStop: 100
-        }); */
+        this.on('preStep', this.preStepLogic.bind(this));
+        this.on('postStep', this.postStepLogic.bind(this));
     }
 
     registerClasses(serializer) {
@@ -46,20 +46,66 @@ export default class InterferenceGameEngine extends GameEngine {
         super.start();
     }
 
-    randPos() {
-        let x = (Math.random() - 0.5) * this.spaceWidth;
-        let y = (Math.random() - 0.5) * this.spaceHeight;
+    randPos(roomName) {
+        let x = Math.random() * this.playerWidth * this.playersByRoom[roomName].length;
+        let y = Math.random() * this.playerHeight;
         return new TwoVector(x, y);
     }
 
-    moveAll(stepInfo) {
+    velRandY() {
+        let y = (Math.random() - 0.5) * this.eggBaseXVelocity;
+        return new TwoVector(this.eggBaseXVelocity, y);
+    }
 
+    preStepLogic(stepInfo) {
+        this.playersByRoom = this.groupBy(this.world.queryObjects({ instanceType: Performer }), "_roomName");
+        this.rooms = Object.keys(this.playersByRoom);
+        this.eggsByRoom = this.groupBy(this.world.queryObjects({ instanceType: Egg }), "_roomName");
+        this.rightBoundByRoom = {};
+        for (let r of this.rooms) {
+            this.rightBoundByRoom[r] = this.playersByRoom[r].length * this.playerWidth;
+        }
+    }
+
+    postStepLogic(stepInfo) {
+        for (let r of this.rooms) {
+            this.resolveCollisions(r);
+            this.gameLogic(r);
+        }
+    }
+
+    resolveCollisions(r) {
+        /*
         if (stepInfo.isReenact)
             return;
+        */
 
+        if (this.eggsByRoom[r]) {
+            for (let e of this.eggsByRoom[r]) {
+                // bounce off walls
+                if ((e.position.x - this.eggRadius) < this.leftBound) {
+                    e.velocity.x *= -1;
+                    e.position.x = this.leftBound + this.eggRadius;
+                } 
+                else if ((e.position.x + this.eggRadius) > this.rightBoundByRoom[r]) {
+                    e.velocity.x *= -1;
+                    e.position.x = this.rightBoundByRoom[r] - this.eggRadius;
+                }
+                if ((e.position.y - this.eggRadius) < this.topBound) {
+                    e.velocity.y *= -1
+                    e.position.y = this.topBound + this.eggRadius;
+                }
+                else if ((e.position.y + this.eggRadius) > this.bottomBound) {
+                    e.velocity.y *= -1
+                    e.position.y = this.bottomBound - this.eggRadius;
+                }
+            }
+        }
+        
+                        /*
         this.world.forEachObject((id, obj) => {
-            if (obj instanceof Performer) {
-                /*
+            if (obj instanceof Egg) {
+
                 // if the position changed, add a body part and trim the length
                 let pos = obj.position.clone();
                 if (obj.bodyParts.length === 0 || pos.subtract(obj.bodyParts[obj.bodyParts.length-1]).length() > 0.05) {
@@ -76,9 +122,21 @@ export default class InterferenceGameEngine extends GameEngine {
                 obj.position.y = Math.max(obj.position.y, -this.spaceHeight / 2);
                 obj.position.x = Math.min(obj.position.x, this.spaceWidth / 2);
                 obj.position.x = Math.max(obj.position.x, -this.spaceWidth / 2);
-                */
+
             }
-        });
+        });                */
+    }
+
+    gameLogic(r) {
+
+    }
+
+    groupBy(arr, property) {
+        return arr.reduce((grouped, current) => {
+            if (!grouped[current[property]]) grouped[current[property]] = [];
+            grouped[current[property]].push(current);
+            return grouped;
+        }, {});
     }
 
     processInput(inputData, playerId, isServer) {
@@ -87,6 +145,13 @@ export default class InterferenceGameEngine extends GameEngine {
         
         let player = this.world.queryObject({ playerId });
         if (player) {
+            if (inputData.input == 'c') {
+                player.palette = palettes[(palettes.indexOf(player.palette)+1)%palettes.length];
+                console.log(player.palette);
+            }
+        }
+        if (isServer) { 
+        // stuff that should only be processed on the server, such as randomness, which would otherwise cause discrepancies
             if (inputData.input == 'n') {
                 let scale = scaleTable[player.palette];
                 player.notestack = player.notestack.concat(
@@ -94,19 +159,8 @@ export default class InterferenceGameEngine extends GameEngine {
                 );
                 console.log(player.notestack);
             }
-            else if (inputData.input == 'c') {
-                player.palette = palettes[(palettes.indexOf(player.palette)+1)%palettes.length];
-                console.log(player.palette);
-            }
-        }
-        if (isServer) {
-
-        }
-        else {
-            if (player) {
-                if (inputData.input == 'space') {
-
-                }
+            if (inputData.input == 'b') {
+                this.emit('beginPerformance', player);
             }
         }
     }

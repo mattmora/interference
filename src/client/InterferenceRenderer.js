@@ -54,10 +54,13 @@ let client = null;
 let ctx = null;
 let w = 0;
 let h = 0;
+let leftViewBound = 0; // bounds of area to be rendered in game coordinates
+let rightViewBound = 0;
 let time = 0;
 let players = []; 
 let playerId = 0;
 let thisPlayer = null;
+let eggs = [];
 
 let prevNotestack = '';
 let prevRhythmstack = '';
@@ -81,7 +84,7 @@ export default class InterferenceRenderer extends Renderer {
         h = this.canvas.height = window.innerHeight;
         document.body.insertBefore(this.canvas, document.getElementById('logo'));
         ctx = this.ctx = this.canvas.getContext('2d');
-        this.ctx.lineWidth = 5;
+        ctx.lineWidth = 5;
 
         window.addEventListener('resize', ()=>{ this.setRendererSize(); });
     }
@@ -92,9 +95,19 @@ export default class InterferenceRenderer extends Renderer {
         if (client.room === null) return
 
         time = client.syncClient.getSyncTime();
-        players = game.world.queryObjects({ instanceType: Performer });
         playerId = game.playerId;
         thisPlayer = game.world.queryObject({ playerId });
+        if (client.performanceView) {
+            players = [thisPlayer];
+            leftViewBound = thisPlayer.number * game.playerWidth;
+            rightViewBound = (thisPlayer.number + 1) * game.playerWidth;
+        }
+        else {
+            players = game.world.queryObjects({ instanceType: Performer });
+            leftViewBound = 0;
+            rightViewBound = players.length * game.playerWidth;
+        }
+        eggs = game.world.queryObjects({ instanceType: Egg });
 
         bg = paletteTable[thisPlayer.palette].bg;
         c1 = paletteTable[thisPlayer.palette].c1;
@@ -120,13 +133,16 @@ export default class InterferenceRenderer extends Renderer {
         ctx.save();
         //ctx.scale(this.clientEngine.zoom, this.clientEngine.zoom);  // Zoom in and flip y axis
         // Draw all things
-        this.drawField();
+        this.updateClientSequencer();
+        this.drawPlayers();
+        this.drawEggs();
+
         /*
         if (this.gameEngine.playerId < 5) {
             Tone.Transport.seconds = t/1000;
             ctx.fillStyle = 'red';
         } */
-        ctx.fillStyle = 'black';
+        ctx.fillStyle = c1;
         ctx.font = "20px Georgia";
         ctx.fillText(playerId, 50, 25);
         ctx.fillText(time, 50, 50);
@@ -135,39 +151,49 @@ export default class InterferenceRenderer extends Renderer {
         ctx.restore(); 
     }
 
-    drawField() {
-        if (client.performanceView) {
-
-
+    drawPlayers() {
+        let n = players.length;
+        for (let p of players) {
+            let i = p.number;
+            let x = (w / n) * i;
+            ctx.fillStyle = paletteTable[p.palette].bg;
+            ctx.fillRect(x, 0, w / n, h / n)
         }
-        else {
-            let n = players.length;
-            for (let p of players) {
-                let i = p.number;
-                let x = (i / n) * w;
-                let y = (i / n) * h;
-                ctx.fillStyle = paletteTable[p.palette].bg;
-                ctx.fillRect(x, 0, w / n, h / n)
-            }
-            if (thisPlayer) {
-                let i = thisPlayer.number;
-                let x = (i / n) * w;
-                let y = (i / n) * h;
+        let i = thisPlayer.number;
+        let x = (w / n) * (i + 0.5);
+        ctx.fillStyle = 'black';
+        this.triangle(   x,                 (1.1 * h) / n, 
+                    x - ((0.25 * w) / n),   (1.15 * h) / n,
+                    x + ((0.25 * w) / n),   (1.15 * h) / n );   
+    }
+
+    drawEggs() {
+        let leftBound = leftViewBound - game.eggRadius;
+        let rightBound = rightViewBound + game.eggRadius;
+        for (let e of eggs) {
+            if (leftBound < e.position.x && e.position.x < rightBound) {
+                ctx.fillStyle = 'white';
                 ctx.strokeStyle = 'black';
-                ctx.strokeRect(x, 0, w / n, h / n)   
-                if (thisPlayer.notestack !== prevNotestack) {
-                    client.notestack = [];
-                    for (let c = 0; c < thisPlayer.notestack.length; c++) {
-                        client.notestack.push(Frequency(thisPlayer.notestack.charCodeAt(c), 'midi').toNote());
-                    }
-                    prevNotestack = thisPlayer.notestack;
-                    console.log(client.notestack);
+                let pos = this.gamePositionToCanvasPosition(e.position.x, e.position.y)
+                this.circle(pos[0], pos[1], this.gameDistanceToCanvasDistance(game.eggRadius));
+            }
+        }
+    }
+
+    updateClientSequencer() {
+        if (thisPlayer) {
+            if (thisPlayer.notestack !== prevNotestack) {
+                client.notestack = [];
+                for (let c = 0; c < thisPlayer.notestack.length; c++) {
+                    client.notestack.push(Frequency(thisPlayer.notestack.charCodeAt(c), 'midi').toNote());
                 }
-                if (thisPlayer.rhythmstack !== prevRhythmstack) {
-                    client.rhythmstack = thisPlayer.rhythmstack.split(' ');
-                    prevRhythmstack = thisPlayer.rhythmstack;
-                    console.log(client.rhythmstack);
-                }
+                prevNotestack = thisPlayer.notestack;
+                console.log(client.notestack);
+            }
+            if (thisPlayer.rhythmstack !== prevRhythmstack) {
+                client.rhythmstack = thisPlayer.rhythmstack.split(' ');
+                prevRhythmstack = thisPlayer.rhythmstack;
+                console.log(client.rhythmstack);
             }
         }
     }
@@ -206,28 +232,36 @@ export default class InterferenceRenderer extends Renderer {
         h = this.canvas.height = window.innerHeight;
     }
 
-    drawFood(f) {
-        ctx.strokeStyle = ctx.fillStyle = 'Orange';
-        this.drawCircle(f.position.x, f.position.y, game.foodRadius, true);
-        ctx.strokeStyle = ctx.fillStyle = 'White';
+    gamePositionToCanvasPosition(gameX, gameY) {
+        let canvasX = this.mapToRange(gameX, leftViewBound, rightViewBound, 0, w);
+        let canvasY = this.mapToRange(gameY, 0, game.playerHeight, 0, h / players.length) 
+        return [canvasX, canvasY];
     }
 
-    drawCircle(x, y, radius, fill) {
+    gameDistanceToCanvasDistance(gameDist) {
+        let canvasDist = this.mapToRange(gameDist, 0, game.playerWidth, 0, w / players.length);
+        return canvasDist;
+    }
+
+    mapToRange(val, l1, h1, l2, h2) {
+        return Math.floor(l2 + (h2 - l2) * (val - l1) / (h1 - l1));
+    }
+
+    circle(x, y, radius) {
         ctx.beginPath();
         ctx.arc(x, y, radius, 0, 2*Math.PI);
-        fill?ctx.fill():ctx.stroke();
+        ctx.fill();
+        ctx.stroke();
         ctx.closePath();
     }
 
-    drawBounds() {
+    triangle(x1, y1, x2, y2, x3, y3) {
         ctx.beginPath();
-        ctx.moveTo(-game.spaceWidth/2, -game.spaceHeight/2);
-        ctx.lineTo(-game.spaceWidth/2, game.spaceHeight/2);
-        ctx.lineTo( game.spaceWidth/2, game.spaceHeight/2);
-        ctx.lineTo( game.spaceWidth/2, -game.spaceHeight/2);
-        ctx.lineTo(-game.spaceWidth/2, -game.spaceHeight/2);
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(x2, y2);
+        ctx.lineTo(x3, y3);
+        ctx.fill();
         ctx.closePath();
-        ctx.stroke();
     }
 
 }

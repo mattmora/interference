@@ -14,7 +14,7 @@ var _InterferenceGameEngine = _interopRequireDefault(require("./common/Interfere
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
-var PORT = process.env.PORT || 3000;
+var PORT = process.env.PORT || 8080;
 
 var INDEX = _path.default.join(__dirname, '../dist/index.html'); // define routes and socket
 
