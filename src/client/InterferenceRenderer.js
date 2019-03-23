@@ -143,7 +143,7 @@ export default class InterferenceRenderer extends Renderer {
             ctx.fillStyle = 'red';
         } */
         ctx.fillStyle = c1;
-        ctx.font = "20px Georgia";
+        ctx.font = "20px Lucida Console";
         ctx.fillText(playerId, 50, 25);
         ctx.fillText(time, 50, 50);
         ctx.fillText(client.transport.position, 50, 75);
@@ -154,17 +154,17 @@ export default class InterferenceRenderer extends Renderer {
     drawPlayers() {
         let n = players.length;
         for (let p of players) {
-            let i = p.number;
-            let x = (w / n) * i;
+            let i = p.number - (leftViewBound / game.playerWidth);
+            let x = ((w / n) * i);
             ctx.fillStyle = paletteTable[p.palette].bg;
             ctx.fillRect(x, 0, w / n, h / n)
         }
         let i = thisPlayer.number;
         let x = (w / n) * (i + 0.5);
-        ctx.fillStyle = 'black';
-        this.triangle(   x,                 (1.1 * h) / n, 
-                    x - ((0.25 * w) / n),   (1.15 * h) / n,
-                    x + ((0.25 * w) / n),   (1.15 * h) / n );   
+        ctx.fillStyle = 'white';
+        this.triangle(  x,                      (1.05 * h) / n, 
+                        x - ((0.25 * w) / n),   (1.15 * h) / n,
+                        x + ((0.25 * w) / n),   (1.15 * h) / n );   
     }
 
     drawEggs() {

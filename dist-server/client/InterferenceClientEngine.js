@@ -11,6 +11,10 @@ var _client = _interopRequireDefault(require("@ircam/sync/client"));
 
 var _InterferenceRenderer = _interopRequireDefault(require("../client/InterferenceRenderer"));
 
+var _Performer = _interopRequireDefault(require("../common/Performer"));
+
+var _Egg = _interopRequireDefault(require("../common/Egg"));
+
 var _tone = require("tone");
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
@@ -47,6 +51,7 @@ var InterferenceClientEngine =
 function (_ClientEngine) {
   _inherits(InterferenceClientEngine, _ClientEngine);
 
+  /// INITIALIZATION AND CONNECTION
   function InterferenceClientEngine(gameEngine, options) {
     var _this;
 
@@ -55,11 +60,21 @@ function (_ClientEngine) {
     _this = _possibleConstructorReturn(this, _getPrototypeOf(InterferenceClientEngine).call(this, gameEngine, options, _InterferenceRenderer.default));
     _this.syncClient = null;
     _this.transport = _tone.Transport;
-    _this.notestack = [];
-    _this.rhythmstack = ['4n'];
+    _this.player = null;
     _this.room = null;
+    _this.players = [];
+    _this.eggs = [];
+    _this.eggSounds = {};
     _this.performanceView = false;
     _this.controls = new _lanceGg.KeyboardControls(_assertThisInitialized(_this));
+    _this.prevState = 'setup';
+
+    _this.gameEngine.on('client__postStep', _this.stepLogic.bind(_assertThisInitialized(_this)));
+
+    _this.gameEngine.on('eggBounce', function (e) {
+      _this.onEggBounce(e);
+    });
+
     return _this;
   }
 
@@ -100,15 +115,11 @@ function (_ClientEngine) {
             }
           }
         } else {
-          if (e.code === 'Space') {
-            console.log('space');
-
+          if (e.code === 'Backquote') {
             if (_this2.transport.state !== 'started') {
               _this2.transport.start();
 
-              _this2.transport.seconds = _this2.syncClient.getSyncTime();
-
-              _this2.sequencerLoop(0);
+              _this2.transport.seconds = _this2.syncClient.getSyncTime(); //this.sequencerLoop(0);
             } else {
               _this2.transport.pause();
             }
@@ -120,7 +131,12 @@ function (_ClientEngine) {
             viewLock = !viewLock;
           }
         }
-      });
+      }); //this.transport.timeSignature = 4;
+
+      this.reverb = new _tone.Reverb(1).toMaster();
+      this.reverb.generate();
+      this.bitcrusher = new _tone.BitCrusher(4).toMaster();
+      this.autowah = new _tone.AutoWah().connect(this.reverb);
       this.synth = new _tone.Synth({
         oscillator: {
           type: 'sine',
@@ -132,7 +148,24 @@ function (_ClientEngine) {
           sustain: 0,
           release: 0.1
         }
+      }).toMaster(); // BUILDERS
+      // Tetris Chain
+
+      this.tetrisChainSynth = new _tone.Synth({
+        oscillator: {
+          type: 'triangle',
+          modulationFrequency: 0.2
+        },
+        envelope: {
+          attack: 0.1,
+          decay: 0.1,
+          sustain: 0.5,
+          release: 0.1
+        }
       }).toMaster();
+      this.tetrisChainSequence = new _tone.Sequence(function (time, note) {
+        this.tetrisChainSynth.triggerAttackRelease(note, '16n', time);
+      }, [], "8n");
       /*
       // show try-again button
       this.gameEngine.on('objectDestroyed', (obj) => {
@@ -176,42 +209,53 @@ function (_ClientEngine) {
       return _get(_getPrototypeOf(InterferenceClientEngine.prototype), "connect", this).call(this).then(function () {
         _this3.socket.on('assignedRoom', function (roomName) {
           _this3.room = roomName;
-          var startTime = performance.now();
-          _this3.syncClient = new _client.default(function () {
-            return (performance.now() - startTime) / 1000;
-          });
 
-          _this3.syncClient.start( // send function
-          function (pingId, clientPingTime) {
-            var request = [];
-            request[0] = 0; // we send a ping
+          _this3.transport.start();
 
-            request[1] = pingId;
-            request[2] = clientPingTime; //console.log('[ping] - id: %s, pingTime: %s', request[1], request[2]);
+          _this3.startSyncClient(_this3.socket);
 
-            _this3.socket.emit('syncClientData', request);
-          }, // receive function  
-          function (callback) {
-            // unpack args before executing the callback
-            _this3.socket.on('syncServerData', function (data) {
-              var response = data;
-
-              if (response[0] === 1) {
-                // this is a pong
-                var pingId = response[1];
-                var clientPingTime = response[2];
-                var serverPingTime = response[3];
-                var serverPongTime = response[4]; //console.log('[pong] - id: %s, clientPingTime: %s, serverPingTime: %s, serverPongTime: %s',
-                //pingId, clientPingTime, serverPingTime, serverPongTime);
-
-                callback(pingId, clientPingTime, serverPingTime, serverPongTime);
-              }
-            });
-          }, // status report function
-          function (status) {} //console.log(status); }
-          );
+          _this3.startEffects();
         });
       });
+    }
+  }, {
+    key: "startSyncClient",
+    value: function startSyncClient(socket) {
+      var _this4 = this;
+
+      var startTime = performance.now();
+      this.syncClient = new _client.default(function () {
+        return (performance.now() - startTime) / 1000;
+      });
+      this.syncClient.start( // send function
+      function (pingId, clientPingTime) {
+        var request = [];
+        request[0] = 0; // we send a ping
+
+        request[1] = pingId;
+        request[2] = clientPingTime; //console.log('[ping] - id: %s, pingTime: %s', request[1], request[2]);
+
+        _this4.socket.emit('syncClientData', request);
+      }, // receive function  
+      function (callback) {
+        // unpack args before executing the callback
+        _this4.socket.on('syncServerData', function (data) {
+          var response = data;
+
+          if (response[0] === 1) {
+            // this is a pong
+            var pingId = response[1];
+            var clientPingTime = response[2];
+            var serverPingTime = response[3];
+            var serverPongTime = response[4]; //console.log('[pong] - id: %s, clientPingTime: %s, serverPingTime: %s, serverPongTime: %s',
+            //pingId, clientPingTime, serverPingTime, serverPongTime);
+
+            callback(pingId, clientPingTime, serverPingTime, serverPongTime);
+          }
+        });
+      }, // status report function
+      function (status) {} //console.log(status); }
+      );
     }
   }, {
     key: "assignToRoom",
@@ -223,37 +267,140 @@ function (_ClientEngine) {
 
         console.log('binding keys'); //this.controls.bindKey('space', 'space');
 
+        this.controls.bindKey('open bracket', '[');
+        this.controls.bindKey('close bracket / å', ']');
         this.controls.bindKey('n', 'n');
         this.controls.bindKey('b', 'b'); // begin
 
         this.controls.bindKey('c', 'c'); // change color
       }
+    } ///////////////////////////////////////////////////////////////////////////////////////////
+    /// SOUND HANDLING
+
+  }, {
+    key: "stepLogic",
+    value: function stepLogic() {
+      if (this.room === null) return; //if we yet to be assigned a room, don't do this stuff
+
+      this.player = this.gameEngine.world.queryObject({
+        playerId: this.gameEngine.playerId
+      });
+      this.players = this.gameEngine.world.queryObjects({
+        instanceType: _Performer.default
+      });
+      this.eggs = this.gameEngine.world.queryObjects({
+        instanceType: _Egg.default
+      });
+      var stage = this.player.stage;
+
+      if (stage === 'setup') {} else if (stage === 'intro') {
+        if (this.transport.state !== 'started' && this.prevStage !== stage) {
+          this.transport.start();
+          this.transport.seconds = this.syncClient.getSyncTime();
+        }
+
+        var _iteratorNormalCompletion = true;
+        var _didIteratorError = false;
+        var _iteratorError = undefined;
+
+        try {
+          for (var _iterator = this.eggs[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
+            var e = _step.value;
+            if (!Object.keys(this.eggSounds).includes(e.toString())) this.constructEggSounds(e);
+            var vol = 1 - 0.3 * Math.abs(this.player.number - Math.floor(e.position.x / this.gameEngine.playerWidth));
+            if (vol < 0) vol = 0;
+            this.eggSounds[e.toString()].drone.volume.rampTo(vol, 0.1);
+          }
+        } catch (err) {
+          _didIteratorError = true;
+          _iteratorError = err;
+        } finally {
+          try {
+            if (!_iteratorNormalCompletion && _iterator.return != null) {
+              _iterator.return();
+            }
+          } finally {
+            if (_didIteratorError) {
+              throw _iteratorError;
+            }
+          }
+        }
+      }
+
+      this.prevStage = stage;
     }
   }, {
-    key: "sequencerLoop",
-    value: function sequencerLoop(thisTime) {
-      var _this4 = this;
+    key: "onEggBounce",
+    value: function onEggBounce(e) {
+      if (!Object.keys(this.eggSounds).includes(e.toString())) this.constructEggSounds(e);
+      var leftBound = this.player.number * this.gameEngine.playerWidth;
+      var rightBound = (this.player.number + 1) * this.gameEngine.playerWidth;
 
-      this.rhythmstack = ['4n'];
-      console.log('step');
-
-      if (this.notestack.length && this.rhythmstack.length) {
-        if (noteIndex >= this.notestack.length) noteIndex = 0;
-        if (rhythmIndex >= this.rhythmstack.length) rhythmIndex = 0;
-        this.synth.triggerAttackRelease(this.notestack[noteIndex], '8n', thisTime);
-        this.transport.scheduleOnce(function (nextTime) {
-          _this4.sequencerLoop(nextTime);
-        }, _tone.Transport.getSecondsAtTime(_tone.Transport.nextSubdivision(this.rhythmstack[rhythmIndex])));
-        noteIndex++;
-        rhythmIndex++;
-      } else {
-        noteIndex = 0;
-        rhythmIndex = 0;
-        this.transport.scheduleOnce(function (nextTime) {
-          _this4.sequencerLoop(nextTime);
-        }, _tone.Transport.getSecondsAtTime(_tone.Transport.nextSubdivision('1m')));
+      if (leftBound < e.position.x && e.position.x < rightBound) {
+        this.eggSounds[e.toString()].bounce.triggerAttackRelease('8n');
       }
     }
+  }, {
+    key: "startEffects",
+    value: function startEffects() {//this.bitcrusher.start();
+    }
+  }, {
+    key: "constructEggSounds",
+    value: function constructEggSounds(e) {
+      //console.log('making egg sounds');
+      console.log(e.toString());
+      this.eggSounds[e.toString()] = {
+        drone: new _tone.NoiseSynth({
+          noise: {
+            type: 'pink'
+          },
+          envelope: {
+            attack: 1,
+            decay: 0.1,
+            sustain: 1,
+            release: 0.1
+          }
+        }),
+        bounce: new _tone.NoiseSynth({
+          noise: {
+            type: 'white'
+          },
+          envelope: {
+            attack: 0.01,
+            decay: 0.3,
+            sustain: 0.1,
+            release: 0.5
+          }
+        })
+      };
+      this.eggSounds[e.toString()].drone.connect(this.autowah);
+      this.eggSounds[e.toString()].bounce.connect(this.autowah);
+      this.eggSounds[e.toString()].drone.triggerAttack('+0', 0.1);
+    }
+    /*
+    sequencerLoop(thisTime) {
+        this.rhythmstack = ['4n'];
+        console.log('step');
+        if (this.notestack.length && this.rhythmstack.length) {
+            if (noteIndex >= this.notestack.length) noteIndex = 0;
+            if (rhythmIndex >= this.rhythmstack.length) rhythmIndex = 0;
+            this.synth.triggerAttackRelease(this.notestack[noteIndex], '8n', thisTime)
+            this.transport.scheduleOnce(nextTime => { this.sequencerLoop(nextTime); }, 
+                Transport.getSecondsAtTime(Transport.nextSubdivision(this.rhythmstack[rhythmIndex]))
+            );
+            noteIndex++;
+            rhythmIndex++;
+        }
+        else {
+            noteIndex = 0;
+            rhythmIndex = 0;
+            this.transport.scheduleOnce(nextTime => { this.sequencerLoop(nextTime) }, 
+                Transport.getSecondsAtTime(Transport.nextSubdivision('1m'))
+            );
+        }
+    }
+    */
+
     /*
     updateMouseXY(e) {
         e.preventDefault();

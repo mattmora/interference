@@ -49,6 +49,9 @@ function (_DynamicObject) {
         },
         rhythmstack: {
           type: _lanceGg.BaseTypes.TYPES.STRING
+        },
+        stage: {
+          type: _lanceGg.BaseTypes.TYPES.STRING
         }
       }, _get(_getPrototypeOf(Performer), "netScheme", this));
     }

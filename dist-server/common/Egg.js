@@ -64,7 +64,7 @@ function (_DynamicObject) {
   _createClass(Egg, [{
     key: "toString",
     value: function toString() {
-      return "Egg::".concat(_get(_getPrototypeOf(Egg.prototype), "toString", this).call(this), " position=").concat(this.position);
+      return "Egg[".concat(this.id, "]");
     }
   }]);
 

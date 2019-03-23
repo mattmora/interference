@@ -7,7 +7,8 @@ export default class Performer extends DynamicObject {
             number: { type: BaseTypes.TYPES.INT16 },
             palette: { type: BaseTypes.TYPES.STRING },
             notestack: { type: BaseTypes.TYPES.STRING },
-            rhythmstack: { type: BaseTypes.TYPES.STRING }
+            rhythmstack: { type: BaseTypes.TYPES.STRING },
+            stage: { type: BaseTypes.TYPES.STRING }
         }, super.netScheme);
     }
 

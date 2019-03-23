@@ -11,6 +11,7 @@ export default class InterferenceServerEngine extends ServerEngine {
         super(io, gameEngine, inputOptions);
 
         this.myRooms = {}; //roomName: [players in the room]
+        this.roomStages = {};
         this.syncServers = {}; //roomName: syncServer
 
         this.gameEngine.on('postStep', this.stepLogic.bind(this));
@@ -36,6 +37,7 @@ export default class InterferenceServerEngine extends ServerEngine {
         player.palette = 'default';
         player.notestack = '';
         player.rhythmstack = '';
+        player.stage = 'setup'
         console.log(player.number);
         player.playerId = socket.playerId;
         this.gameEngine.addObjectToWorld(player);
@@ -45,9 +47,11 @@ export default class InterferenceServerEngine extends ServerEngine {
                 this.createRoom(roomName);
                 this.createSyncServer(roomName);
                 this.myRooms[roomName] = [];
+                this.roomStages[roomName] = 'setup';
             }
             player.number = this.myRooms[roomName].length;
             player.palette = palettes[player.number%palettes.length];
+            player.stage = this.roomStages[roomName];
             console.log(player.number);
             this.myRooms[roomName].push(player);
             this.assignPlayerToRoom(player.playerId, roomName);
@@ -108,6 +112,8 @@ export default class InterferenceServerEngine extends ServerEngine {
                     for (let p of this.myRooms[k]) if (p.number > removed) p.number--; 
                 }
                 if (this.myRooms[k].length === 0) {
+                    for (let e of this.gameEngine.world.queryObjects({ instanceType: Egg })) 
+                        this.gameEngine.removeObjectFromWorld(e);
                     delete this.myRooms[k];
                     delete this.syncServers[k];
                 }
@@ -117,11 +123,11 @@ export default class InterferenceServerEngine extends ServerEngine {
 
     onBeginPerformance(player) {
         console.log('beginning');
-        for (let k of Object.keys(this.myRooms)) {
-            if (this.myRooms[k].includes(player)) {
-                this.addEgg(k);
-            }
-        }
+        let r = player._roomName;
+        this.roomStages[r] = 'intro';
+        for (let p of this.myRooms[r])
+            p.stage = 'intro';
+        this.addEgg(r);
     }
 
     addEgg(roomName) {

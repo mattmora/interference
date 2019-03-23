@@ -19,6 +19,6 @@ export default class Egg extends DynamicObject {
     }
 
     toString() {
-        return `Egg::${super.toString()} position=${this.position}`;
+        return `Egg[${this.id}]`;
     }
 }

@@ -189,7 +189,7 @@ function (_Renderer) {
       } */
 
       ctx.fillStyle = c1;
-      ctx.font = "20px Georgia";
+      ctx.font = "20px Lucida Console";
       ctx.fillText(playerId, 50, 25);
       ctx.fillText(time, 50, 50);
       ctx.fillText(client.transport.position, 50, 75);
@@ -206,7 +206,8 @@ function (_Renderer) {
       try {
         for (var _iterator = players[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
           var p = _step.value;
-          var _i = p.number;
+
+          var _i = p.number - leftViewBound / game.playerWidth;
 
           var _x = w / n * _i;
 
@@ -230,8 +231,8 @@ function (_Renderer) {
 
       var i = thisPlayer.number;
       var x = w / n * (i + 0.5);
-      ctx.fillStyle = 'black';
-      this.triangle(x, 1.1 * h / n, x - 0.25 * w / n, 1.15 * h / n, x + 0.25 * w / n, 1.15 * h / n);
+      ctx.fillStyle = 'white';
+      this.triangle(x, 1.05 * h / n, x - 0.25 * w / n, 1.15 * h / n, x + 0.25 * w / n, 1.15 * h / n);
     }
   }, {
     key: "drawEggs",

@@ -86,18 +86,22 @@ export default class InterferenceGameEngine extends GameEngine {
                 if ((e.position.x - this.eggRadius) < this.leftBound) {
                     e.velocity.x *= -1;
                     e.position.x = this.leftBound + this.eggRadius;
+                    this.emit('eggBounce', e);
                 } 
                 else if ((e.position.x + this.eggRadius) > this.rightBoundByRoom[r]) {
                     e.velocity.x *= -1;
                     e.position.x = this.rightBoundByRoom[r] - this.eggRadius;
+                    this.emit('eggBounce', e);
                 }
                 if ((e.position.y - this.eggRadius) < this.topBound) {
                     e.velocity.y *= -1
                     e.position.y = this.topBound + this.eggRadius;
+                    this.emit('eggBounce', e);
                 }
                 else if ((e.position.y + this.eggRadius) > this.bottomBound) {
                     e.velocity.y *= -1
                     e.position.y = this.bottomBound - this.eggRadius;
+                    this.emit('eggBounce', e);
                 }
             }
         }
@@ -144,24 +148,54 @@ export default class InterferenceGameEngine extends GameEngine {
         super.processInput(inputData, playerId);
         
         let player = this.world.queryObject({ playerId });
-        if (player) {
-            if (inputData.input == 'c') {
+        let players = this.playersByRoom[player._roomName];
+
+        if (inputData.input == 'c') {
+            if (player.stage === 'setup') {
                 player.palette = palettes[(palettes.indexOf(player.palette)+1)%palettes.length];
                 console.log(player.palette);
             }
         }
+        
         if (isServer) { 
         // stuff that should only be processed on the server, such as randomness, which would otherwise cause discrepancies
-            if (inputData.input == 'n') {
+        // or actions that require more info than is available to one player
+            //console.log(inputData.input);
+            if (player.stage === 'setup') {
+                if (inputData.input == '[') {
+                    let newNumber = player.number - 1;
+                    if (newNumber < 0) newNumber = players.length - 1;
+                    for (let p of players) { 
+                        if (p.number === newNumber) p.number = player.number; 
+                    }
+                    player.number = newNumber;
+                }
+                else if (inputData.input == ']') {
+                    let newNumber = player.number + 1;
+                    if (newNumber >= players.length) newNumber = 0;
+                    for (let p of players) { 
+                        if (p.number === newNumber) p.number = player.number; 
+                    }
+                    player.number = newNumber;
+                } 
+                else if (inputData.input == 'b') {
+                    this.emit('beginPerformance', player);
+                }
+            }
+            else if (player.stage === 'intro') {
+                if (inputData.input == 'b') {
+                    this.emit('beginPerformance', player);
+                }
+            }
+            else if (inputData.input == 'n') {
                 let scale = scaleTable[player.palette];
                 player.notestack = player.notestack.concat(
                     String.fromCharCode(scale[Math.floor(Math.random() * scale.length)])
                 );
                 console.log(player.notestack);
             }
-            if (inputData.input == 'b') {
-                this.emit('beginPerformance', player);
-            }
+
+
         }
     }
 }

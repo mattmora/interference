@@ -191,22 +191,26 @@ function (_GameEngine) {
         try {
           for (var _iterator3 = this.eggsByRoom[r][Symbol.iterator](), _step3; !(_iteratorNormalCompletion3 = (_step3 = _iterator3.next()).done); _iteratorNormalCompletion3 = true) {
             var e = _step3.value;
-            console.log(e.position); // bounce off walls
 
+            // bounce off walls
             if (e.position.x - this.eggRadius < this.leftBound) {
               e.velocity.x *= -1;
               e.position.x = this.leftBound + this.eggRadius;
+              this.emit('eggBounce', e);
             } else if (e.position.x + this.eggRadius > this.rightBoundByRoom[r]) {
               e.velocity.x *= -1;
               e.position.x = this.rightBoundByRoom[r] - this.eggRadius;
+              this.emit('eggBounce', e);
             }
 
             if (e.position.y - this.eggRadius < this.topBound) {
               e.velocity.y *= -1;
               e.position.y = this.topBound + this.eggRadius;
+              this.emit('eggBounce', e);
             } else if (e.position.y + this.eggRadius > this.bottomBound) {
               e.velocity.y *= -1;
               e.position.y = this.bottomBound - this.eggRadius;
+              this.emit('eggBounce', e);
             }
           }
         } catch (err) {
@@ -266,9 +270,10 @@ function (_GameEngine) {
       var player = this.world.queryObject({
         playerId: playerId
       });
+      var players = this.playersByRoom[player._roomName];
 
-      if (player) {
-        if (inputData.input == 'c') {
+      if (inputData.input == 'c') {
+        if (player.stage === 'setup') {
           player.palette = palettes[(palettes.indexOf(player.palette) + 1) % palettes.length];
           console.log(player.palette);
         }
@@ -276,14 +281,77 @@ function (_GameEngine) {
 
       if (isServer) {
         // stuff that should only be processed on the server, such as randomness, which would otherwise cause discrepancies
-        if (inputData.input == 'n') {
+        // or actions that require more info than is available to one player
+        //console.log(inputData.input);
+        if (player.stage === 'setup') {
+          if (inputData.input == '[') {
+            var newNumber = player.number - 1;
+            if (newNumber < 0) newNumber = players.length - 1;
+            var _iteratorNormalCompletion4 = true;
+            var _didIteratorError4 = false;
+            var _iteratorError4 = undefined;
+
+            try {
+              for (var _iterator4 = players[Symbol.iterator](), _step4; !(_iteratorNormalCompletion4 = (_step4 = _iterator4.next()).done); _iteratorNormalCompletion4 = true) {
+                var p = _step4.value;
+                if (p.number === newNumber) p.number = player.number;
+              }
+            } catch (err) {
+              _didIteratorError4 = true;
+              _iteratorError4 = err;
+            } finally {
+              try {
+                if (!_iteratorNormalCompletion4 && _iterator4.return != null) {
+                  _iterator4.return();
+                }
+              } finally {
+                if (_didIteratorError4) {
+                  throw _iteratorError4;
+                }
+              }
+            }
+
+            player.number = newNumber;
+          } else if (inputData.input == ']') {
+            var _newNumber = player.number + 1;
+
+            if (_newNumber >= players.length) _newNumber = 0;
+            var _iteratorNormalCompletion5 = true;
+            var _didIteratorError5 = false;
+            var _iteratorError5 = undefined;
+
+            try {
+              for (var _iterator5 = players[Symbol.iterator](), _step5; !(_iteratorNormalCompletion5 = (_step5 = _iterator5.next()).done); _iteratorNormalCompletion5 = true) {
+                var _p = _step5.value;
+                if (_p.number === _newNumber) _p.number = player.number;
+              }
+            } catch (err) {
+              _didIteratorError5 = true;
+              _iteratorError5 = err;
+            } finally {
+              try {
+                if (!_iteratorNormalCompletion5 && _iterator5.return != null) {
+                  _iterator5.return();
+                }
+              } finally {
+                if (_didIteratorError5) {
+                  throw _iteratorError5;
+                }
+              }
+            }
+
+            player.number = _newNumber;
+          } else if (inputData.input == 'b') {
+            this.emit('beginPerformance', player);
+          }
+        } else if (player.stage === 'intro') {
+          if (inputData.input == 'b') {
+            this.emit('beginPerformance', player);
+          }
+        } else if (inputData.input == 'n') {
           var scale = scaleTable[player.palette];
           player.notestack = player.notestack.concat(String.fromCharCode(scale[Math.floor(Math.random() * scale.length)]));
           console.log(player.notestack);
-        }
-
-        if (inputData.input == 'b') {
-          this.emit('beginPerformance', player);
         }
       }
     }

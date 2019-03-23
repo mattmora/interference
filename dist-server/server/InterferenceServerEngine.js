@@ -52,6 +52,7 @@ function (_ServerEngine) {
     _this = _possibleConstructorReturn(this, _getPrototypeOf(InterferenceServerEngine).call(this, io, gameEngine, inputOptions));
     _this.myRooms = {}; //roomName: [players in the room]
 
+    _this.roomStages = {};
     _this.syncServers = {}; //roomName: syncServer
 
     _this.gameEngine.on('postStep', _this.stepLogic.bind(_assertThisInitialized(_this)));
@@ -88,6 +89,7 @@ function (_ServerEngine) {
       player.palette = 'default';
       player.notestack = '';
       player.rhythmstack = '';
+      player.stage = 'setup';
       console.log(player.number);
       player.playerId = socket.playerId;
       this.gameEngine.addObjectToWorld(player);
@@ -98,10 +100,12 @@ function (_ServerEngine) {
           _this2.createSyncServer(roomName);
 
           _this2.myRooms[roomName] = [];
+          _this2.roomStages[roomName] = 'setup';
         }
 
         player.number = _this2.myRooms[roomName].length;
         player.palette = palettes[player.number % palettes.length];
+        player.stage = _this2.roomStages[roomName];
         console.log(player.number);
 
         _this2.myRooms[roomName].push(player);
@@ -200,6 +204,32 @@ function (_ServerEngine) {
           }
 
           if (this.myRooms[k].length === 0) {
+            var _iteratorNormalCompletion2 = true;
+            var _didIteratorError2 = false;
+            var _iteratorError2 = undefined;
+
+            try {
+              for (var _iterator2 = this.gameEngine.world.queryObjects({
+                instanceType: _Egg.default
+              })[Symbol.iterator](), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
+                var e = _step2.value;
+                this.gameEngine.removeObjectFromWorld(e);
+              }
+            } catch (err) {
+              _didIteratorError2 = true;
+              _iteratorError2 = err;
+            } finally {
+              try {
+                if (!_iteratorNormalCompletion2 && _iterator2.return != null) {
+                  _iterator2.return();
+                }
+              } finally {
+                if (_didIteratorError2) {
+                  throw _iteratorError2;
+                }
+              }
+            }
+
             delete this.myRooms[k];
             delete this.syncServers[k];
           }
@@ -210,16 +240,33 @@ function (_ServerEngine) {
     key: "onBeginPerformance",
     value: function onBeginPerformance(player) {
       console.log('beginning');
+      var r = player._roomName;
+      this.roomStages[r] = 'intro';
+      var _iteratorNormalCompletion3 = true;
+      var _didIteratorError3 = false;
+      var _iteratorError3 = undefined;
 
-      var _arr2 = Object.keys(this.myRooms);
-
-      for (var _i2 = 0; _i2 < _arr2.length; _i2++) {
-        var k = _arr2[_i2];
-
-        if (this.myRooms[k].includes(player)) {
-          this.addEgg(k);
+      try {
+        for (var _iterator3 = this.myRooms[r][Symbol.iterator](), _step3; !(_iteratorNormalCompletion3 = (_step3 = _iterator3.next()).done); _iteratorNormalCompletion3 = true) {
+          var p = _step3.value;
+          p.stage = 'intro';
+        }
+      } catch (err) {
+        _didIteratorError3 = true;
+        _iteratorError3 = err;
+      } finally {
+        try {
+          if (!_iteratorNormalCompletion3 && _iterator3.return != null) {
+            _iterator3.return();
+          }
+        } finally {
+          if (_didIteratorError3) {
+            throw _iteratorError3;
+          }
         }
       }
+
+      this.addEgg(r);
     }
   }, {
     key: "addEgg",
@@ -261,12 +308,12 @@ function (_ServerEngine) {
       var eggs = this.gameEngine.world.queryObjects({
         instanceType: _Egg.default
       });
-      var _iteratorNormalCompletion2 = true;
-      var _didIteratorError2 = false;
-      var _iteratorError2 = undefined;
+      var _iteratorNormalCompletion4 = true;
+      var _didIteratorError4 = false;
+      var _iteratorError4 = undefined;
 
       try {
-        for (var _iterator2 = players[Symbol.iterator](), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
+        for (var _iterator4 = players[Symbol.iterator](), _step4; !(_iteratorNormalCompletion4 = (_step4 = _iterator4.next()).done); _iteratorNormalCompletion4 = true) {
           /*
           // check for collision
           for (let w2 of wiggles) {
@@ -298,19 +345,19 @@ function (_ServerEngine) {
           }
           */
 
-          var p = _step2.value;
+          var p = _step4.value;
         }
       } catch (err) {
-        _didIteratorError2 = true;
-        _iteratorError2 = err;
+        _didIteratorError4 = true;
+        _iteratorError4 = err;
       } finally {
         try {
-          if (!_iteratorNormalCompletion2 && _iterator2.return != null) {
-            _iterator2.return();
+          if (!_iteratorNormalCompletion4 && _iterator4.return != null) {
+            _iterator4.return();
           }
         } finally {
-          if (_didIteratorError2) {
-            throw _iteratorError2;
+          if (_didIteratorError4) {
+            throw _iteratorError4;
           }
         }
       }
