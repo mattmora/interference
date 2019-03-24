@@ -94,7 +94,11 @@ var time = 0;
 var players = [];
 var playerId = 0;
 var thisPlayer = null;
+var graphicNotes = [];
 var eggs = [];
+var animFrames = {
+  eggBreak: 0
+};
 var prevNotestack = '';
 var prevRhythmstack = '';
 var bg = paletteTable['default'].bg;
@@ -121,7 +125,7 @@ function (_Renderer) {
     h = _this.canvas.height = window.innerHeight;
     document.body.insertBefore(_this.canvas, document.getElementById('logo'));
     ctx = _this.ctx = _this.canvas.getContext('2d');
-    ctx.lineWidth = 5;
+    ctx.lineWidth = 1;
     window.addEventListener('resize', function () {
       _this.setRendererSize();
     });
@@ -152,6 +156,7 @@ function (_Renderer) {
         rightViewBound = players.length * game.playerWidth;
       }
 
+      graphicNotes = client.graphicNotes;
       eggs = game.world.queryObjects({
         instanceType: _Egg.default
       });
@@ -164,8 +169,7 @@ function (_Renderer) {
       if (client.transport.state === 'started') {
         if (transportSyncCount >= game.transportSyncInterval) {
           client.transport.seconds = time;
-          transportSyncCount = 0;
-          console.log(client.transport.state);
+          transportSyncCount = 0; //console.log(client.transport.state);
         }
 
         transportSyncCount++;
@@ -181,6 +185,7 @@ function (_Renderer) {
 
       this.updateClientSequencer();
       this.drawPlayers();
+      this.drawNoteGraphics();
       this.drawEggs();
       /*
       if (this.gameEngine.playerId < 5) {
@@ -211,7 +216,7 @@ function (_Renderer) {
 
           var _x = w / n * _i;
 
-          ctx.fillStyle = paletteTable[p.palette].bg;
+          this.fillColor(p, 'bg');
           ctx.fillRect(_x, 0, w / n, h / n);
         }
       } catch (err) {
@@ -235,23 +240,22 @@ function (_Renderer) {
       this.triangle(x, 1.05 * h / n, x - 0.25 * w / n, 1.15 * h / n, x + 0.25 * w / n, 1.15 * h / n);
     }
   }, {
-    key: "drawEggs",
-    value: function drawEggs() {
-      var leftBound = leftViewBound - game.eggRadius;
-      var rightBound = rightViewBound + game.eggRadius;
+    key: "drawNoteGraphics",
+    value: function drawNoteGraphics() {
       var _iteratorNormalCompletion2 = true;
       var _didIteratorError2 = false;
       var _iteratorError2 = undefined;
 
       try {
-        for (var _iterator2 = eggs[Symbol.iterator](), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
-          var e = _step2.value;
+        for (var _iterator2 = graphicNotes[Symbol.iterator](), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
+          var g = _step2.value;
 
-          if (leftBound < e.position.x && e.position.x < rightBound) {
-            ctx.fillStyle = 'white';
-            ctx.strokeStyle = 'black';
-            var pos = this.gamePositionToCanvasPosition(e.position.x, e.position.y);
-            this.circle(pos[0], pos[1], this.gameDistanceToCanvasDistance(game.eggRadius));
+          if (g.type === 'egg') {
+            var pos = this.playerCellToCanvasPosition(thisPlayer, g.cell.x, g.cell.y);
+            var c = 'c1';
+            if (g.step === client.currentStep) c = 'c2';
+            this.fillColor(thisPlayer, c);
+            ctx.fillRect(pos[0], pos[1], this.gameDistanceToCanvasDistance(game.cellWidth), this.gameDistanceToCanvasDistance(game.cellHeight));
           }
         }
       } catch (err) {
@@ -265,6 +269,41 @@ function (_Renderer) {
         } finally {
           if (_didIteratorError2) {
             throw _iteratorError2;
+          }
+        }
+      }
+    }
+  }, {
+    key: "drawEggs",
+    value: function drawEggs() {
+      var leftBound = leftViewBound - game.eggRadius;
+      var rightBound = rightViewBound + game.eggRadius;
+      var _iteratorNormalCompletion3 = true;
+      var _didIteratorError3 = false;
+      var _iteratorError3 = undefined;
+
+      try {
+        for (var _iterator3 = eggs[Symbol.iterator](), _step3; !(_iteratorNormalCompletion3 = (_step3 = _iterator3.next()).done); _iteratorNormalCompletion3 = true) {
+          var e = _step3.value;
+
+          if (leftBound < e.position.x && e.position.x < rightBound) {
+            ctx.fillStyle = 'white';
+            ctx.strokeStyle = 'black';
+            var pos = this.gamePositionToCanvasPosition(e.position.x, e.position.y);
+            if (e.hp > 0) this.circle(pos[0], pos[1], this.gameDistanceToCanvasDistance(game.eggRadius));else this.drawBrokenEgg(pos[0], pos[1], this.gameDistanceToCanvasDistance(game.eggRadius));
+          }
+        }
+      } catch (err) {
+        _didIteratorError3 = true;
+        _iteratorError3 = err;
+      } finally {
+        try {
+          if (!_iteratorNormalCompletion3 && _iterator3.return != null) {
+            _iterator3.return();
+          }
+        } finally {
+          if (_didIteratorError3) {
+            throw _iteratorError3;
           }
         }
       }
@@ -339,9 +378,37 @@ function (_Renderer) {
       return canvasDist;
     }
   }, {
+    key: "playerCellToCanvasPosition",
+    value: function playerCellToCanvasPosition(p, cellX, cellY) {
+      var gameX = game.cellWidth * (cellX + p.number * game.playerCellWidth);
+      var gameY = game.cellHeight * cellY;
+      return this.gamePositionToCanvasPosition(gameX, gameY);
+    }
+  }, {
     key: "mapToRange",
     value: function mapToRange(val, l1, h1, l2, h2) {
       return Math.floor(l2 + (h2 - l2) * (val - l1) / (h1 - l1));
+    }
+  }, {
+    key: "drawBrokenEgg",
+    value: function drawBrokenEgg(x, y, radius) {
+      var gap = radius * (animFrames.eggBreak * 0.02);
+      ctx.beginPath();
+      ctx.arc(x - gap, y, radius, 0.25 * Math.PI, 1.25 * Math.PI);
+      ctx.fill();
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(x + gap, y, radius, 1.25 * Math.PI, 2.25 * Math.PI);
+      ctx.fill();
+      ctx.stroke();
+      if (animFrames.eggBreak < 60) animFrames.eggBreak++;
+    }
+  }, {
+    key: "fillColor",
+    value: function fillColor(p, which) {
+      if (paletteTable[p.palette]) {
+        ctx.fillStyle = paletteTable[p.palette][which];
+      } else ctx.fillStyle = paletteTable['default'][which];
     }
   }, {
     key: "circle",

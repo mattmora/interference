@@ -3,16 +3,25 @@ import SyncClient from '@ircam/sync/client';
 import InterferenceRenderer from '../client/InterferenceRenderer';
 import Performer from '../common/Performer';
 import Egg from '../common/Egg';
-import { Transport, Sequence, Synth, NoiseSynth, FMSynth } from 'tone';
-import { Reverb, BitCrusher, AutoWah } from 'tone';
+import { Transport, Frequency, Part, Sequence, Synth, MonoSynth, PolySynth, NoiseSynth, FMSynth } from 'tone';
+import { Reverb, FeedbackDelay, BitCrusher, AutoWah } from 'tone';
 
 const durs = ['4n', '8n', '6n'];
+const scaleTable = {
+    'rain':     [0, 4, 6, 9, 11],
+    'celeste':  [0, 2, 3, 5, 7],
+    'pyre':     [0, 2, 3, 7, 10],
+    'journey':  [0, 2, 4, 7, 9],
+    'kirby':    [0, 2, 4, 5, 7],
+    'default':  [0, 2, 4, 5, 7]
+}
 let noteIndex = 0;
 let rhythmIndex = 0;
 let viewLock = false;
 
 export default class InterferenceClientEngine extends ClientEngine {
 
+    ///////////////////////////////////////////////////////////////////////////////////////////
     /// INITIALIZATION AND CONNECTION
     constructor(gameEngine, options) {
         super(gameEngine, options, InterferenceRenderer);
@@ -27,9 +36,16 @@ export default class InterferenceClientEngine extends ClientEngine {
         this.performanceView = false;
         this.controls = new KeyboardControls(this);
         this.prevState = 'setup';
+        this.fullscreen = false;
+        this.optionSelection = { left: null, right: null, up: null, down: null };
+        this.graphicNotes = [];
+        this.sequence = [];
+        this.currentStep = null;
 
         this.gameEngine.on('client__postStep', this.stepLogic.bind(this));
         this.gameEngine.on('eggBounce', e => { this.onEggBounce(e) });
+        this.gameEngine.on('playerHitEgg', e => { this.onPlayerHitEgg(e) });
+        this.gameEngine.on('eggBroke', e => { this.onEggBroke(e) });
     }
 
     start() {
@@ -48,10 +64,12 @@ export default class InterferenceClientEngine extends ClientEngine {
             }
         };
 
+        document.body.requestPointerLock = document.body.requestPointerLock || document.body.mozRequestPointerLock;
+
         // LOCAL CONTROLS
         // Any inputs that do nothing server-side (i.e. doesn't need to be known by other players)
         document.addEventListener('keypress', e => {
-            console.log(e.code);
+            //console.log(e.code);
             if (document.activeElement === roomNameInput) {
                 if (e.code === 'Enter') {
                     let regex = /^\w+$/;
@@ -73,12 +91,34 @@ export default class InterferenceClientEngine extends ClientEngine {
                         this.transport.pause();
                     }
                 }
+                else if (e.code === 'KeyF') {
+                    if (!viewLock) {
+                        let elem = this.renderer.canvas;
+                        if (!document.fullscreenElement) {
+                            elem.requestFullscreen({navigationUI: 'hide'}).then({}).catch(err => {
+                                //alert(`Error attempting to enable full-screen mode: ${err.message} (${err.name})`);
+                            });
+                        } else {
+                            document.exitFullscreen();
+                        }
+                    }
+                }
+                else if (e.code === 'KeyH') {
+                    if (!viewLock) {
+                        if (document.pointerLockElement === document.body || 
+                            document.mozPointerLockElement === document.body) {
+                            document.exitPointerLock();
+                        } else {
+                            document.body.requestPointerLock();
+                        }
+                    }
+                }
                 else if (e.code === 'KeyV') {
-                    console.log('view');
+                    //console.log('view');
                     if (!viewLock) this.performanceView = !this.performanceView;
                 }
                 else if (e.code === 'Slash') {
-                    console.log('lock');
+                    //console.log('lock');
                     viewLock = !viewLock;
                 }
             }
@@ -87,14 +127,14 @@ export default class InterferenceClientEngine extends ClientEngine {
         //this.transport.timeSignature = 4;
 
         this.reverb = new Reverb(1).toMaster();
-        this.reverb.generate();
-        this.bitcrusher = new BitCrusher(4).toMaster()
-        this.autowah = new AutoWah().connect(this.reverb);  
+        this.delay = new FeedbackDelay()
+        //this.bitcrusher = new BitCrusher(4).connect(this.reverb); 
+        this.autowah = new AutoWah().toMaster()
+        this.autowah.connect(this.reverb);  
 
         this.synth = new Synth({
             oscillator: {
                 type: 'sine',
-                modulationFrequency: 0.2
             },
             envelope: {
                 attack: 0,
@@ -107,22 +147,13 @@ export default class InterferenceClientEngine extends ClientEngine {
         // BUILDERS
 
         // Tetris Chain
-        this.tetrisChainSynth = new Synth({
-            oscillator: {
-                type: 'triangle',
-                modulationFrequency: 0.2
-            },
-            envelope: {
-                attack: 0.1,
-                decay: 0.1,
-                sustain: 0.5,
-                release: 0.1,
-            }
-        }).toMaster();
+        this.tetrisChainSynth = new PolySynth(9, Synth).toMaster();
 
-        this.tetrisChainSequence = new Sequence(function(time, note){
-            this.tetrisChainSynth.triggerAttackRelease(note, '16n', time);
-        }, [], "8n");
+        let events = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
+        this.tetrisChainSequence = new Sequence((time, step) => {
+            this.currentStep = step;
+            this.playScaleNoteOnPolySynth(this.tetrisChainSynth, this.sequence[step], 1, '16n', time)
+        }, events, '16n');
  
         /*
         // show try-again button
@@ -216,8 +247,8 @@ export default class InterferenceClientEngine extends ClientEngine {
             document.getElementById('startMenuWrapper').style.display = 'none';
             // NETWORKED CONTROLS
             // These inputs will also be processed on the server
-            console.log('binding keys');
-            //this.controls.bindKey('space', 'space');
+            //console.log('binding keys');
+            this.controls.bindKey('space', 'space');
             this.controls.bindKey('open bracket', '[');
             this.controls.bindKey('close bracket / å', ']');
             this.controls.bindKey('n', 'n');
@@ -227,7 +258,7 @@ export default class InterferenceClientEngine extends ClientEngine {
     } 
 
     ///////////////////////////////////////////////////////////////////////////////////////////
-    /// SOUND HANDLING
+    /// SOUND HANDLING AND CLIENT LOGIC
 
     stepLogic() {
         if (this.room === null) return //if we yet to be assigned a room, don't do this stuff
@@ -243,6 +274,10 @@ export default class InterferenceClientEngine extends ClientEngine {
                 this.transport.start();
                 this.transport.seconds = this.syncClient.getSyncTime();
             }
+            if (this.tetrisChainSequence.state !== 'started') {
+                //console.log('start seq');
+                this.tetrisChainSequence.start(this.nextDiv('1m'));
+            }
             for (let e of this.eggs) {
                 if (!Object.keys(this.eggSounds).includes(e.toString())) this.constructEggSounds(e);
                 let vol = 1 - (0.3 * Math.abs(this.player.number - Math.floor(e.position.x / this.gameEngine.playerWidth)));
@@ -255,20 +290,56 @@ export default class InterferenceClientEngine extends ClientEngine {
 
     onEggBounce(e) {
         if (!Object.keys(this.eggSounds).includes(e.toString())) this.constructEggSounds(e);
-        let leftBound = this.player.number * this.gameEngine.playerWidth;
-        let rightBound = (this.player.number + 1) * this.gameEngine.playerWidth;
-        if (leftBound < e.position.x && e.position.x < rightBound) {
+        if (this.gameEngine.positionIsInPlayer(e.position.x, this.player)) {
             this.eggSounds[e.toString()].bounce.triggerAttackRelease('8n');
+        }
+    }
+
+    onPlayerHitEgg(e) {
+        let scale = scaleTable[this.player.palette];
+        let pos = this.gameEngine.playerCellAtPosition(this.player, e.position.x, e.position.y);
+        let step = pos[0];
+        let note = (this.gameEngine.playerCellHeight - pos[1]) + (scale.length * 4);
+        //let note = (this.gameEngine.cellsPerPlayer - 1) - ((pos[1] * this.gameEngine.playerCellWidth) + pos[0]);
+        if (this.sequence[step]) this.sequence[step].push(note);
+        else this.sequence[step] = [note];
+        this.graphicNotes.push({ 
+            type: 'egg', 
+            step: step,
+            cell: { 
+                x: pos[0], 
+                y: pos[1] 
+            },
+        });
+    }
+
+    onEggBroke(e) {
+        console.log('egg broke');
+        if (this.gameEngine.positionIsInPlayer(e.position.x, this.player)) {
+            this.eggSounds[e.toString()].break.start(this.nextDiv('4n'));
+            this.optionSelection.up = 'tetrisChain';
         }
     }
 
     startEffects() {
         //this.bitcrusher.start();
+        this.reverb.generate();
     }
 
     constructEggSounds(e) {
         //console.log('making egg sounds');
-        console.log(e.toString());
+        let scale = scaleTable[this.player.palette]
+        let synth = new Synth({
+            oscillator: {
+                type: 'triangle',
+            },
+            envelope: {
+                attack: 0.005,
+                decay: 0.5,
+                sustain: 0,
+                release: 0.1,
+            }
+        });
         this.eggSounds[e.toString()] = {
             drone: new NoiseSynth({
                 noise: {
@@ -283,7 +354,7 @@ export default class InterferenceClientEngine extends ClientEngine {
             }),
             bounce: new NoiseSynth({
                 noise: {
-                    type: 'white',
+                    type: 'pink',
                 },
                 envelope: {
                     attack: 0.01,
@@ -291,12 +362,46 @@ export default class InterferenceClientEngine extends ClientEngine {
                     sustain: 0.1,
                     release: 0.5,
                 }
-            })
+            }).toMaster(),
+            breakSynth: synth.toMaster(), 
+            break: new Sequence((time, note) => {
+                this.playScaleNoteOnSynth(synth, note, 6, '64n', time)
+            }, [0, 1, 2, 3, 1, 2, 3, 4], '32n')
         };
 
         this.eggSounds[e.toString()].drone.connect(this.autowah);
-        this.eggSounds[e.toString()].bounce.connect(this.autowah);
+        this.eggSounds[e.toString()].bounce.connect(this.reverb);
+        this.eggSounds[e.toString()].breakSynth.connect(this.reverb);
         this.eggSounds[e.toString()].drone.triggerAttack('+0', 0.1);
+        this.eggSounds[e.toString()].break.loop = false;
+    }
+
+    playScaleNoteOnSynth(synth, note, octaveShift, dur, time) {
+        if (!note) return;
+        //console.log(note);
+        let scale = scaleTable[this.player.palette];
+        let degree = note % scale.length;
+        let octave = Math.floor(note / scale.length) + octaveShift;
+        //console.log(scale[degree] + (12 * octave));
+        synth.triggerAttackRelease(Frequency(scale[degree] + (12 * octave), 'midi'), dur, time);
+    }
+
+    playScaleNoteOnPolySynth(synth, notes, octaveShift, dur, time) {
+        if (!notes) return;
+        //console.log(note);
+        let chord = [];
+        for (let note of notes) {
+            let scale = scaleTable[this.player.palette];
+            let degree = note % scale.length;
+            let octave = Math.floor(note / scale.length) + octaveShift;
+            //console.log(scale[degree] + (12 * octave));
+            chord.push(Frequency(scale[degree] + (12 * octave), 'midi'));
+        }
+        synth.triggerAttackRelease(chord, dur, time);
+    }
+
+    nextDiv(div) {
+        return Transport.getSecondsAtTime(Transport.nextSubdivision(div));
     }
     /*
     sequencerLoop(thisTime) {

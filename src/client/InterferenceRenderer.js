@@ -60,7 +60,9 @@ let time = 0;
 let players = []; 
 let playerId = 0;
 let thisPlayer = null;
+let graphicNotes = [];
 let eggs = [];
+let animFrames = { eggBreak: 0 };
 
 let prevNotestack = '';
 let prevRhythmstack = '';
@@ -84,7 +86,7 @@ export default class InterferenceRenderer extends Renderer {
         h = this.canvas.height = window.innerHeight;
         document.body.insertBefore(this.canvas, document.getElementById('logo'));
         ctx = this.ctx = this.canvas.getContext('2d');
-        ctx.lineWidth = 5;
+        ctx.lineWidth = 1;
 
         window.addEventListener('resize', ()=>{ this.setRendererSize(); });
     }
@@ -107,6 +109,7 @@ export default class InterferenceRenderer extends Renderer {
             leftViewBound = 0;
             rightViewBound = players.length * game.playerWidth;
         }
+        graphicNotes = client.graphicNotes;
         eggs = game.world.queryObjects({ instanceType: Egg });
 
         bg = paletteTable[thisPlayer.palette].bg;
@@ -119,7 +122,7 @@ export default class InterferenceRenderer extends Renderer {
             if (transportSyncCount >= game.transportSyncInterval) {
                 client.transport.seconds = time;
                 transportSyncCount = 0;
-                console.log(client.transport.state);
+                //console.log(client.transport.state);
             }
             transportSyncCount++
         }
@@ -135,6 +138,7 @@ export default class InterferenceRenderer extends Renderer {
         // Draw all things
         this.updateClientSequencer();
         this.drawPlayers();
+        this.drawNoteGraphics();
         this.drawEggs();
 
         /*
@@ -156,7 +160,7 @@ export default class InterferenceRenderer extends Renderer {
         for (let p of players) {
             let i = p.number - (leftViewBound / game.playerWidth);
             let x = ((w / n) * i);
-            ctx.fillStyle = paletteTable[p.palette].bg;
+            this.fillColor(p, 'bg');
             ctx.fillRect(x, 0, w / n, h / n)
         }
         let i = thisPlayer.number;
@@ -167,6 +171,20 @@ export default class InterferenceRenderer extends Renderer {
                         x + ((0.25 * w) / n),   (1.15 * h) / n );   
     }
 
+    drawNoteGraphics() {
+        for (let g of graphicNotes) {
+            if (g.type === 'egg') {
+                let pos = this.playerCellToCanvasPosition(thisPlayer, g.cell.x, g.cell.y);
+                let c = 'c1';
+                if (g.step === client.currentStep) c = 'c2'
+                this.fillColor(thisPlayer, c);
+                ctx.fillRect(pos[0], pos[1], 
+                    this.gameDistanceToCanvasDistance(game.cellWidth), 
+                    this.gameDistanceToCanvasDistance(game.cellHeight));
+            }
+        }
+    }
+
     drawEggs() {
         let leftBound = leftViewBound - game.eggRadius;
         let rightBound = rightViewBound + game.eggRadius;
@@ -175,7 +193,8 @@ export default class InterferenceRenderer extends Renderer {
                 ctx.fillStyle = 'white';
                 ctx.strokeStyle = 'black';
                 let pos = this.gamePositionToCanvasPosition(e.position.x, e.position.y)
-                this.circle(pos[0], pos[1], this.gameDistanceToCanvasDistance(game.eggRadius));
+                if (e.hp > 0) this.circle(pos[0], pos[1], this.gameDistanceToCanvasDistance(game.eggRadius));
+                else this.drawBrokenEgg(pos[0], pos[1], this.gameDistanceToCanvasDistance(game.eggRadius));
             }
         }
     }
@@ -243,8 +262,36 @@ export default class InterferenceRenderer extends Renderer {
         return canvasDist;
     }
 
+    playerCellToCanvasPosition(p, cellX, cellY) {
+        let gameX = game.cellWidth * (cellX + (p.number * game.playerCellWidth));
+        let gameY = game.cellHeight * cellY;
+        return this.gamePositionToCanvasPosition(gameX, gameY);
+    }
+
     mapToRange(val, l1, h1, l2, h2) {
         return Math.floor(l2 + (h2 - l2) * (val - l1) / (h1 - l1));
+    }
+
+    drawBrokenEgg(x, y, radius) {
+        let gap = radius * (animFrames.eggBreak * 0.02);
+        ctx.beginPath();
+        ctx.arc(x-gap, y, radius, 0.25*Math.PI, 1.25*Math.PI);
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.arc(x+gap, y, radius, 1.25*Math.PI, 2.25*Math.PI);
+        ctx.fill();
+        ctx.stroke();
+
+        if (animFrames.eggBreak < 60) animFrames.eggBreak++
+    }
+
+    fillColor(p, which) {
+        if (paletteTable[p.palette]) {
+            ctx.fillStyle = paletteTable[p.palette][which];
+        }  
+        else ctx.fillStyle = paletteTable['default'][which];
     }
 
     circle(x, y, radius) {

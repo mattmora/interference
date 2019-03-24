@@ -50,6 +50,9 @@ function (_DynamicObject) {
         rhythmstack: {
           type: _lanceGg.BaseTypes.TYPES.STRING
         },
+        ammo: {
+          type: _lanceGg.BaseTypes.TYPES.INT16
+        },
         stage: {
           type: _lanceGg.BaseTypes.TYPES.STRING
         }

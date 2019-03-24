@@ -35,14 +35,6 @@ function _inherits(subClass, superClass) { if (typeof superClass !== "function" 
 
 function _setPrototypeOf(o, p) { _setPrototypeOf = Object.setPrototypeOf || function _setPrototypeOf(o, p) { o.__proto__ = p; return o; }; return _setPrototypeOf(o, p); }
 
-var scaleTable = {
-  'rain': [60, 64, 66, 69, 71],
-  'celeste': [60, 62, 63, 65, 67],
-  'pyre': [60, 62, 63, 67, 70],
-  'journey': [60, 62, 64, 67, 69],
-  'kirby': [60, 62, 64, 65, 67],
-  'default': [60, 62, 64, 65, 67]
-};
 var palettes = ['rain', 'celeste', 'pyre', 'journey', 'kirby'];
 
 var InterferenceGameEngine =
@@ -64,7 +56,8 @@ function (_GameEngine) {
     }); // game constants
 
     Object.assign(_assertThisInitialized(_this), {
-      cellSize: 1,
+      cellWidth: 1,
+      cellHeight: 1,
       playerWidth: 16,
       playerHeight: 9,
       leftBound: 0,
@@ -73,6 +66,12 @@ function (_GameEngine) {
       transportSyncInterval: 200,
       eggRadius: 1,
       eggBaseXVelocity: 0.1
+    }); // dependent game constants
+
+    Object.assign(_assertThisInitialized(_this), {
+      playerCellWidth: _this.playerWidth / _this.cellWidth,
+      playerCellHeight: _this.playerHeight / _this.cellHeight,
+      cellsPerPlayer: _this.playerWidth / _this.cellWidth * (_this.playerHeight / _this.cellHeight)
     }); // game variables
 
     Object.assign(_assertThisInitialized(_this), {
@@ -211,6 +210,12 @@ function (_GameEngine) {
               e.velocity.y *= -1;
               e.position.y = this.bottomBound - this.eggRadius;
               this.emit('eggBounce', e);
+            } // check if broken
+
+
+            if (e.hp <= 0 && !e.broken) {
+              e.broken = true;
+              this.emit('eggBroke', e);
             }
           }
         } catch (err) {
@@ -252,7 +257,72 @@ function (_GameEngine) {
     }
   }, {
     key: "gameLogic",
-    value: function gameLogic(r) {}
+    value: function gameLogic(r) {
+      if (this.eggsByRoom[r]) {
+        var _iteratorNormalCompletion4 = true;
+        var _didIteratorError4 = false;
+        var _iteratorError4 = undefined;
+
+        try {
+          for (var _iterator4 = this.eggsByRoom[r][Symbol.iterator](), _step4; !(_iteratorNormalCompletion4 = (_step4 = _iterator4.next()).done); _iteratorNormalCompletion4 = true) {
+            var e = _step4.value;
+
+            if (e.hp <= 0) {
+              e.velocity.x = 0;
+              e.velocity.y = 0;
+            }
+          }
+        } catch (err) {
+          _didIteratorError4 = true;
+          _iteratorError4 = err;
+        } finally {
+          try {
+            if (!_iteratorNormalCompletion4 && _iterator4.return != null) {
+              _iterator4.return();
+            }
+          } finally {
+            if (_didIteratorError4) {
+              throw _iteratorError4;
+            }
+          }
+        }
+      }
+    }
+  }, {
+    key: "playerHitEgg",
+    value: function playerHitEgg(p, e, isServer) {
+      if (e.hp <= 0) return;
+      if (p.ammo <= 0) return;
+      p.ammo--;
+      this.emit('playerHitEgg', e);
+
+      if (isServer) {
+        e.hp--;
+        console.log(e.hp);
+      }
+    }
+  }, {
+    key: "positionIsInPlayer",
+    value: function positionIsInPlayer(x, p) {
+      var leftBound = p.number * this.playerWidth;
+      var rightBound = (p.number + 1) * this.playerWidth;
+      return leftBound < x && x < rightBound;
+    }
+  }, {
+    key: "cellAtPosition",
+    value: function cellAtPosition(x, y) {
+      var cellX = Math.floor(x / this.cellWidth);
+      var cellY = Math.floor(y / this.cellHeight);
+      return [cellX, cellY];
+    }
+  }, {
+    key: "playerCellAtPosition",
+    value: function playerCellAtPosition(p, x, y) {
+      var cell = this.cellAtPosition(x, y);
+      var playerCellX = cell[0] - p.number * this.playerCellWidth;
+      var playerCellY = cell[1];
+      return [playerCellX, playerCellY];
+    }
   }, {
     key: "groupBy",
     value: function groupBy(arr, property) {
@@ -271,59 +341,29 @@ function (_GameEngine) {
         playerId: playerId
       });
       var players = this.playersByRoom[player._roomName];
+      var eggs = this.eggsByRoom[player._roomName];
 
-      if (inputData.input == 'c') {
-        if (player.stage === 'setup') {
+      if (player.stage === 'setup') {
+        if (inputData.input == 'c') {
           player.palette = palettes[(palettes.indexOf(player.palette) + 1) % palettes.length];
           console.log(player.palette);
         }
-      }
 
-      if (isServer) {
-        // stuff that should only be processed on the server, such as randomness, which would otherwise cause discrepancies
-        // or actions that require more info than is available to one player
-        //console.log(inputData.input);
-        if (player.stage === 'setup') {
+        if (isServer) {
+          // stuff that should only be processed on the server, such as randomness, which would otherwise cause discrepancies
+          // or actions that require more info than is available to one player
+          //console.log(inputData.input);
           if (inputData.input == '[') {
             var newNumber = player.number - 1;
             if (newNumber < 0) newNumber = players.length - 1;
-            var _iteratorNormalCompletion4 = true;
-            var _didIteratorError4 = false;
-            var _iteratorError4 = undefined;
-
-            try {
-              for (var _iterator4 = players[Symbol.iterator](), _step4; !(_iteratorNormalCompletion4 = (_step4 = _iterator4.next()).done); _iteratorNormalCompletion4 = true) {
-                var p = _step4.value;
-                if (p.number === newNumber) p.number = player.number;
-              }
-            } catch (err) {
-              _didIteratorError4 = true;
-              _iteratorError4 = err;
-            } finally {
-              try {
-                if (!_iteratorNormalCompletion4 && _iterator4.return != null) {
-                  _iterator4.return();
-                }
-              } finally {
-                if (_didIteratorError4) {
-                  throw _iteratorError4;
-                }
-              }
-            }
-
-            player.number = newNumber;
-          } else if (inputData.input == ']') {
-            var _newNumber = player.number + 1;
-
-            if (_newNumber >= players.length) _newNumber = 0;
             var _iteratorNormalCompletion5 = true;
             var _didIteratorError5 = false;
             var _iteratorError5 = undefined;
 
             try {
               for (var _iterator5 = players[Symbol.iterator](), _step5; !(_iteratorNormalCompletion5 = (_step5 = _iterator5.next()).done); _iteratorNormalCompletion5 = true) {
-                var _p = _step5.value;
-                if (_p.number === _newNumber) _p.number = player.number;
+                var p = _step5.value;
+                if (p.number === newNumber) p.number = player.number;
               }
             } catch (err) {
               _didIteratorError5 = true;
@@ -340,20 +380,79 @@ function (_GameEngine) {
               }
             }
 
+            player.number = newNumber;
+          } else if (inputData.input == ']') {
+            var _newNumber = player.number + 1;
+
+            if (_newNumber >= players.length) _newNumber = 0;
+            var _iteratorNormalCompletion6 = true;
+            var _didIteratorError6 = false;
+            var _iteratorError6 = undefined;
+
+            try {
+              for (var _iterator6 = players[Symbol.iterator](), _step6; !(_iteratorNormalCompletion6 = (_step6 = _iterator6.next()).done); _iteratorNormalCompletion6 = true) {
+                var _p = _step6.value;
+                if (_p.number === _newNumber) _p.number = player.number;
+              }
+            } catch (err) {
+              _didIteratorError6 = true;
+              _iteratorError6 = err;
+            } finally {
+              try {
+                if (!_iteratorNormalCompletion6 && _iterator6.return != null) {
+                  _iterator6.return();
+                }
+              } finally {
+                if (_didIteratorError6) {
+                  throw _iteratorError6;
+                }
+              }
+            }
+
             player.number = _newNumber;
           } else if (inputData.input == 'b') {
             this.emit('beginPerformance', player);
           }
-        } else if (player.stage === 'intro') {
-          if (inputData.input == 'b') {
-            this.emit('beginPerformance', player);
+        }
+      } else if (player.stage === 'intro') {
+        if (inputData.input == 'space') {
+          var _iteratorNormalCompletion7 = true;
+          var _didIteratorError7 = false;
+          var _iteratorError7 = undefined;
+
+          try {
+            for (var _iterator7 = eggs[Symbol.iterator](), _step7; !(_iteratorNormalCompletion7 = (_step7 = _iterator7.next()).done); _iteratorNormalCompletion7 = true) {
+              var e = _step7.value;
+
+              if (this.positionIsInPlayer(e.position.x, player)) {
+                this.playerHitEgg(player, e, isServer);
+              }
+            }
+          } catch (err) {
+            _didIteratorError7 = true;
+            _iteratorError7 = err;
+          } finally {
+            try {
+              if (!_iteratorNormalCompletion7 && _iterator7.return != null) {
+                _iterator7.return();
+              }
+            } finally {
+              if (_didIteratorError7) {
+                throw _iteratorError7;
+              }
+            }
           }
-        } else if (inputData.input == 'n') {
-          var scale = scaleTable[player.palette];
-          player.notestack = player.notestack.concat(String.fromCharCode(scale[Math.floor(Math.random() * scale.length)]));
-          console.log(player.notestack);
         }
       }
+      /*
+      else if (inputData.input == 'n') {
+          let scale = scaleTable[player.palette];
+          player.notestack = player.notestack.concat(
+              String.fromCharCode(scale[Math.floor(Math.random() * scale.length)])
+          );
+          console.log(player.notestack);
+      } */
+
     }
   }]);
 

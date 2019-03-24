@@ -89,6 +89,7 @@ function (_ServerEngine) {
       player.palette = 'default';
       player.notestack = '';
       player.rhythmstack = '';
+      player.ammo = 0;
       player.stage = 'setup';
       console.log(player.number);
       player.playerId = socket.playerId;
@@ -276,7 +277,31 @@ function (_ServerEngine) {
         velocity: this.gameEngine.velRandY()
       });
       var numPlayers = this.myRooms[roomName].length;
-      newEgg.hp = Math.random() * numPlayers * 5 + numPlayers * 3;
+      var _iteratorNormalCompletion4 = true;
+      var _didIteratorError4 = false;
+      var _iteratorError4 = undefined;
+
+      try {
+        for (var _iterator4 = this.myRooms[roomName][Symbol.iterator](), _step4; !(_iteratorNormalCompletion4 = (_step4 = _iterator4.next()).done); _iteratorNormalCompletion4 = true) {
+          var p = _step4.value;
+          p.ammo += 8;
+        }
+      } catch (err) {
+        _didIteratorError4 = true;
+        _iteratorError4 = err;
+      } finally {
+        try {
+          if (!_iteratorNormalCompletion4 && _iterator4.return != null) {
+            _iterator4.return();
+          }
+        } finally {
+          if (_didIteratorError4) {
+            throw _iteratorError4;
+          }
+        }
+      }
+
+      newEgg.hp = Math.floor(Math.random() * numPlayers * 5 + numPlayers * 3);
       this.assignObjectToRoom(newEgg, roomName);
       this.gameEngine.addObjectToWorld(newEgg);
     }
@@ -308,12 +333,12 @@ function (_ServerEngine) {
       var eggs = this.gameEngine.world.queryObjects({
         instanceType: _Egg.default
       });
-      var _iteratorNormalCompletion4 = true;
-      var _didIteratorError4 = false;
-      var _iteratorError4 = undefined;
+      var _iteratorNormalCompletion5 = true;
+      var _didIteratorError5 = false;
+      var _iteratorError5 = undefined;
 
       try {
-        for (var _iterator4 = players[Symbol.iterator](), _step4; !(_iteratorNormalCompletion4 = (_step4 = _iterator4.next()).done); _iteratorNormalCompletion4 = true) {
+        for (var _iterator5 = players[Symbol.iterator](), _step5; !(_iteratorNormalCompletion5 = (_step5 = _iterator5.next()).done); _iteratorNormalCompletion5 = true) {
           /*
           // check for collision
           for (let w2 of wiggles) {
@@ -345,19 +370,19 @@ function (_ServerEngine) {
           }
           */
 
-          var p = _step4.value;
+          var p = _step5.value;
         }
       } catch (err) {
-        _didIteratorError4 = true;
-        _iteratorError4 = err;
+        _didIteratorError5 = true;
+        _iteratorError5 = err;
       } finally {
         try {
-          if (!_iteratorNormalCompletion4 && _iterator4.return != null) {
-            _iterator4.return();
+          if (!_iteratorNormalCompletion5 && _iterator5.return != null) {
+            _iterator5.return();
           }
         } finally {
-          if (_didIteratorError4) {
-            throw _iteratorError4;
+          if (_didIteratorError5) {
+            throw _iteratorError5;
           }
         }
       }

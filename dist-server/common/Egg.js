@@ -45,7 +45,7 @@ function (_DynamicObject) {
     get: function get() {
       return Object.assign({
         hp: {
-          type: _lanceGg.BaseTypes.TYPES.UINT8
+          type: _lanceGg.BaseTypes.TYPES.INT16
         }
       }, _get(_getPrototypeOf(Egg), "netScheme", this));
     }
@@ -58,6 +58,7 @@ function (_DynamicObject) {
 
     _this = _possibleConstructorReturn(this, _getPrototypeOf(Egg).call(this, gameEngine, options, props));
     _this.class = Egg;
+    _this.broken = false;
     return _this;
   }
 

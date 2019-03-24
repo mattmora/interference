@@ -37,6 +37,7 @@ export default class InterferenceServerEngine extends ServerEngine {
         player.palette = 'default';
         player.notestack = '';
         player.rhythmstack = '';
+        player.ammo = 0;
         player.stage = 'setup'
         console.log(player.number);
         player.playerId = socket.playerId;
@@ -134,7 +135,8 @@ export default class InterferenceServerEngine extends ServerEngine {
         let newEgg = new Egg(this.gameEngine, null, {   position: this.gameEngine.randPos(roomName), 
                                                         velocity: this.gameEngine.velRandY() });
         let numPlayers = this.myRooms[roomName].length;
-        newEgg.hp = (Math.random() * numPlayers * 5) + (numPlayers * 3);
+        for (let p of this.myRooms[roomName]) p.ammo += 8;
+        newEgg.hp = Math.floor((Math.random() * numPlayers * 5) + (numPlayers * 3));
         this.assignObjectToRoom(newEgg, roomName)
         this.gameEngine.addObjectToWorld(newEgg);
     }

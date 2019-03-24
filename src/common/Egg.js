@@ -4,7 +4,9 @@ export default class Egg extends DynamicObject {
 
     static get netScheme() {
         return Object.assign({
-            hp: { type: BaseTypes.TYPES.UINT8 }
+            number: { type: BaseTypes.TYPES.UINT8 },
+            sound: { type: BaseTypes.TYPES.STRING },
+            hp: { type: BaseTypes.TYPES.INT16 }
         }, super.netScheme);
     }
 
@@ -16,6 +18,7 @@ export default class Egg extends DynamicObject {
     constructor(gameEngine, options, props) {
         super(gameEngine, options, props);
         this.class = Egg;
+        this.broken = false;
     }
 
     toString() {

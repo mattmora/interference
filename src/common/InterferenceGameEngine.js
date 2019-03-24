@@ -2,14 +2,6 @@ import { GameEngine, SimplePhysicsEngine, TwoVector } from 'lance-gg';
 import Performer from './Performer';
 import Egg from './Egg';
 
-const scaleTable = {
-    'rain':     [60, 64, 66, 69, 71],
-    'celeste':  [60, 62, 63, 65, 67],
-    'pyre':     [60, 62, 63, 67, 70],
-    'journey':  [60, 62, 64, 67, 69],
-    'kirby':    [60, 62, 64, 65, 67],
-    'default':  [60, 62, 64, 65, 67]
-}
 const palettes = ['rain', 'celeste', 'pyre', 'journey', 'kirby'];
 
 export default class InterferenceGameEngine extends GameEngine {
@@ -23,9 +15,16 @@ export default class InterferenceGameEngine extends GameEngine {
 
         // game constants
         Object.assign(this, {
-            cellSize: 1, playerWidth: 16, playerHeight: 9,
+            cellWidth: 1, cellHeight: 1, playerWidth: 16, playerHeight: 9, 
             leftBound: 0, topBound: 0, bottomBound: 9,
             transportSyncInterval: 200, eggRadius: 1, eggBaseXVelocity: 0.1
+        });
+
+        // dependent game constants
+        Object.assign(this, {
+            playerCellWidth: this.playerWidth / this.cellWidth, 
+            playerCellHeight: this.playerHeight / this.cellHeight, 
+            cellsPerPlayer: (this.playerWidth / this.cellWidth) * (this.playerHeight / this.cellHeight) 
         });
 
         // game variables
@@ -103,6 +102,11 @@ export default class InterferenceGameEngine extends GameEngine {
                     e.position.y = this.bottomBound - this.eggRadius;
                     this.emit('eggBounce', e);
                 }
+                // check if broken
+                if (e.hp <= 0 && !e.broken) {
+                    e.broken = true;
+                    this.emit('eggBroke', e);
+                }
             }
         }
         
@@ -132,7 +136,44 @@ export default class InterferenceGameEngine extends GameEngine {
     }
 
     gameLogic(r) {
+        if (this.eggsByRoom[r]) {
+            for (let e of this.eggsByRoom[r]) {
+                if (e.hp <= 0) {
+                    e.velocity.x = 0;
+                    e.velocity.y = 0;
+                }
+            }
+        }
+    }
 
+    playerHitEgg(p, e, isServer) {
+        if (e.hp <= 0) return;
+        if (p.ammo <= 0) return;
+        p.ammo--;
+        this.emit('playerHitEgg', e);
+        if (isServer) {
+            e.hp--;
+            console.log(e.hp)
+        }
+    }
+
+    positionIsInPlayer(x, p) {
+        let leftBound = p.number * this.playerWidth;
+        let rightBound = (p.number + 1) * this.playerWidth;
+        return (leftBound < x && x < rightBound);
+    }
+
+    cellAtPosition(x, y) {
+        let cellX = Math.floor(x / this.cellWidth);
+        let cellY = Math.floor(y / this.cellHeight);
+        return [cellX, cellY];
+    }
+
+    playerCellAtPosition(p, x, y) {
+        let cell = this.cellAtPosition(x, y)
+        let playerCellX = cell[0] - (p.number * this.playerCellWidth);
+        let playerCellY = cell[1];
+        return [playerCellX, playerCellY];
     }
 
     groupBy(arr, property) {
@@ -149,19 +190,17 @@ export default class InterferenceGameEngine extends GameEngine {
         
         let player = this.world.queryObject({ playerId });
         let players = this.playersByRoom[player._roomName];
+        let eggs = this.eggsByRoom[player._roomName];
 
-        if (inputData.input == 'c') {
-            if (player.stage === 'setup') {
+        if (player.stage === 'setup') {
+            if (inputData.input == 'c') {
                 player.palette = palettes[(palettes.indexOf(player.palette)+1)%palettes.length];
                 console.log(player.palette);
             }
-        }
-        
-        if (isServer) { 
-        // stuff that should only be processed on the server, such as randomness, which would otherwise cause discrepancies
-        // or actions that require more info than is available to one player
+            if (isServer) { 
+            // stuff that should only be processed on the server, such as randomness, which would otherwise cause discrepancies
+            // or actions that require more info than is available to one player
             //console.log(inputData.input);
-            if (player.stage === 'setup') {
                 if (inputData.input == '[') {
                     let newNumber = player.number - 1;
                     if (newNumber < 0) newNumber = players.length - 1;
@@ -182,20 +221,23 @@ export default class InterferenceGameEngine extends GameEngine {
                     this.emit('beginPerformance', player);
                 }
             }
-            else if (player.stage === 'intro') {
-                if (inputData.input == 'b') {
-                    this.emit('beginPerformance', player);
+        }
+        else if (player.stage === 'intro') {
+            if (inputData.input == 'space') {
+                for (let e of eggs) {
+                    if (this.positionIsInPlayer(e.position.x, player)) {
+                        this.playerHitEgg(player, e, isServer);
+                    }
                 }
             }
-            else if (inputData.input == 'n') {
-                let scale = scaleTable[player.palette];
-                player.notestack = player.notestack.concat(
-                    String.fromCharCode(scale[Math.floor(Math.random() * scale.length)])
-                );
-                console.log(player.notestack);
-            }
-
-
         }
+        /*
+        else if (inputData.input == 'n') {
+            let scale = scaleTable[player.palette];
+            player.notestack = player.notestack.concat(
+                String.fromCharCode(scale[Math.floor(Math.random() * scale.length)])
+            );
+            console.log(player.notestack);
+        } */
     }
 }
