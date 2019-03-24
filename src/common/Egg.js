@@ -18,7 +18,12 @@ export default class Egg extends DynamicObject {
     constructor(gameEngine, options, props) {
         super(gameEngine, options, props);
         this.class = Egg;
+        this.animFrames = { spawn: 0, break: 0 };
         this.broken = false;
+    }
+
+    velocityAngle() {
+        return Math.atan2(this.velocity.y, this.velocity.x);
     }
 
     toString() {

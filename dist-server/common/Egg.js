@@ -44,6 +44,12 @@ function (_DynamicObject) {
     key: "netScheme",
     get: function get() {
       return Object.assign({
+        number: {
+          type: _lanceGg.BaseTypes.TYPES.UINT8
+        },
+        sound: {
+          type: _lanceGg.BaseTypes.TYPES.STRING
+        },
         hp: {
           type: _lanceGg.BaseTypes.TYPES.INT16
         }
@@ -58,11 +64,20 @@ function (_DynamicObject) {
 
     _this = _possibleConstructorReturn(this, _getPrototypeOf(Egg).call(this, gameEngine, options, props));
     _this.class = Egg;
+    _this.animFrames = {
+      spawn: 0,
+      break: 0
+    };
     _this.broken = false;
     return _this;
   }
 
   _createClass(Egg, [{
+    key: "velocityAngle",
+    value: function velocityAngle() {
+      return Math.atan2(this.velocity.y, this.velocity.x);
+    }
+  }, {
     key: "toString",
     value: function toString() {
       return "Egg[".concat(this.id, "]");

@@ -48,10 +48,17 @@ const paletteTable = {
     }
 }
 
+const animLengths = {
+    eggSpawn: 20,
+    eggBreak: 30,
+    eggNote: 10
+}
+
 let transportSyncCount = 0;
 let game = null;
 let client = null;
-let ctx = null;
+let canvas = []
+let ctx = [];
 let w = 0;
 let h = 0;
 let leftViewBound = 0; // bounds of area to be rendered in game coordinates
@@ -62,7 +69,6 @@ let playerId = 0;
 let thisPlayer = null;
 let graphicNotes = [];
 let eggs = [];
-let animFrames = { eggBreak: 0 };
 
 let prevNotestack = '';
 let prevRhythmstack = '';
@@ -82,11 +88,20 @@ export default class InterferenceRenderer extends Renderer {
         client = this.clientEngine;
 
         this.canvas = document.createElement('canvas');
-        w = this.canvas.width = window.innerWidth;
-        h = this.canvas.height = window.innerHeight;
+        this.ctx = this.canvas.getContext('2d');
+
+        canvas[0] = document.createElement('canvas');
+        ctx[0] = canvas[0].getContext('2d');
+        ctx[0].lineWidth = 1;
+
+        canvas[1] = document.createElement('canvas');
+        ctx[1] = canvas[1].getContext('2d');
+        ctx[1].lineWidth = 1;
+
+        w = canvas[0].width = canvas[1].width = this.canvas.width = window.innerWidth;
+        h = canvas[0].height = canvas[1].height = this.canvas.height = window.innerHeight;
+
         document.body.insertBefore(this.canvas, document.getElementById('logo'));
-        ctx = this.ctx = this.canvas.getContext('2d');
-        ctx.lineWidth = 1;
 
         window.addEventListener('resize', ()=>{ this.setRendererSize(); });
     }
@@ -109,6 +124,7 @@ export default class InterferenceRenderer extends Renderer {
             leftViewBound = 0;
             rightViewBound = players.length * game.playerWidth;
         }
+
         graphicNotes = client.graphicNotes;
         eggs = game.world.queryObjects({ instanceType: Egg });
 
@@ -128,31 +144,33 @@ export default class InterferenceRenderer extends Renderer {
         }
         
         // Clear the canvas
-        ctx.clearRect(0, 0, w, h);
+        this.ctx.clearRect(0, 0, w, h);
+        ctx[0].clearRect(0, 0, w, h);
+        ctx[1].clearRect(0, 0, w, h);
 
         // Transform the canvas
         // Note that we need to flip the y axis since Canvas pixel coordinates
         // goes from top to bottom, while physics does the opposite.
-        ctx.save();
+        ctx[0].save();
+        ctx[1].save();
         //ctx.scale(this.clientEngine.zoom, this.clientEngine.zoom);  // Zoom in and flip y axis
         // Draw all things
-        this.updateClientSequencer();
         this.drawPlayers();
         this.drawNoteGraphics();
         this.drawEggs();
 
-        /*
-        if (this.gameEngine.playerId < 5) {
-            Tone.Transport.seconds = t/1000;
-            ctx.fillStyle = 'red';
-        } */
-        ctx.fillStyle = c1;
-        ctx.font = "20px Lucida Console";
-        ctx.fillText(playerId, 50, 25);
-        ctx.fillText(time, 50, 50);
-        ctx.fillText(client.transport.position, 50, 75);
+        /*()
+        ctx[1].fillStyle = c1;
+        ctx[1].font = "20px Lucida Console";
+        ctx[1].fillText(playerId, 50, 25);
+        ctx[1].fillText(time, 50, 50);
+        ctx[1].fillText(client.transport.position, 50, 75);
+        */
+        this.ctx.drawImage(canvas[0], 0, 0);
+        this.ctx.drawImage(canvas[1], 0, 0);
 
-        ctx.restore(); 
+        ctx[0].restore(); 
+        ctx[1].restore();
     }
 
     drawPlayers() {
@@ -160,27 +178,37 @@ export default class InterferenceRenderer extends Renderer {
         for (let p of players) {
             let i = p.number - (leftViewBound / game.playerWidth);
             let x = ((w / n) * i);
-            this.fillColor(p, 'bg');
-            ctx.fillRect(x, 0, w / n, h / n)
+            this.fillColor(p, 'bg', 0);
+            ctx[0].fillRect(x, 0, w / n, h / n)
         }
         let i = thisPlayer.number;
         let x = (w / n) * (i + 0.5);
-        ctx.fillStyle = 'white';
-        this.triangle(  x,                      (1.05 * h) / n, 
-                        x - ((0.25 * w) / n),   (1.15 * h) / n,
-                        x + ((0.25 * w) / n),   (1.15 * h) / n );   
+        ctx[0].fillStyle = 'white';
+        this.fillTriangle(  x,                      (1.05 * h) / n, 
+                            x - ((0.25 * w) / n),   (1.15 * h) / n,
+                            x + ((0.25 * w) / n),   (1.15 * h) / n, 0 );   
     }
 
     drawNoteGraphics() {
         for (let g of graphicNotes) {
             if (g.type === 'egg') {
                 let pos = this.playerCellToCanvasPosition(thisPlayer, g.cell.x, g.cell.y);
+                let x = pos[0];
+                let y = this.mapToRange(g.animFrame, 0, animLengths.eggNote, 0, pos[1]);
+                let heightFactor = this.mapToRange(g.animFrame, 0, animLengths.eggNote, game.playerCellHeight, 1);
+                let dimX = this.gameXDimToCanvasXDim(game.cellWidth); 
+                let dimY = this.gameYDimToCanvasYDim(game.cellHeight*heightFactor);
                 let c = 'c1';
+                let layer = 1;
+                if (g.duration === '2n') {
+                    c = 'c3';
+                    dimX *= game.playerCellWidth / 2;
+                    layer = 0;
+                }
                 if (g.step === client.currentStep) c = 'c2'
-                this.fillColor(thisPlayer, c);
-                ctx.fillRect(pos[0], pos[1], 
-                    this.gameDistanceToCanvasDistance(game.cellWidth), 
-                    this.gameDistanceToCanvasDistance(game.cellHeight));
+                this.fillColor(thisPlayer, c, layer);
+                ctx[layer].fillRect(x, y, dimX, dimY);
+                if (g.animFrame < animLengths.eggNote) g.animFrame++;
             }
         }
     }
@@ -190,76 +218,40 @@ export default class InterferenceRenderer extends Renderer {
         let rightBound = rightViewBound + game.eggRadius;
         for (let e of eggs) {
             if (leftBound < e.position.x && e.position.x < rightBound) {
-                ctx.fillStyle = 'white';
-                ctx.strokeStyle = 'black';
+                let scale = this.mapToRange(e.animFrames.spawn, 0, animLengths.eggSpawn, 0.0, 1.0);
+                ctx[1].fillStyle = 'white';
+                ctx[1].strokeStyle = 'black';
                 let pos = this.gamePositionToCanvasPosition(e.position.x, e.position.y)
-                if (e.hp > 0) this.circle(pos[0], pos[1], this.gameDistanceToCanvasDistance(game.eggRadius));
-                else this.drawBrokenEgg(pos[0], pos[1], this.gameDistanceToCanvasDistance(game.eggRadius));
-            }
-        }
-    }
-
-    updateClientSequencer() {
-        if (thisPlayer) {
-            if (thisPlayer.notestack !== prevNotestack) {
-                client.notestack = [];
-                for (let c = 0; c < thisPlayer.notestack.length; c++) {
-                    client.notestack.push(Frequency(thisPlayer.notestack.charCodeAt(c), 'midi').toNote());
+                if (e.hp > 0) {
+                    this.ellipse(pos[0], pos[1], 
+                        this.gameXDimToCanvasXDim(game.eggRadius) * scale, 
+                        this.gameYDimToCanvasYDim(game.eggRadius) * scale,
+                        0, 0, 2*Math.PI, 1);
                 }
-                prevNotestack = thisPlayer.notestack;
-                console.log(client.notestack);
+                else this.drawBrokenEgg(e, pos[0], pos[1], 
+                    this.gameXDimToCanvasXDim(game.eggRadius), this.gameYDimToCanvasYDim(game.eggRadius), 1);
             }
-            if (thisPlayer.rhythmstack !== prevRhythmstack) {
-                client.rhythmstack = thisPlayer.rhythmstack.split(' ');
-                prevRhythmstack = thisPlayer.rhythmstack;
-                console.log(client.rhythmstack);
-            }
+        if (e.animFrames.spawn < animLengths.eggSpawn) e.animFrames.spawn++;
         }
-    }
-
-    drawPerformers(p, t, dt) {
-        /*
-        this.drawCircle(x, y, game.headRadius, true);
-        for (let i = 0; i < p.bodyParts.length; i++) {
-            let nextPos = p.bodyParts[i];
-            if (isThisPerformer) ctx.fillStyle = this.rainbowColors();
-            this.drawCircle(nextPos.x, nextPos.y, game.bodyRadius, true);
-        }
-
-        // draw eyes
-        let angle = +w.direction;
-        if (w.direction === game.directionStop) {
-            angle = - Math.PI / 2;
-        }
-        let eye1 = new TwoVector(Math.cos(angle + game.eyeAngle), Math.sin(angle + game.eyeAngle));
-        let eye2 = new TwoVector(Math.cos(angle - game.eyeAngle), Math.sin(angle - game.eyeAngle));
-        eye1.multiplyScalar(game.eyeDist).add(w.position);
-        eye2.multiplyScalar(game.eyeDist).add(w.position);
-        ctx.fillStyle = 'black';
-        this.drawCircle(eye1.x, eye1.y, game.eyeRadius, true);
-        this.drawCircle(eye2.x, eye2.y, game.eyeRadius, true);
-        ctx.fillStyle = 'white';
-
-        // update status
-        if (isPerformer) {
-            document.getElementById('wiggle-length').innerHTML = 'Wiggle Length: ' + Math.floor(t) + ' ' + Math.floor(dt);
-        } */
     }
 
     setRendererSize() {
-        w = this.canvas.width = window.innerWidth;
-        h = this.canvas.height = window.innerHeight;
+        w = canvas[0].width = canvas[1].width = this.canvas.width = window.innerWidth;
+        h = canvas[0].height = canvas[1].height = this.canvas.height = window.innerHeight;
     }
 
     gamePositionToCanvasPosition(gameX, gameY) {
-        let canvasX = this.mapToRange(gameX, leftViewBound, rightViewBound, 0, w);
-        let canvasY = this.mapToRange(gameY, 0, game.playerHeight, 0, h / players.length) 
+        let canvasX = Math.floor(this.mapToRange(gameX, leftViewBound, rightViewBound, 0, w));
+        let canvasY = Math.floor(this.mapToRange(gameY, 0, game.playerHeight, 0, h / players.length)); 
         return [canvasX, canvasY];
     }
 
-    gameDistanceToCanvasDistance(gameDist) {
-        let canvasDist = this.mapToRange(gameDist, 0, game.playerWidth, 0, w / players.length);
-        return canvasDist;
+    gameXDimToCanvasXDim(gameX) {
+        return Math.floor(this.mapToRange(gameX, 0, game.playerWidth, 0, w / players.length));
+    }
+
+    gameYDimToCanvasYDim(gameY) {
+        return Math.floor(this.mapToRange(gameY, 0, game.playerHeight, 0, h / players.length));
     }
 
     playerCellToCanvasPosition(p, cellX, cellY) {
@@ -269,46 +261,40 @@ export default class InterferenceRenderer extends Renderer {
     }
 
     mapToRange(val, l1, h1, l2, h2) {
-        return Math.floor(l2 + (h2 - l2) * (val - l1) / (h1 - l1));
+        return (l2 + (h2 - l2) * (val - l1) / (h1 - l1));
     }
 
-    drawBrokenEgg(x, y, radius) {
-        let gap = radius * (animFrames.eggBreak * 0.02);
-        ctx.beginPath();
-        ctx.arc(x-gap, y, radius, 0.25*Math.PI, 1.25*Math.PI);
-        ctx.fill();
-        ctx.stroke();
-
-        ctx.beginPath();
-        ctx.arc(x+gap, y, radius, 1.25*Math.PI, 2.25*Math.PI);
-        ctx.fill();
-        ctx.stroke();
-
-        if (animFrames.eggBreak < 60) animFrames.eggBreak++
+    drawBrokenEgg(e, x, y, radiusX, radiusY, layer) {
+        let gapX = radiusX * (e.animFrames.break / animLengths.eggBreak);
+        let gapY = radiusY * (e.animFrames.break / animLengths.eggBreak);
+        this.ellipse(x+gapX, y-gapY, radiusX, radiusY, 0, 0, 0.5*Math.PI, layer)
+        this.ellipse(x-gapX, y-gapY, radiusX, radiusY, 0, 0.5*Math.PI, Math.PI, layer)
+        this.ellipse(x-gapX, y+gapY, radiusX, radiusY, 0, Math.PI, 1.5*Math.PI, layer)
+        this.ellipse(x+gapX, y+gapY, radiusX, radiusY, 0, 1.5*Math.PI, 2*Math.PI, layer)
+        if (e.animFrames.break < animLengths.eggBreak) e.animFrames.break++
     }
 
-    fillColor(p, which) {
+    fillColor(p, which, layer) {
         if (paletteTable[p.palette]) {
-            ctx.fillStyle = paletteTable[p.palette][which];
+            ctx[layer].fillStyle = paletteTable[p.palette][which];
         }  
-        else ctx.fillStyle = paletteTable['default'][which];
+        else ctx[layer].fillStyle = paletteTable['default'][which];
     }
 
-    circle(x, y, radius) {
-        ctx.beginPath();
-        ctx.arc(x, y, radius, 0, 2*Math.PI);
-        ctx.fill();
-        ctx.stroke();
-        ctx.closePath();
+    ellipse(x, y, radiusX, radiusY, rotation, startAngle, endAngle, layer) {
+        ctx[layer].beginPath();
+        ctx[layer].ellipse(x, y, radiusX, radiusY, rotation, startAngle, endAngle);
+        ctx[layer].fill();
+        ctx[layer].stroke();
     }
 
-    triangle(x1, y1, x2, y2, x3, y3) {
-        ctx.beginPath();
-        ctx.moveTo(x1, y1);
-        ctx.lineTo(x2, y2);
-        ctx.lineTo(x3, y3);
-        ctx.fill();
-        ctx.closePath();
+    fillTriangle(x1, y1, x2, y2, x3, y3, layer) {
+        ctx[layer].beginPath();
+        ctx[layer].moveTo(x1, y1);
+        ctx[layer].lineTo(x2, y2);
+        ctx[layer].lineTo(x3, y3);
+        ctx[layer].fill();
+        ctx[layer].closePath();
     }
 
 }

@@ -53,6 +53,12 @@ export default class InterferenceServerEngine extends ServerEngine {
             player.number = this.myRooms[roomName].length;
             player.palette = palettes[player.number%palettes.length];
             player.stage = this.roomStages[roomName];
+            if (player.stage === 'intro') {
+                player.ammo += 8;
+                for (let e of this.gameEngine.eggsByRoom[roomName]) {
+                    e.hp += Math.floor((Math.random() * 3) + 5);
+                }
+            }
             console.log(player.number);
             this.myRooms[roomName].push(player);
             this.assignPlayerToRoom(player.playerId, roomName);
@@ -110,7 +116,9 @@ export default class InterferenceServerEngine extends ServerEngine {
             for (let k of Object.keys(this.myRooms)) {
                 if (this.myRooms[k].includes(player)) {
                     this.myRooms[k].splice(this.myRooms[k].indexOf(player), 1);
-                    for (let p of this.myRooms[k]) if (p.number > removed) p.number--; 
+                    for (let p of this.myRooms[k]) {
+                        if (p.number > removed) p.number--; 
+                    }
                 }
                 if (this.myRooms[k].length === 0) {
                     for (let e of this.gameEngine.world.queryObjects({ instanceType: Egg })) 
@@ -136,7 +144,9 @@ export default class InterferenceServerEngine extends ServerEngine {
                                                         velocity: this.gameEngine.velRandY() });
         let numPlayers = this.myRooms[roomName].length;
         for (let p of this.myRooms[roomName]) p.ammo += 8;
-        newEgg.hp = Math.floor((Math.random() * numPlayers * 5) + (numPlayers * 3));
+        newEgg.number = 0;
+        newEgg.sound = 'melody';
+        newEgg.hp = Math.floor((Math.random() * numPlayers * 3) + (numPlayers * 5));
         this.assignObjectToRoom(newEgg, roomName)
         this.gameEngine.addObjectToWorld(newEgg);
     }
@@ -164,44 +174,16 @@ export default class InterferenceServerEngine extends ServerEngine {
     */
     stepLogic() {
 
-        let players = this.gameEngine.world.queryObjects({ instanceType: Performer });
-        let eggs = this.gameEngine.world.queryObjects({ instanceType: Egg });
-        for (let p of players) {
-            /*
-            // check for collision
-            for (let w2 of wiggles) {
-                if (w === w2)
-                    continue;
-
-                for (let i = 0; i < w2.bodyParts.length; i++) {
-                    let distance = w2.bodyParts[i].clone().subtract(w.position);
-                    if (distance.length() < this.gameEngine.collideDistance)
-                        this.wiggleHitWiggle(w, w2);
+        for (let k of Object.keys(this.myRooms)) {
+            let reload = true;
+            for (let p of this.myRooms[k]) {
+                if (p.ammo > 0) reload = false;
+            }
+            if (reload) {
+                for (let p of this.myRooms[k]) {
+                    p.ammo += 4;
                 }
             }
-
-            // check for food-eating
-            for (let f of foodObjects) {
-                let distance = w.position.clone().subtract(f.position);
-                if (distance.length() < this.gameEngine.eatDistance) {
-                    this.wiggleEatFood(w, f);
-                }
-            }
-
-            // move AI wiggles
-            if (w.AI) {
-                if (Math.random() < 0.01) w.turnDirection *= -1;
-                w.direction += w.turnDirection * (Math.random() - 0.9)/20;
-                if (w.position.y >= this.gameEngine.spaceHeight / 2) w.direction = -Math.PI/2;
-                if (w.position.y <= -this.gameEngine.spaceHeight / 2) w.direction = Math.PI/2;
-                if (w.position.x >= this.gameEngine.spaceWidth / 2) w.direction = Math.PI;
-                if (w.position.x <= -this.gameEngine.spaceWidth / 2) w.direction = 0;
-                if (w.direction > Math.PI * 2) w.direction -= Math.PI * 2;
-                if (w.direction < 0) w.direction += Math.PI * 2;
-            }
-            */
         }
-
-    
     }
 }

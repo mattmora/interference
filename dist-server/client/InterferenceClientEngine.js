@@ -78,12 +78,7 @@ function (_ClientEngine) {
     _this.controls = new _lanceGg.KeyboardControls(_assertThisInitialized(_this));
     _this.prevState = 'setup';
     _this.fullscreen = false;
-    _this.optionSelection = {
-      left: null,
-      right: null,
-      up: null,
-      down: null
-    };
+    _this.optionSelection = {};
     _this.graphicNotes = [];
     _this.sequence = [];
     _this.currentStep = null;
@@ -142,6 +137,10 @@ function (_ClientEngine) {
             }
           }
         } else {
+          if (_this2.optionSelection[e.code]) {
+            _this2.executeOption(optionSelection[e.code]);
+          }
+
           if (e.code === 'Backquote') {
             if (_this2.transport.state !== 'started') {
               _this2.transport.start();
@@ -203,8 +202,7 @@ function (_ClientEngine) {
       var events = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
       this.tetrisChainSequence = new _tone.Sequence(function (time, step) {
         _this2.currentStep = step;
-
-        _this2.playScaleNoteOnPolySynth(_this2.tetrisChainSynth, _this2.sequence[step], 1, '16n', time);
+        if (_this2.sequence[step]) _this2.playScaleNoteOnPolySynth(_this2.tetrisChainSynth, _this2.sequence[step].notes, 1, _this2.sequence[step].durs, time);
       }, events, '16n');
       /*
       // show try-again button
@@ -287,9 +285,8 @@ function (_ClientEngine) {
             var pingId = response[1];
             var clientPingTime = response[2];
             var serverPingTime = response[3];
-            var serverPongTime = response[4]; //console.log('[pong] - id: %s, clientPingTime: %s, serverPingTime: %s, serverPongTime: %s',
-            //pingId, clientPingTime, serverPingTime, serverPongTime);
-
+            var serverPongTime = response[4];
+            console.log('[pong] - id: %s, clientPingTime: %s, serverPingTime: %s, serverPongTime: %s', pingId, clientPingTime, serverPingTime, serverPongTime);
             callback(pingId, clientPingTime, serverPingTime, serverPongTime);
           }
         });
@@ -375,6 +372,9 @@ function (_ClientEngine) {
       this.prevStage = stage;
     }
   }, {
+    key: "executeOption",
+    value: function executeOption(optionString) {}
+  }, {
     key: "onEggBounce",
     value: function onEggBounce(e) {
       if (!Object.keys(this.eggSounds).includes(e.toString())) this.constructEggSounds(e);
@@ -389,22 +389,38 @@ function (_ClientEngine) {
       var scale = scaleTable[this.player.palette];
       var pos = this.gameEngine.playerCellAtPosition(this.player, e.position.x, e.position.y);
       var step = pos[0];
-      var note = this.gameEngine.playerCellHeight - pos[1] + scale.length * 4; //let note = (this.gameEngine.cellsPerPlayer - 1) - ((pos[1] * this.gameEngine.playerCellWidth) + pos[0]);
+      var note = this.gameEngine.playerCellHeight - pos[1] + scale.length * 4;
+      var dur = '16n'; //let note = (this.gameEngine.cellsPerPlayer - 1) - ((pos[1] * this.gameEngine.playerCellWidth) + pos[0]);
 
-      if (this.sequence[step]) this.sequence[step].push(note);else this.sequence[step] = [note];
+      if (this.sequence[step]) {
+        if (this.sequence[step].notes.includes(note)) {
+          this.sequence[step].durs[this.sequence[step].notes.indexOf(note)] = '2n';
+          dur = '2n';
+        } else {
+          this.sequence[step].notes.push(note);
+          this.sequence[step].durs.push('16n');
+        }
+      } else this.sequence[step] = {
+        notes: [note],
+        durs: ['16n']
+      };
+
       this.graphicNotes.push({
         type: 'egg',
+        duration: dur,
         step: step,
         cell: {
           x: pos[0],
           y: pos[1]
-        }
+        },
+        animFrame: 0
       });
     }
   }, {
     key: "onEggBroke",
     value: function onEggBroke(e) {
       console.log('egg broke');
+      this.eggSounds[e.toString()].drone.triggerRelease();
 
       if (this.gameEngine.positionIsInPlayer(e.position.x, this.player)) {
         this.eggSounds[e.toString()].break.start(this.nextDiv('4n'));
@@ -444,7 +460,7 @@ function (_ClientEngine) {
             attack: 1,
             decay: 0.1,
             sustain: 1,
-            release: 0.1
+            release: 0.5
           }
         }),
         bounce: new _tone.NoiseSynth({
@@ -461,13 +477,13 @@ function (_ClientEngine) {
         breakSynth: synth.toMaster(),
         break: new _tone.Sequence(function (time, note) {
           _this5.playScaleNoteOnSynth(synth, note, 6, '64n', time);
-        }, [0, 1, 2, 3, 1, 2, 3, 4], '32n')
+        }, [[0, 1, 2, 3, 1, 2, 3, 4], null, null, null], '4n')
       };
       this.eggSounds[e.toString()].drone.connect(this.autowah);
       this.eggSounds[e.toString()].bounce.connect(this.reverb);
       this.eggSounds[e.toString()].breakSynth.connect(this.reverb);
       this.eggSounds[e.toString()].drone.triggerAttack('+0', 0.1);
-      this.eggSounds[e.toString()].break.loop = false;
+      this.eggSounds[e.toString()].break.loop = true;
     }
   }, {
     key: "playScaleNoteOnSynth",
@@ -482,7 +498,7 @@ function (_ClientEngine) {
     }
   }, {
     key: "playScaleNoteOnPolySynth",
-    value: function playScaleNoteOnPolySynth(synth, notes, octaveShift, dur, time) {
+    value: function playScaleNoteOnPolySynth(synth, notes, octaveShift, durs, time) {
       if (!notes) return; //console.log(note);
 
       var chord = [];
@@ -514,7 +530,7 @@ function (_ClientEngine) {
         }
       }
 
-      synth.triggerAttackRelease(chord, dur, time);
+      synth.triggerAttackRelease(chord, durs, time);
     }
   }, {
     key: "nextDiv",
