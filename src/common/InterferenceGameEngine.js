@@ -68,9 +68,19 @@ export default class InterferenceGameEngine extends GameEngine {
 
     postStepLogic(stepInfo) {
         for (let r of this.rooms) {
+            this.quantizedMovement(r);
             this.resolveCollisions(r);
             this.gameLogic(r);
         }
+    }
+
+    quantizedMovement(r) {
+        if (this.eggsByRoom[r]) {
+            for (let e of this.eggsByRoom[r]) {
+
+            }
+        }
+
     }
 
     resolveCollisions(r) {
@@ -163,15 +173,15 @@ export default class InterferenceGameEngine extends GameEngine {
         return (leftBound < x && x < rightBound);
     }
 
-    cellAtPosition(x, y) {
-        let cellX = Math.floor(x / this.cellWidth);
-        let cellY = Math.floor(y / this.cellHeight);
+    quantizedPosition(x, y, divX, divY) {
+        let cellX = Math.floor(x / (this.playerWidth / divX));
+        let cellY = Math.floor(y / (this.playerHeight / divY));
         return [cellX, cellY];
     }
 
-    playerCellAtPosition(p, x, y) {
-        let cell = this.cellAtPosition(x, y)
-        let playerCellX = cell[0] - (p.number * this.playerCellWidth);
+    playerQuantizedPosition(p, x, y, divX, divY) {
+        let cell = this.quantizedPosition(x, y, divX, divY);
+        let playerCellX = cell[0] - (p.number * divX);
         let playerCellY = cell[1];
         return [playerCellX, playerCellY];
     }

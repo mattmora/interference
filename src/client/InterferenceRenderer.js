@@ -67,7 +67,7 @@ let time = 0;
 let players = []; 
 let playerId = 0;
 let thisPlayer = null;
-let graphicNotes = [];
+let graphicNotes = {};
 let eggs = [];
 
 let prevNotestack = '';
@@ -190,27 +190,9 @@ export default class InterferenceRenderer extends Renderer {
     }
 
     drawNoteGraphics() {
-        for (let g of graphicNotes) {
-            if (g.type === 'egg') {
-                let pos = this.playerCellToCanvasPosition(thisPlayer, g.cell.x, g.cell.y);
-                let x = pos[0];
-                let y = this.mapToRange(g.animFrame, 0, animLengths.eggNote, 0, pos[1]);
-                let heightFactor = this.mapToRange(g.animFrame, 0, animLengths.eggNote, game.playerCellHeight, 1);
-                let dimX = this.gameXDimToCanvasXDim(game.cellWidth); 
-                let dimY = this.gameYDimToCanvasYDim(game.cellHeight*heightFactor);
-                let c = 'c1';
-                let layer = 1;
-                if (g.duration === '2n') {
-                    c = 'c3';
-                    dimX *= game.playerCellWidth / 2;
-                    layer = 0;
-                }
-                if (g.step === client.currentStep) c = 'c2'
-                this.fillColor(thisPlayer, c, layer);
-                ctx[layer].fillRect(x, y, dimX, dimY);
-                if (g.animFrame < animLengths.eggNote) g.animFrame++;
-            }
-        }
+        for (let n of graphicNotes.egg.perc) this.drawEggPercNote(n);
+        for (let n of graphicNotes.egg.bass) this.drawEggBassNote(n);
+        for (let n of graphicNotes.egg.melody) this.drawEggMelodyNote(n);
     }
 
     drawEggs() {
@@ -221,18 +203,76 @@ export default class InterferenceRenderer extends Renderer {
                 let scale = this.mapToRange(e.animFrames.spawn, 0, animLengths.eggSpawn, 0.0, 1.0);
                 ctx[1].fillStyle = 'white';
                 ctx[1].strokeStyle = 'black';
-                let pos = this.gamePositionToCanvasPosition(e.position.x, e.position.y)
+                let gamePos = game.quantizedPosition(e.position.x, e.position.y, 16, 9);
+                let pos = this.gamePositionToCanvasPosition(gamePos[0] + (game.playerWidth / 32), gamePos[1] + (game.playerHeight / 18));
                 if (e.hp > 0) {
                     this.ellipse(pos[0], pos[1], 
                         this.gameXDimToCanvasXDim(game.eggRadius) * scale, 
                         this.gameYDimToCanvasYDim(game.eggRadius) * scale,
-                        0, 0, 2*Math.PI, 1);
+                        0, 0, 2*Math.PI, true, 1);
                 }
                 else this.drawBrokenEgg(e, pos[0], pos[1], 
-                    this.gameXDimToCanvasXDim(game.eggRadius), this.gameYDimToCanvasYDim(game.eggRadius), 1);
+                    this.gameXDimToCanvasXDim(game.eggRadius), this.gameYDimToCanvasYDim(game.eggRadius), true, 1);
             }
         if (e.animFrames.spawn < animLengths.eggSpawn) e.animFrames.spawn++;
         }
+    }
+
+    drawEggMelodyNote(n) {
+        let pos = this.playerCellToCanvasPosition(thisPlayer, n.cell.x, n.cell.y, n.sequence.length, n.sequence.range);
+        let dimX = this.gameXDimToCanvasXDim(game.playerWidth / n.sequence.length) / 2; 
+        let dimY = this.gameYDimToCanvasYDim(game.playerHeight / n.sequence.range) / 2;
+        let x = pos[0] + dimX;
+        let y = pos[1] + dimY;
+        dimY *= this.mapToRange(n.animFrame, 0, animLengths.eggNote, n.sequence.range, 1);
+        dimX *= this.mapToRange(n.animFrame, 0, animLengths.eggNote, n.sequence.length, 1);
+        // color
+        let c = 'c2';
+        let layer = 0;
+        if (n.duration === '2n') {
+            c = 'c4';
+            layer = 1;
+        }
+        if (n.step === client.currentStep) c = 'c3'
+        this.fillColor(thisPlayer, c, layer);
+        this.ellipse(x, y, dimX, dimY, 0, 0, 2*Math.PI, false, layer);
+        if (n.animFrame < animLengths.eggNote) n.animFrame++;
+    }
+
+    drawEggBassNote(n) {
+        // generic position and dimensions of any egg sequence note
+        let pos = this.playerCellToCanvasPosition(thisPlayer, n.cell.x, n.cell.y, n.sequence.length, n.sequence.range);
+        let dimX = this.gameXDimToCanvasXDim(game.playerWidth / n.sequence.length); 
+        let dimY = this.gameYDimToCanvasYDim(game.playerHeight / n.sequence.range);
+        ////////////////////////////////////////
+        // adjust generic values for animation
+        let x = pos[0];
+        let y = this.mapToRange(n.animFrame, 0, animLengths.eggNote, 0, pos[1]);
+        dimY *= this.mapToRange(n.animFrame, 0, animLengths.eggNote, n.sequence.range, 1);
+        // color
+        let c = 'c1';
+        let layer = 1;
+        if (n.duration === '2n') {
+            c = 'c3';
+            dimX *= n.sequence.length / 2;
+            layer = 0;
+        }
+        if (n.step === client.currentStep) c = 'c2'
+        this.fillColor(thisPlayer, c, layer);
+        ctx[layer].fillRect(x, y, dimX, dimY);
+        if (n.animFrame < animLengths.eggNote) n.animFrame++;
+    }
+
+    drawEggPercNote(n) {
+
+    }
+
+    drawEggPercNode(n) {
+        // generic position and dimensions of any egg sequence note
+        let pos = this.playerCellToCanvasPosition(thisPlayer, n.cell.x, n.cell.y, n.sequence.length, n.sequence.range);
+        let dimX = this.gameXDimToCanvasXDim(game.playerWidth / n.sequence.length); 
+        let dimY = this.gameYDimToCanvasYDim((game.playerHeight / n.sequence.range));
+        ////////////////////////////////////////
     }
 
     setRendererSize() {
@@ -254,9 +294,11 @@ export default class InterferenceRenderer extends Renderer {
         return Math.floor(this.mapToRange(gameY, 0, game.playerHeight, 0, h / players.length));
     }
 
-    playerCellToCanvasPosition(p, cellX, cellY) {
-        let gameX = game.cellWidth * (cellX + (p.number * game.playerCellWidth));
-        let gameY = game.cellHeight * cellY;
+    playerCellToCanvasPosition(p, cellX, cellY, cellsXPerPlayer, cellsYPerPlayer) {
+        //let gameX = game.cellWidth * (cellX + (p.number * game.playerCellWidth));
+        //let gameY = game.cellHeight * cellY;
+        let gameX = (game.playerWidth / cellsXPerPlayer) * (cellX + (p.number * cellsXPerPlayer));
+        let gameY = (game.playerHeight / cellsYPerPlayer) * cellY;
         return this.gamePositionToCanvasPosition(gameX, gameY);
     }
 
@@ -264,13 +306,13 @@ export default class InterferenceRenderer extends Renderer {
         return (l2 + (h2 - l2) * (val - l1) / (h1 - l1));
     }
 
-    drawBrokenEgg(e, x, y, radiusX, radiusY, layer) {
+    drawBrokenEgg(e, x, y, radiusX, radiusY, stroke, layer) {
         let gapX = radiusX * (e.animFrames.break / animLengths.eggBreak);
         let gapY = radiusY * (e.animFrames.break / animLengths.eggBreak);
-        this.ellipse(x+gapX, y-gapY, radiusX, radiusY, 0, 0, 0.5*Math.PI, layer)
-        this.ellipse(x-gapX, y-gapY, radiusX, radiusY, 0, 0.5*Math.PI, Math.PI, layer)
-        this.ellipse(x-gapX, y+gapY, radiusX, radiusY, 0, Math.PI, 1.5*Math.PI, layer)
-        this.ellipse(x+gapX, y+gapY, radiusX, radiusY, 0, 1.5*Math.PI, 2*Math.PI, layer)
+        this.ellipse(x+gapX, y-gapY, radiusX, radiusY, 0, 0, 0.5*Math.PI, stroke, layer)
+        this.ellipse(x-gapX, y-gapY, radiusX, radiusY, 0, 0.5*Math.PI, Math.PI, stroke, layer)
+        this.ellipse(x-gapX, y+gapY, radiusX, radiusY, 0, Math.PI, 1.5*Math.PI, stroke, layer)
+        this.ellipse(x+gapX, y+gapY, radiusX, radiusY, 0, 1.5*Math.PI, 2*Math.PI, stroke, layer)
         if (e.animFrames.break < animLengths.eggBreak) e.animFrames.break++
     }
 
@@ -281,11 +323,11 @@ export default class InterferenceRenderer extends Renderer {
         else ctx[layer].fillStyle = paletteTable['default'][which];
     }
 
-    ellipse(x, y, radiusX, radiusY, rotation, startAngle, endAngle, layer) {
+    ellipse(x, y, radiusX, radiusY, rotation, startAngle, endAngle, stroke, layer) {
         ctx[layer].beginPath();
         ctx[layer].ellipse(x, y, radiusX, radiusY, rotation, startAngle, endAngle);
         ctx[layer].fill();
-        ctx[layer].stroke();
+        if (stroke) ctx[layer].stroke();
     }
 
     fillTriangle(x1, y1, x2, y2, x3, y3, layer) {

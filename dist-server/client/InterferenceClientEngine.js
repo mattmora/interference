@@ -79,8 +79,20 @@ function (_ClientEngine) {
     _this.prevState = 'setup';
     _this.fullscreen = false;
     _this.optionSelection = {};
-    _this.graphicNotes = [];
-    _this.sequence = [];
+    _this.graphicNotes = {
+      egg: {
+        melody: [],
+        bass: [],
+        perc: []
+      }
+    };
+    _this.sequences = {
+      egg: {
+        melody: [],
+        bass: [],
+        perc: []
+      }
+    };
     _this.currentStep = null;
 
     _this.gameEngine.on('client__postStep', _this.stepLogic.bind(_assertThisInitialized(_this)));
@@ -198,11 +210,12 @@ function (_ClientEngine) {
       }).toMaster(); // BUILDERS
       // Tetris Chain
 
-      this.tetrisChainSynth = new _tone.PolySynth(9, _tone.Synth).toMaster();
+      this.eggMelodySynth = new _tone.PolySynth(9, _tone.Synth).toMaster();
       var events = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
-      this.tetrisChainSequence = new _tone.Sequence(function (time, step) {
+      this.eggMelodySequence = new _tone.Sequence(function (time, step) {
         _this2.currentStep = step;
-        if (_this2.sequence[step]) _this2.playScaleNoteOnPolySynth(_this2.tetrisChainSynth, _this2.sequence[step].notes, 1, _this2.sequence[step].durs, time);
+        var seqStep = _this2.sequences.egg.melody[step];
+        if (seqStep) _this2.playScaleNoteOnPolySynth(_this2.eggMelodySynth, seqStep.notes, 1, seqStep.durs, time);
       }, events, '16n');
       /*
       // show try-again button
@@ -285,8 +298,9 @@ function (_ClientEngine) {
             var pingId = response[1];
             var clientPingTime = response[2];
             var serverPingTime = response[3];
-            var serverPongTime = response[4];
-            console.log('[pong] - id: %s, clientPingTime: %s, serverPingTime: %s, serverPongTime: %s', pingId, clientPingTime, serverPingTime, serverPongTime);
+            var serverPongTime = response[4]; //console.log('[pong] - id: %s, clientPingTime: %s, serverPingTime: %s, serverPongTime: %s',
+            //pingId, clientPingTime, serverPingTime, serverPongTime);
+
             callback(pingId, clientPingTime, serverPingTime, serverPongTime);
           }
         });
@@ -336,9 +350,9 @@ function (_ClientEngine) {
           this.transport.seconds = this.syncClient.getSyncTime();
         }
 
-        if (this.tetrisChainSequence.state !== 'started') {
+        if (this.eggMelodySequence.state !== 'started') {
           //console.log('start seq');
-          this.tetrisChainSequence.start(this.nextDiv('1m'));
+          this.eggMelodySequence.start(this.nextDiv('1m'));
         }
 
         var _iteratorNormalCompletion = true;
@@ -373,7 +387,9 @@ function (_ClientEngine) {
     }
   }, {
     key: "executeOption",
-    value: function executeOption(optionString) {}
+    value: function executeOption(optionString) {
+      console.log(optionString);
+    }
   }, {
     key: "onEggBounce",
     value: function onEggBounce(e) {
@@ -387,31 +403,34 @@ function (_ClientEngine) {
     key: "onPlayerHitEgg",
     value: function onPlayerHitEgg(e) {
       var scale = scaleTable[this.player.palette];
-      var pos = this.gameEngine.playerCellAtPosition(this.player, e.position.x, e.position.y);
+      var pos = this.gameEngine.playerQuantizedPosition(this.player, e.position.x, e.position.y, 16, 9);
       var step = pos[0];
       var note = this.gameEngine.playerCellHeight - pos[1] + scale.length * 4;
       var dur = '16n'; //let note = (this.gameEngine.cellsPerPlayer - 1) - ((pos[1] * this.gameEngine.playerCellWidth) + pos[0]);
 
-      if (this.sequence[step]) {
-        if (this.sequence[step].notes.includes(note)) {
-          this.sequence[step].durs[this.sequence[step].notes.indexOf(note)] = '2n';
+      if (this.sequences.egg[e.sound][step]) {
+        if (this.sequences.egg[e.sound][step].notes.includes(note)) {
+          this.sequences.egg[e.sound][step].durs[this.sequences.egg[e.sound][step].notes.indexOf(note)] = '2n';
           dur = '2n';
         } else {
-          this.sequence[step].notes.push(note);
-          this.sequence[step].durs.push('16n');
+          this.sequences.egg[e.sound][step].notes.push(note);
+          this.sequences.egg[e.sound][step].durs.push('16n');
         }
-      } else this.sequence[step] = {
+      } else this.sequences.egg[e.sound][step] = {
         notes: [note],
         durs: ['16n']
       };
 
-      this.graphicNotes.push({
-        type: 'egg',
+      this.graphicNotes.egg[e.sound].push({
         duration: dur,
         step: step,
         cell: {
           x: pos[0],
           y: pos[1]
+        },
+        sequence: {
+          length: 16,
+          range: 9
         },
         animFrame: 0
       });
@@ -424,7 +443,7 @@ function (_ClientEngine) {
 
       if (this.gameEngine.positionIsInPlayer(e.position.x, this.player)) {
         this.eggSounds[e.toString()].break.start(this.nextDiv('4n'));
-        this.optionSelection.up = 'tetrisChain';
+        this.optionSelection['Digit1'] = 'tetrisChain';
       }
     }
   }, {

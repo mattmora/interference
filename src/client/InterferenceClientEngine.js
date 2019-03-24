@@ -38,8 +38,20 @@ export default class InterferenceClientEngine extends ClientEngine {
         this.prevState = 'setup';
         this.fullscreen = false;
         this.optionSelection = {};
-        this.graphicNotes = [];
-        this.sequence = [];
+        this.graphicNotes = {
+            egg: {
+                melody: [],
+                bass: [],
+                perc: []
+            }
+        };
+        this.sequences = {
+            egg: {
+                melody: [],
+                bass: [],
+                perc: []
+            }
+        };
         this.currentStep = null;
 
         this.gameEngine.on('client__postStep', this.stepLogic.bind(this));
@@ -150,12 +162,13 @@ export default class InterferenceClientEngine extends ClientEngine {
         // BUILDERS
 
         // Tetris Chain
-        this.tetrisChainSynth = new PolySynth(9, Synth).toMaster();
+        this.eggMelodySynth = new PolySynth(9, Synth).toMaster();
 
         let events = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
-        this.tetrisChainSequence = new Sequence((time, step) => {
+        this.eggMelodySequence = new Sequence((time, step) => {
             this.currentStep = step;
-            if (this.sequence[step]) this.playScaleNoteOnPolySynth(this.tetrisChainSynth, this.sequence[step].notes, 1, this.sequence[step].durs, time)
+            let seqStep = this.sequences.egg.melody[step];
+            if (seqStep) this.playScaleNoteOnPolySynth(this.eggMelodySynth, seqStep.notes, 1, seqStep.durs, time)
         }, events, '16n');
  
         /*
@@ -277,9 +290,9 @@ export default class InterferenceClientEngine extends ClientEngine {
                 this.transport.start();
                 this.transport.seconds = this.syncClient.getSyncTime();
             }
-            if (this.tetrisChainSequence.state !== 'started') {
+            if (this.eggMelodySequence.state !== 'started') {
                 //console.log('start seq');
-                this.tetrisChainSequence.start(this.nextDiv('1m'));
+                this.eggMelodySequence.start(this.nextDiv('1m'));
             }
             for (let e of this.eggs) {
                 if (!Object.keys(this.eggSounds).includes(e.toString())) this.constructEggSounds(e);
@@ -292,7 +305,7 @@ export default class InterferenceClientEngine extends ClientEngine {
     }
 
     executeOption(optionString) {
-
+        console.log(optionString);
     }
 
     onEggBounce(e) {
@@ -304,29 +317,32 @@ export default class InterferenceClientEngine extends ClientEngine {
 
     onPlayerHitEgg(e) {
         let scale = scaleTable[this.player.palette];
-        let pos = this.gameEngine.playerCellAtPosition(this.player, e.position.x, e.position.y);
+        let pos = this.gameEngine.playerQuantizedPosition(this.player, e.position.x, e.position.y, 16, 9);
         let step = pos[0];
         let note = (this.gameEngine.playerCellHeight - pos[1]) + (scale.length * 4);
         let dur = '16n';
         //let note = (this.gameEngine.cellsPerPlayer - 1) - ((pos[1] * this.gameEngine.playerCellWidth) + pos[0]);
-        if (this.sequence[step]) {
-            if (this.sequence[step].notes.includes(note)) {
-                this.sequence[step].durs[this.sequence[step].notes.indexOf(note)] = '2n';
+        if (this.sequences.egg[e.sound][step]) {
+            if (this.sequences.egg[e.sound][step].notes.includes(note)) {
+                this.sequences.egg[e.sound][step].durs[this.sequences.egg[e.sound][step].notes.indexOf(note)] = '2n';
                 dur = '2n';
             }
             else {
-                this.sequence[step].notes.push(note);
-                this.sequence[step].durs.push('16n');
+                this.sequences.egg[e.sound][step].notes.push(note);
+                this.sequences.egg[e.sound][step].durs.push('16n');
             }
         }
-        else this.sequence[step] = { notes: [note], durs: ['16n'] };
-        this.graphicNotes.push({ 
-            type: 'egg',
+        else this.sequences.egg[e.sound][step] = { notes: [note], durs: ['16n'] };
+        this.graphicNotes.egg[e.sound].push({
             duration: dur,
             step: step,
             cell: { 
                 x: pos[0], 
                 y: pos[1] 
+            },
+            sequence: {
+                length: 16,
+                range: 9
             },
             animFrame: 0
         });
@@ -337,7 +353,7 @@ export default class InterferenceClientEngine extends ClientEngine {
         this.eggSounds[e.toString()].drone.triggerRelease();
         if (this.gameEngine.positionIsInPlayer(e.position.x, this.player)) {
             this.eggSounds[e.toString()].break.start(this.nextDiv('4n'));
-            this.optionSelection.up = 'tetrisChain';
+            this.optionSelection['Digit1'] = 'tetrisChain';
         }
     }
 
