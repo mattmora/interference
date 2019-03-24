@@ -79,6 +79,13 @@ function (_ClientEngine) {
     _this.prevState = 'setup';
     _this.fullscreen = false;
     _this.optionSelection = {};
+    _this.localControls = {
+      'Backquote': 'ToggleTransport',
+      'KeyF': 'ToggleFullscreen',
+      'KeyH': 'ToggleCursor',
+      'KeyV': 'ToggleView',
+      'Slash': 'ToggleLock'
+    };
     _this.graphicNotes = {
       egg: {
         melody: [],
@@ -113,6 +120,50 @@ function (_ClientEngine) {
   }
 
   _createClass(InterferenceClientEngine, [{
+    key: "executeLocalControl",
+    value: function executeLocalControl(controlString) {
+      if (controlString === 'ToggleTransport') {
+        if (this.transport.state !== 'started') {
+          this.transport.start();
+          this.transport.seconds = this.syncClient.getSyncTime(); //this.sequencerLoop(0);
+        } else {
+          this.transport.pause();
+        }
+      } else if (controlString === 'ToggleFullscreen') {
+        if (!viewLock) {
+          var elem = this.renderer.canvas;
+
+          if (!document.fullscreenElement) {
+            elem.requestFullscreen({
+              navigationUI: 'hide'
+            }).then({}).catch(function (err) {//alert(`Error attempting to enable full-screen mode: ${err.message} (${err.name})`);
+            });
+          } else {
+            document.exitFullscreen();
+          }
+        }
+      } else if (controlString === 'ToggleCursor') {
+        if (!viewLock) {
+          if (document.pointerLockElement === document.body || document.mozPointerLockElement === document.body) {
+            document.exitPointerLock();
+          } else {
+            document.body.requestPointerLock();
+          }
+        }
+      } else if (controlString === 'ToggleView') {
+        //console.log('view');
+        if (!viewLock) this.performanceView = !this.performanceView;
+      } else if (controlString === 'ToggleLock') {
+        //console.log('lock');
+        viewLock = !viewLock;
+      }
+    }
+  }, {
+    key: "executeOption",
+    value: function executeOption(optionString) {
+      console.log(optionString);
+    }
+  }, {
     key: "start",
     value: function start() {
       var _this2 = this;
@@ -150,44 +201,11 @@ function (_ClientEngine) {
           }
         } else {
           if (_this2.optionSelection[e.code]) {
-            _this2.executeOption(optionSelection[e.code]);
+            _this2.executeOption(_this2.optionSelection[e.code]);
           }
 
-          if (e.code === 'Backquote') {
-            if (_this2.transport.state !== 'started') {
-              _this2.transport.start();
-
-              _this2.transport.seconds = _this2.syncClient.getSyncTime(); //this.sequencerLoop(0);
-            } else {
-              _this2.transport.pause();
-            }
-          } else if (e.code === 'KeyF') {
-            if (!viewLock) {
-              var elem = _this2.renderer.canvas;
-
-              if (!document.fullscreenElement) {
-                elem.requestFullscreen({
-                  navigationUI: 'hide'
-                }).then({}).catch(function (err) {//alert(`Error attempting to enable full-screen mode: ${err.message} (${err.name})`);
-                });
-              } else {
-                document.exitFullscreen();
-              }
-            }
-          } else if (e.code === 'KeyH') {
-            if (!viewLock) {
-              if (document.pointerLockElement === document.body || document.mozPointerLockElement === document.body) {
-                document.exitPointerLock();
-              } else {
-                document.body.requestPointerLock();
-              }
-            }
-          } else if (e.code === 'KeyV') {
-            //console.log('view');
-            if (!viewLock) _this2.performanceView = !_this2.performanceView;
-          } else if (e.code === 'Slash') {
-            //console.log('lock');
-            viewLock = !viewLock;
+          if (_this2.localControls[e.code]) {
+            _this2.executeLocalControl(_this2.localControls[e.code]);
           }
         }
       }); //this.transport.timeSignature = 4;
@@ -384,11 +402,6 @@ function (_ClientEngine) {
       }
 
       this.prevStage = stage;
-    }
-  }, {
-    key: "executeOption",
-    value: function executeOption(optionString) {
-      console.log(optionString);
     }
   }, {
     key: "onEggBounce",

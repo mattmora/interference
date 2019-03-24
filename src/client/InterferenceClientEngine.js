@@ -38,6 +38,13 @@ export default class InterferenceClientEngine extends ClientEngine {
         this.prevState = 'setup';
         this.fullscreen = false;
         this.optionSelection = {};
+        this.localControls = {
+            //'Backquote': 'ToggleTransport',
+            'KeyF': 'ToggleFullscreen',
+            'KeyH': 'ToggleCursor',
+            'KeyV': 'ToggleView',
+            'Slash': 'ToggleLock'
+        };
         this.graphicNotes = {
             egg: {
                 melody: [],
@@ -58,6 +65,53 @@ export default class InterferenceClientEngine extends ClientEngine {
         this.gameEngine.on('eggBounce', e => { this.onEggBounce(e) });
         this.gameEngine.on('playerHitEgg', e => { this.onPlayerHitEgg(e) });
         this.gameEngine.on('eggBroke', e => { this.onEggBroke(e) });
+    }
+
+    executeLocalControl(controlString) {
+        if (controlString === 'ToggleTransport') {
+            if (this.transport.state !== 'started') {
+                this.transport.start();
+                this.transport.seconds = this.syncClient.getSyncTime();
+                //this.sequencerLoop(0);
+            }   
+            else {
+                this.transport.pause();
+            }
+        }
+        else if (controlString === 'ToggleFullscreen') {
+            if (!viewLock) {
+                let elem = this.renderer.canvas;
+                if (!document.fullscreenElement) {
+                    elem.requestFullscreen({navigationUI: 'hide'}).then({}).catch(err => {
+                        //alert(`Error attempting to enable full-screen mode: ${err.message} (${err.name})`);
+                    });
+                } else {
+                    document.exitFullscreen();
+                }
+            }
+        }
+        else if (controlString === 'ToggleCursor') {
+            if (!viewLock) {
+                if (document.pointerLockElement === document.body || 
+                    document.mozPointerLockElement === document.body) {
+                    document.exitPointerLock();
+                } else {
+                    document.body.requestPointerLock();
+                }
+            }
+        }
+        else if (controlString === 'ToggleView') {
+            //console.log('view');
+            if (!viewLock) this.performanceView = !this.performanceView;
+        }
+        else if (controlString === 'ToggleLock') {
+            //console.log('lock');
+            viewLock = !viewLock;
+        }
+    }
+
+    executeOption(optionString) {
+        console.log(optionString);
     }
 
     start() {
@@ -94,47 +148,10 @@ export default class InterferenceClientEngine extends ClientEngine {
             }
             else {
                 if (this.optionSelection[e.code]) {
-                    this.executeOption(optionSelection[e.code]);
+                    this.executeOption(this.optionSelection[e.code]);
                 }
-                if (e.code === 'Backquote') {
-                    if (this.transport.state !== 'started') {
-                        this.transport.start();
-                        this.transport.seconds = this.syncClient.getSyncTime();
-                        //this.sequencerLoop(0);
-                    }   
-                    else {
-                        this.transport.pause();
-                    }
-                }
-                else if (e.code === 'KeyF') {
-                    if (!viewLock) {
-                        let elem = this.renderer.canvas;
-                        if (!document.fullscreenElement) {
-                            elem.requestFullscreen({navigationUI: 'hide'}).then({}).catch(err => {
-                                //alert(`Error attempting to enable full-screen mode: ${err.message} (${err.name})`);
-                            });
-                        } else {
-                            document.exitFullscreen();
-                        }
-                    }
-                }
-                else if (e.code === 'KeyH') {
-                    if (!viewLock) {
-                        if (document.pointerLockElement === document.body || 
-                            document.mozPointerLockElement === document.body) {
-                            document.exitPointerLock();
-                        } else {
-                            document.body.requestPointerLock();
-                        }
-                    }
-                }
-                else if (e.code === 'KeyV') {
-                    //console.log('view');
-                    if (!viewLock) this.performanceView = !this.performanceView;
-                }
-                else if (e.code === 'Slash') {
-                    //console.log('lock');
-                    viewLock = !viewLock;
+                if (this.localControls[e.code]) {
+                    this.executeLocalControl(this.localControls[e.code]);
                 }
             }
         });
@@ -286,7 +303,7 @@ export default class InterferenceClientEngine extends ClientEngine {
 
         }
         else if (stage === 'intro') {
-            if (this.transport.state !== 'started' && this.prevStage !== stage) {
+            if (this.transport.state !== 'started') {// && this.prevStage !== stage) {
                 this.transport.start();
                 this.transport.seconds = this.syncClient.getSyncTime();
             }
@@ -302,10 +319,6 @@ export default class InterferenceClientEngine extends ClientEngine {
             }
         }
         this.prevStage = stage;
-    }
-
-    executeOption(optionString) {
-        console.log(optionString);
     }
 
     onEggBounce(e) {

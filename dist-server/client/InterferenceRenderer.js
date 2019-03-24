@@ -378,11 +378,11 @@ function (_Renderer) {
       dimX *= this.mapToRange(n.animFrame, 0, animLengths.eggNote, n.sequence.length, 1); // color
 
       var c = 'c2';
-      var layer = 1;
+      var layer = 0;
 
       if (n.duration === '2n') {
         c = 'c4';
-        layer = 0;
+        layer = 1;
       }
 
       if (n.step === client.currentStep) c = 'c3';
