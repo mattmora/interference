@@ -6,11 +6,6 @@ import Egg from '../common/Egg';
 
 //const palettes = ['rain', 'celeste', 'pyre', 'journey', 'kirby'];
 
-const hpRange = 5;
-const hpMin = 5;
-const initAmmo = 4;
-const ammoInc = 4;
-
 export default class InterferenceServerEngine extends ServerEngine {
 
     constructor(io, gameEngine, inputOptions) {
@@ -68,9 +63,9 @@ export default class InterferenceServerEngine extends ServerEngine {
             player.perc = JSON.stringify([]);
 
             if (player.stage === 'intro') {
-                player.ammo = initAmmo;
+                player.ammo = this.gameEngine.startingAmmo;
                 for (let e of this.gameEngine.eggsByRoom[roomName]) {
-                    e.hp += Math.floor((Math.random() * hpRange) + hpMin);
+                    e.hp += Math.floor((Math.random() * this.gameEngine.eggHPRange) + this.gameEngine.eggHPMin);
                 }
             }
 
@@ -160,10 +155,10 @@ export default class InterferenceServerEngine extends ServerEngine {
         let newEgg = new Egg(this.gameEngine, null, {   position: this.gameEngine.randPos(roomName), 
                                                         velocity: this.gameEngine.velRandY() });
         let numPlayers = this.myRooms[roomName].length;
-        for (let p of this.myRooms[roomName]) p.ammo += initAmmo;
+        for (let p of this.myRooms[roomName]) p.ammo += this.gameEngine.startingAmmo;
         newEgg.number = 0;
         newEgg.sound = sound;
-        newEgg.hp = Math.floor((Math.random() * numPlayers * hpRange) + (numPlayers * hpMin));
+        newEgg.hp = Math.floor((Math.random() * numPlayers * this.gameEngine.eggHPRange) + (numPlayers * this.gameEngine.eggHPMin));
         this.assignObjectToRoom(newEgg, roomName)
         this.gameEngine.addObjectToWorld(newEgg);
     }
@@ -198,7 +193,7 @@ export default class InterferenceServerEngine extends ServerEngine {
             }
             if (reload) {
                 for (let p of this.myRooms[k]) {
-                    p.ammo += ammoInc;
+                    p.ammo += this.gameEngine.reloadSize;
                 }
             }
         }

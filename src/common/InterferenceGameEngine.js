@@ -16,7 +16,8 @@ export default class InterferenceGameEngine extends GameEngine {
 
         // game constants
         Object.assign(this, {
-            cellWidth: 1, cellHeight: 1, playerWidth: 16, playerHeight: 9, 
+            playerWidth: 16, playerHeight: 9, 
+            eggHPRange: 4, eggHPMin: 3, startingAmmo: 2, reloadSize: 2,
             leftBound: 0, topBound: 0, bottomBound: 9,
             transportSyncInterval: 200, eggRadius: 1, eggBaseXVelocity: 0.15,
             palettes: [1, 2, 3, 4, 5],
@@ -24,42 +25,41 @@ export default class InterferenceGameEngine extends GameEngine {
                 { //default
                     scale: [0, 2, 4, 5, 7], 
                     gridWidth: 0,
-                    gridHeight: 0
+                    gridHeight: 0,
+                    subdivision: '1n'
 
                 },
                 { //rain
                     scale: [0, 4, 6, 9, 11], 
                     gridWidth: 16,
-                    gridHeight: 9
+                    gridHeight: 9,
+                    subdivision: '16n'
                 },
                 { //celeste
                     scale: [0, 2, 3, 5, 7], 
                     gridWidth: 16,
-                    gridHeight: 9
+                    gridHeight: 9,
+                    subdivision: '16n'
                 },
                 { //pyre
                     scale: [0, 2, 3, 7, 10], 
                     gridWidth: 16,
-                    gridHeight: 9
+                    gridHeight: 9,
+                    subdivision: '16n'
                 },
                 { //journey
                     scale: [0, 2, 4, 7, 9], 
                     gridWidth: 16,
-                    gridHeight: 9
+                    gridHeight: 9,
+                    subdivision: '16n'
                 },
                 { //kirby
                     scale: [0, 2, 4, 5, 7], 
                     gridWidth: 16,
-                    gridHeight: 9
+                    gridHeight: 9,
+                    subdivision: '16n'
                 }
             ]
-        });
-
-        // dependent game constants
-        Object.assign(this, {
-            playerCellWidth: this.playerWidth / this.cellWidth, 
-            playerCellHeight: this.playerHeight / this.cellHeight, 
-            cellsPerPlayer: (this.playerWidth / this.cellWidth) * (this.playerHeight / this.cellHeight) 
         });
 
         // game variables
@@ -274,6 +274,8 @@ export default class InterferenceGameEngine extends GameEngine {
         }
 
         if (player.stage === 'setup') {
+            //TODO need to update a bunch of stuff on a color change, 
+            // also need to be careful when referencing the player palette vs a cell palette, player palette should not change after setup?
             if (inputData.input == 'c') {
                 player.palette = this.palettes[(this.palettes.indexOf(player.palette)+1)%this.palettes.length];
                 console.log(player.palette);

@@ -4,7 +4,7 @@ import InterferenceRenderer from '../client/InterferenceRenderer';
 import Note from '../common/Note';
 import Performer from '../common/Performer';
 import Egg from '../common/Egg';
-import { Transport, Frequency, Part, Sequence, Synth, MonoSynth, PolySynth, NoiseSynth, FMSynth } from 'tone';
+import { Transport, Frequency, Part, Sequence, Synth, MonoSynth, PolySynth, NoiseSynth, FMSynth, AMSynth, MetalSynth } from 'tone';
 import { Reverb, FeedbackDelay, BitCrusher, AutoWah } from 'tone';
 
 export default class InterferenceClientEngine extends ClientEngine {
@@ -130,73 +130,6 @@ export default class InterferenceClientEngine extends ClientEngine {
                 }
             }
         });
-
-        //this.transport.timeSignature = 4;
-
-        this.reverb = new Reverb(1).toMaster();
-        this.delay = new FeedbackDelay()
-        //this.bitcrusher = new BitCrusher(4).connect(this.reverb); 
-        this.autowah = new AutoWah().toMaster()
-        this.autowah.connect(this.reverb);  
-
-        this.synth = new Synth({
-            oscillator: {
-                type: 'sine',
-            },
-            envelope: {
-                attack: 0,
-                decay: 0.1,
-                sustain: 0,
-                release: 0.1,
-            }
-        }).toMaster();
-
-        // BUILDERS
-
-        // Tetris Chain
-        this.eggMelodySynth = new PolySynth(9, Synth).toMaster();
-
-        let events = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
-        this.eggMelodySequence = new Sequence((time, step) => {
-            this.currentStep = step;
-            let seqStep = this.player.sequences.melody[step];
-            if (seqStep) this.playStepOnSynth(this.eggMelodySynth, seqStep, 1, time, true);
-        }, events, '16n');
- 
-        /*
-        // show try-again button
-        this.gameEngine.on('objectDestroyed', (obj) => {
-            if (obj.playerId === gameEngine.playerId) {
-                document.body.classList.add('lostGame');
-                document.querySelector('#tryAgain').disabled = false;
-            }
-        });
-        */
-        /*
-        this.mouseX = null;
-        this.mouseY = null;
-
-        document.addEventListener('mousemove', this.updateMouseXY.bind(this), false);
-        document.addEventListener('mouseenter', this.updateMouseXY.bind(this), false);
-        document.addEventListener('touchmove', this.updateMouseXY.bind(this), false);
-        document.addEventListener('touchenter', this.updateMouseXY.bind(this), false);
-        this.gameEngine.on('client__preStep', this.sendMouseAngle.bind(this));
-        */
-        
-        /*
-        // click event for "try again" button
-        document.querySelector('#tryAgain').addEventListener('click', () => {
-            this.socket.emit('requestRestart');
-        }); */
-        
-        /*
-        document.querySelector('#reconnect').addEventListener('click', () => {
-            window.location.reload();
-        }); */
-
-        //this.controls.bindKey('left', 'left', { repeat: true });
-        //this.controls.bindKey('right', 'right', { repeat: true });
-        //this.controls.bindKey('up', 'up', { repeat: true } );
     }
 
     connect(options = {}) {
@@ -205,7 +138,6 @@ export default class InterferenceClientEngine extends ClientEngine {
                 this.room = roomName;
                 this.transport.start();
                 this.startSyncClient(this.socket);
-                this.startEffects();
             });
         });
     }
@@ -274,6 +206,7 @@ export default class InterferenceClientEngine extends ClientEngine {
     stepLogic() {
         if (this.room == null) return //if we yet to be assigned a room, don't do this stuff
         this.player = this.gameEngine.world.queryObject({ playerId: this.gameEngine.playerId });
+        if (this.player != null && this.reverb == null && this.player.palette != 0) this.initSound(this.player);
         this.players = this.gameEngine.world.queryObjects({ instanceType: Performer });
         for (let p of this.players) {
             if (p.gridString != null) p.grid = JSON.parse(p.gridString);
@@ -291,13 +224,21 @@ export default class InterferenceClientEngine extends ClientEngine {
                 this.transport.start();
                 this.transport.seconds = this.syncClient.getSyncTime();
             }
-            if (this.eggMelodySequence.state !== 'started') {
+            if (this.melodySequence.state !== 'started') {
                 //console.log('start seq');
-                this.eggMelodySequence.start(this.nextDiv('1m'));
+                this.melodySequence.start(this.nextDiv('1m'));
+            }
+            if (this.bassSequence.state !== 'started') {
+                //console.log('start seq');
+                this.bassSequence.start(this.nextDiv('1m'));
+            }
+            if (this.percSequence.state !== 'started') {
+                //console.log('start seq');
+                this.percSequence.start(this.nextDiv('1m'));
             }
             for (let e of this.eggs) {
                 if (!Object.keys(this.eggSounds).includes(e.toString())) this.constructEggSounds(e);
-                let vol = 1 - (0.3 * Math.abs(this.player.number - Math.floor(e.position.x / this.gameEngine.playerWidth)));
+                let vol = 1 - (0.5 * Math.abs(this.player.number - Math.floor(e.position.x / this.gameEngine.playerWidth)));
                 if (vol < 0) vol = 0;
                 this.eggSounds[e.toString()].drone.volume.rampTo(vol, 0.1);
             }
@@ -321,54 +262,186 @@ export default class InterferenceClientEngine extends ClientEngine {
         }
     }
 
-    startEffects() {
-        //this.bitcrusher.start();
-        this.reverb.generate();
-    }
+    initSound(p) {
 
-    constructEggSounds(e) {
-        //console.log('making egg sounds');
-        let scale = this.gameEngine.paletteAttributes[this.player.palette].scale;
-        let synth = new Synth({
+        //this.transport.timeSignature = 4;
+
+        this.reverb = new Reverb(1).toMaster();
+        this.delay = new FeedbackDelay()
+        //this.bitcrusher = new BitCrusher(4).connect(this.reverb); 
+        this.autowah = new AutoWah().toMaster()
+        this.autowah.connect(this.reverb);  
+        this.reverb.generate();
+        //this.bitcrusher.start();
+        /*
+        this.synth = new Synth({
             oscillator: {
-                type: 'triangle',
+                type: 'sine',
             },
             envelope: {
-                attack: 0.005,
-                decay: 0.5,
+                attack: 0,
+                decay: 0.1,
                 sustain: 0,
                 release: 0.1,
             }
-        });
-        this.eggSounds[e.toString()] = {
-            drone: new NoiseSynth({
-                noise: {
-                    type: 'pink',
+        }).toMaster();
+        */
+        let events = []
+        for (let i = 0; i < this.gameEngine.paletteAttributes[p.palette].gridWidth; i++) {
+           events.push(i);
+        }
+
+        this.melodySynth = new PolySynth(this.gameEngine.paletteAttributes[p.palette].gridHeight, Synth).toMaster();
+        this.melodySequence = new Sequence((time, step) => {
+            this.currentStep = step;
+            let seqStep = this.player.sequences.melody[step];
+            if (seqStep) this.playStepOnSynth(this.melodySynth, seqStep, 2, time, true);
+        }, events, this.gameEngine.paletteAttributes[p.palette].subdivision);
+
+        this.bassSynth = new PolySynth(this.gameEngine.paletteAttributes[p.palette].gridHeight, AMSynth).toMaster();
+        this.bassSequence = new Sequence((time, step) => {
+            this.currentStep = step;
+            let seqStep = this.player.sequences.bass[step];
+            if (seqStep) this.playStepOnSynth(this.bassSynth, seqStep, -2, time, true);
+        }, events, this.gameEngine.paletteAttributes[p.palette].subdivision);
+
+        this.percSynth = new PolySynth(this.gameEngine.paletteAttributes[p.palette].gridHeight, FMSynth).toMaster();
+        this.percSequence = new Sequence((time, step) => {
+            this.currentStep = step;
+            let seqStep = this.player.sequences.perc[step];
+            if (seqStep) this.playStepOnSynth(this.percSynth, seqStep, 0, time, true);
+        }, events, this.gameEngine.paletteAttributes[p.palette].subdivision);
+    }
+
+    constructEggSounds(e) {
+        let scale = this.gameEngine.paletteAttributes[this.player.palette].scale;
+
+        if (e.sound === 'melody') {
+            let synth = new Synth({
+                oscillator: {
+                    type: 'triangle',
                 },
                 envelope: {
-                    attack: 1,
-                    decay: 0.1,
-                    sustain: 1,
-                    release: 0.5,
+                    attack: 0.005,
+                    decay: 0.5,
+                    sustain: 0,
+                    release: 0.1,
                 }
-            }),
-            bounce: new NoiseSynth({
-                noise: {
-                    type: 'pink',
+            });
+            this.eggSounds[e.toString()] = {
+                drone: new NoiseSynth({
+                    noise: {
+                        type: 'pink',
+                    },
+                    envelope: {
+                        attack: 1,
+                        decay: 0.1,
+                        sustain: 1,
+                        release: 0.5,
+                    }
+                }),
+                bounce: new NoiseSynth({
+                    noise: {
+                        type: 'pink',
+                    },
+                    envelope: {
+                        attack: 0.01,
+                        decay: 0.3,
+                        sustain: 0.1,
+                        release: 0.5,
+                    }
+                }).toMaster(),
+                breakSynth: synth.toMaster(), 
+                break: new Sequence((time, note) => {
+                    let scale = this.gameEngine.paletteAttributes[this.player.palette].scale;
+                    this.playScaleNoteOnSynth(synth, note, scale, 6, '64n', time, 0.5);
+                }, [[0, 1, 2, 3, 1, 2, 3, 4], null, null, null], '4n')
+            };
+        }
+        else if (e.sound === 'bass') {
+            let synth = new Synth({
+                oscillator: {
+                    type: 'triangle',
                 },
                 envelope: {
-                    attack: 0.01,
-                    decay: 0.3,
-                    sustain: 0.1,
-                    release: 0.5,
+                    attack: 0.005,
+                    decay: 0.5,
+                    sustain: 0,
+                    release: 0.1,
                 }
-            }).toMaster(),
-            breakSynth: synth.toMaster(), 
-            break: new Sequence((time, note) => {
-                let scale = this.gameEngine.paletteAttributes[this.player.palette].scale;
-                this.playScaleNoteOnSynth(synth, note, scale, 6, '64n', time, 0.5);
-            }, [[0, 1, 2, 3, 1, 2, 3, 4], null, null, null], '4n')
-        };
+            });
+            this.eggSounds[e.toString()] = {
+                drone: new NoiseSynth({
+                    noise: {
+                        type: 'pink',
+                    },
+                    envelope: {
+                        attack: 1,
+                        decay: 0.1,
+                        sustain: 1,
+                        release: 0.5,
+                    }
+                }),
+                bounce: new NoiseSynth({
+                    noise: {
+                        type: 'pink',
+                    },
+                    envelope: {
+                        attack: 0.01,
+                        decay: 0.3,
+                        sustain: 0.1,
+                        release: 0.5,
+                    }
+                }).toMaster(),
+                breakSynth: synth.toMaster(), 
+                break: new Sequence((time, note) => {
+                    let scale = this.gameEngine.paletteAttributes[this.player.palette].scale;
+                    this.playScaleNoteOnSynth(synth, note, scale, 6, '64n', time, 0.5);
+                }, [[0, 1, 2, 3, 1, 2, 3, 4], null, null, null], '4n')
+            };
+        }
+        else if (e.sound === 'perc') {
+            let synth = new Synth({
+                oscillator: {
+                    type: 'triangle',
+                },
+                envelope: {
+                    attack: 0.005,
+                    decay: 0.5,
+                    sustain: 0,
+                    release: 0.1,
+                }
+            });
+            this.eggSounds[e.toString()] = {
+                drone: new NoiseSynth({
+                    noise: {
+                        type: 'pink',
+                    },
+                    envelope: {
+                        attack: 1,
+                        decay: 0.1,
+                        sustain: 1,
+                        release: 0.5,
+                    }
+                }),
+                bounce: new NoiseSynth({
+                    noise: {
+                        type: 'pink',
+                    },
+                    envelope: {
+                        attack: 0.01,
+                        decay: 0.3,
+                        sustain: 0.1,
+                        release: 0.5,
+                    }
+                }).toMaster(),
+                breakSynth: synth.toMaster(), 
+                break: new Sequence((time, note) => {
+                    let scale = this.gameEngine.paletteAttributes[this.player.palette].scale;
+                    this.playScaleNoteOnSynth(synth, note, scale, 6, '64n', time, 0.5);
+                }, [[0, 1, 2, 3, 1, 2, 3, 4], null, null, null], '4n')
+            };
+        }
 
         this.eggSounds[e.toString()].drone.connect(this.autowah);
         this.eggSounds[e.toString()].bounce.connect(this.reverb);
@@ -401,52 +474,4 @@ export default class InterferenceClientEngine extends ClientEngine {
     nextDiv(div) {
         return Transport.getSecondsAtTime(Transport.nextSubdivision(div));
     }
-    /*
-    sequencerLoop(thisTime) {
-        this.rhythmstack = ['4n'];
-        console.log('step');
-        if (this.notestack.length && this.rhythmstack.length) {
-            if (noteIndex >= this.notestack.length) noteIndex = 0;
-            if (rhythmIndex >= this.rhythmstack.length) rhythmIndex = 0;
-            this.synth.triggerAttackRelease(this.notestack[noteIndex], '8n', thisTime)
-            this.transport.scheduleOnce(nextTime => { this.sequencerLoop(nextTime); }, 
-                Transport.getSecondsAtTime(Transport.nextSubdivision(this.rhythmstack[rhythmIndex]))
-            );
-            noteIndex++;
-            rhythmIndex++;
-        }
-        else {
-            noteIndex = 0;
-            rhythmIndex = 0;
-            this.transport.scheduleOnce(nextTime => { this.sequencerLoop(nextTime) }, 
-                Transport.getSecondsAtTime(Transport.nextSubdivision('1m'))
-            );
-        }
-    }
-    */
-    /*
-    updateMouseXY(e) {
-        e.preventDefault();
-        if (e.touches) e = e.touches.item(0);
-        this.mouseX = e.pageX;
-        this.mouseY = e.pageY;
-    }
-
-    sendMouseAngle() {
-        let player = this.gameEngine.world.queryObject({ playerId: this.gameEngine.playerId });
-        if (this.mouseY === null || player === null) return;
-
-        let mouseX = (this.mouseX - document.body.clientWidth/2) / this.zoom;
-        let mouseY = (this.mouseY - document.body.clientHeight/2) / this.zoom;
-        let dx = mouseY - player.position.y;
-        let dy = mouseX - player.position.x;
-        if (Math.sqrt(dx * dx + dy * dy) < 0.5) {
-            this.sendInput(this.gameEngine.directionStop, { movement: true });
-            return;
-        }
-
-        let angle = Math.atan2(dx, dy);
-        this.sendInput(angle, { movement: true });
-    }
-    */
 }

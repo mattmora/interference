@@ -40,11 +40,6 @@ function _inherits(subClass, superClass) { if (typeof superClass !== "function" 
 function _setPrototypeOf(o, p) { _setPrototypeOf = Object.setPrototypeOf || function _setPrototypeOf(o, p) { o.__proto__ = p; return o; }; return _setPrototypeOf(o, p); }
 
 //const palettes = ['rain', 'celeste', 'pyre', 'journey', 'kirby'];
-var hpRange = 5;
-var hpMin = 5;
-var initAmmo = 4;
-var ammoInc = 4;
-
 var InterferenceServerEngine =
 /*#__PURE__*/
 function (_ServerEngine) {
@@ -122,7 +117,7 @@ function (_ServerEngine) {
         player.perc = JSON.stringify([]);
 
         if (player.stage === 'intro') {
-          player.ammo = initAmmo;
+          player.ammo = _this2.gameEngine.startingAmmo;
           var _iteratorNormalCompletion = true;
           var _didIteratorError = false;
           var _iteratorError = undefined;
@@ -130,7 +125,7 @@ function (_ServerEngine) {
           try {
             for (var _iterator = _this2.gameEngine.eggsByRoom[roomName][Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
               var e = _step.value;
-              e.hp += Math.floor(Math.random() * hpRange + hpMin);
+              e.hp += Math.floor(Math.random() * _this2.gameEngine.eggHPRange + _this2.gameEngine.eggHPMin);
             }
           } catch (err) {
             _didIteratorError = true;
@@ -327,7 +322,7 @@ function (_ServerEngine) {
       try {
         for (var _iterator5 = this.myRooms[roomName][Symbol.iterator](), _step5; !(_iteratorNormalCompletion5 = (_step5 = _iterator5.next()).done); _iteratorNormalCompletion5 = true) {
           var p = _step5.value;
-          p.ammo += initAmmo;
+          p.ammo += this.gameEngine.startingAmmo;
         }
       } catch (err) {
         _didIteratorError5 = true;
@@ -346,7 +341,7 @@ function (_ServerEngine) {
 
       newEgg.number = 0;
       newEgg.sound = sound;
-      newEgg.hp = Math.floor(Math.random() * numPlayers * hpRange + numPlayers * hpMin);
+      newEgg.hp = Math.floor(Math.random() * numPlayers * this.gameEngine.eggHPRange + numPlayers * this.gameEngine.eggHPMin);
       this.assignObjectToRoom(newEgg, roomName);
       this.gameEngine.addObjectToWorld(newEgg);
     }
@@ -409,7 +404,7 @@ function (_ServerEngine) {
           try {
             for (var _iterator7 = this.myRooms[k][Symbol.iterator](), _step7; !(_iteratorNormalCompletion7 = (_step7 = _iterator7.next()).done); _iteratorNormalCompletion7 = true) {
               var p = _step7.value;
-              p.ammo += ammoInc;
+              p.ammo += this.gameEngine.reloadSize;
             }
           } catch (err) {
             _didIteratorError7 = true;
