@@ -31,9 +31,9 @@ export default class InterferenceGameEngine extends GameEngine {
                 },
                 { //rain
                     scale: [0, 4, 6, 9, 11], 
-                    gridWidth: 16,
-                    gridHeight: 9,
-                    subdivision: '16n'
+                    gridWidth: 18,
+                    gridHeight: 8,
+                    subdivision: '18n'
                 },
                 { //celeste
                     scale: [0, 2, 3, 5, 7], 
@@ -43,15 +43,15 @@ export default class InterferenceGameEngine extends GameEngine {
                 },
                 { //pyre
                     scale: [0, 2, 3, 7, 10], 
-                    gridWidth: 16,
-                    gridHeight: 9,
-                    subdivision: '16n'
+                    gridWidth: 12,
+                    gridHeight: 12,
+                    subdivision: '12n'
                 },
                 { //journey
                     scale: [0, 2, 4, 7, 9], 
-                    gridWidth: 16,
-                    gridHeight: 9,
-                    subdivision: '16n'
+                    gridWidth: 8,
+                    gridHeight: 18,
+                    subdivision: '8n'
                 },
                 { //kirby
                     scale: [0, 2, 4, 5, 7], 
@@ -199,10 +199,10 @@ export default class InterferenceGameEngine extends GameEngine {
         let pal = p.palette;
         let pos = this.playerQuantizedPosition(p, e.position.x, e.position.y, 
             this.paletteAttributes[pal].gridWidth, this.paletteAttributes[pal].gridHeight);
-        let scale = this.paletteAttributes[pal].scale; //TODO should base this on grid
+        let scale = this.paletteAttributes[pal].scale; //TODO should base this on palette of the cell?
         let step = pos[0];
         let pitch = (this.paletteAttributes[pal].gridHeight - pos[1]) + (scale.length * 4);
-        let dur = '16n';
+        let dur = this.paletteAttributes[pal].subdivision;
 
         let seq = p.sequences[e.sound];
         if (seq[step]) {
