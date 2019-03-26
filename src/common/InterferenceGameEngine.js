@@ -306,7 +306,7 @@ export default class InterferenceGameEngine extends GameEngine {
             }
         }
         else if (player.stage === 'intro') {
-            if (isServer) {
+            //if (isServer) {
                 if (inputData.input == 'q') {
                     for (let e of eggsByType.melody) {
                         if (this.positionIsInPlayer(e.position.x, player)) {
@@ -328,7 +328,7 @@ export default class InterferenceGameEngine extends GameEngine {
                         }
                     }
                 }
-            }
+            //}
         }
         /*
         else if (inputData.input == 'n') {
