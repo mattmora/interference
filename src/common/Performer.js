@@ -5,11 +5,13 @@ export default class Performer extends DynamicObject {
     static get netScheme() {
         return Object.assign({
             number: { type: BaseTypes.TYPES.INT16 },
-            palette: { type: BaseTypes.TYPES.STRING },
-            notestack: { type: BaseTypes.TYPES.STRING },
-            rhythmstack: { type: BaseTypes.TYPES.STRING },
+            palette: { type: BaseTypes.TYPES.UINT8 },
             ammo: { type: BaseTypes.TYPES.INT16 },
-            stage: { type: BaseTypes.TYPES.STRING }
+            stage: { type: BaseTypes.TYPES.STRING },
+            gridString: { type: BaseTypes.TYPES.STRING },
+            melody: { type: BaseTypes.TYPES.STRING },
+            bass: { type: BaseTypes.TYPES.STRING },
+            perc: { type: BaseTypes.TYPES.STRING }
         }, super.netScheme);
     }
 
@@ -17,6 +19,17 @@ export default class Performer extends DynamicObject {
         super(gameEngine, options, props);
 
         this.class = Performer;
+        this.grid = [[]];
+        this.sequences = {
+            melody: [],
+            bass: [],
+            perc: []
+        };
+        this.animFrames = { 
+            melody: [],
+            bass: [],
+            perc: []
+        };
     }
 
     syncTo(other) {

@@ -42,18 +42,24 @@ function (_DynamicObject) {
           type: _lanceGg.BaseTypes.TYPES.INT16
         },
         palette: {
-          type: _lanceGg.BaseTypes.TYPES.STRING
-        },
-        notestack: {
-          type: _lanceGg.BaseTypes.TYPES.STRING
-        },
-        rhythmstack: {
-          type: _lanceGg.BaseTypes.TYPES.STRING
+          type: _lanceGg.BaseTypes.TYPES.UINT8
         },
         ammo: {
           type: _lanceGg.BaseTypes.TYPES.INT16
         },
         stage: {
+          type: _lanceGg.BaseTypes.TYPES.STRING
+        },
+        gridString: {
+          type: _lanceGg.BaseTypes.TYPES.STRING
+        },
+        melody: {
+          type: _lanceGg.BaseTypes.TYPES.STRING
+        },
+        bass: {
+          type: _lanceGg.BaseTypes.TYPES.STRING
+        },
+        perc: {
           type: _lanceGg.BaseTypes.TYPES.STRING
         }
       }, _get(_getPrototypeOf(Performer), "netScheme", this));
@@ -67,6 +73,17 @@ function (_DynamicObject) {
 
     _this = _possibleConstructorReturn(this, _getPrototypeOf(Performer).call(this, gameEngine, options, props));
     _this.class = Performer;
+    _this.grid = [[]];
+    _this.sequences = {
+      melody: [],
+      bass: [],
+      perc: []
+    };
+    _this.animFrames = {
+      melody: [],
+      bass: [],
+      perc: []
+    };
     return _this;
   }
 

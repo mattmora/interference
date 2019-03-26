@@ -9,6 +9,8 @@ var _lanceGg = require("lance-gg");
 
 var _server = _interopRequireDefault(require("@ircam/sync/server"));
 
+var _Note = _interopRequireDefault(require("../common/Note"));
+
 var _Performer = _interopRequireDefault(require("../common/Performer"));
 
 var _Egg = _interopRequireDefault(require("../common/Egg"));
@@ -37,7 +39,11 @@ function _inherits(subClass, superClass) { if (typeof superClass !== "function" 
 
 function _setPrototypeOf(o, p) { _setPrototypeOf = Object.setPrototypeOf || function _setPrototypeOf(o, p) { o.__proto__ = p; return o; }; return _setPrototypeOf(o, p); }
 
-var palettes = ['rain', 'celeste', 'pyre', 'journey', 'kirby'];
+//const palettes = ['rain', 'celeste', 'pyre', 'journey', 'kirby'];
+var hpRange = 5;
+var hpMin = 5;
+var initAmmo = 4;
+var ammoInc = 4;
 
 var InterferenceServerEngine =
 /*#__PURE__*/
@@ -86,11 +92,14 @@ function (_ServerEngine) {
 
       var player = new _Performer.default(this.gameEngine, null, {});
       player.number = -1;
-      player.palette = 'default';
-      player.notestack = '';
-      player.rhythmstack = '';
+      player.palette = 0; //default
+
       player.ammo = 0;
       player.stage = 'setup';
+      player.gridString = this.getEmptyGridStringByPalette(0);
+      player.melody = JSON.stringify([]);
+      player.bass = JSON.stringify([]);
+      player.perc = JSON.stringify([]);
       console.log(player.number);
       player.playerId = socket.playerId;
       this.gameEngine.addObjectToWorld(player);
@@ -105,11 +114,15 @@ function (_ServerEngine) {
         }
 
         player.number = _this2.myRooms[roomName].length;
-        player.palette = palettes[player.number % palettes.length];
+        player.palette = _this2.gameEngine.palettes[player.number % _this2.gameEngine.palettes.length];
         player.stage = _this2.roomStages[roomName];
+        player.gridString = _this2.getEmptyGridStringByPalette(player.palette);
+        player.melody = JSON.stringify([]);
+        player.bass = JSON.stringify([]);
+        player.perc = JSON.stringify([]);
 
         if (player.stage === 'intro') {
-          player.ammo += 8;
+          player.ammo = initAmmo;
           var _iteratorNormalCompletion = true;
           var _didIteratorError = false;
           var _iteratorError = undefined;
@@ -117,7 +130,7 @@ function (_ServerEngine) {
           try {
             for (var _iterator = _this2.gameEngine.eggsByRoom[roomName][Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
               var e = _step.value;
-              e.hp += Math.floor(Math.random() * 3 + 5);
+              e.hp += Math.floor(Math.random() * hpRange + hpMin);
             }
           } catch (err) {
             _didIteratorError = true;
@@ -295,11 +308,13 @@ function (_ServerEngine) {
         }
       }
 
-      this.addEgg(r);
+      this.addEgg('melody', r);
+      this.addEgg('bass', r);
+      this.addEgg('perc', r);
     }
   }, {
     key: "addEgg",
-    value: function addEgg(roomName) {
+    value: function addEgg(sound, roomName) {
       var newEgg = new _Egg.default(this.gameEngine, null, {
         position: this.gameEngine.randPos(roomName),
         velocity: this.gameEngine.velRandY()
@@ -312,7 +327,7 @@ function (_ServerEngine) {
       try {
         for (var _iterator5 = this.myRooms[roomName][Symbol.iterator](), _step5; !(_iteratorNormalCompletion5 = (_step5 = _iterator5.next()).done); _iteratorNormalCompletion5 = true) {
           var p = _step5.value;
-          p.ammo += 8;
+          p.ammo += initAmmo;
         }
       } catch (err) {
         _didIteratorError5 = true;
@@ -330,8 +345,8 @@ function (_ServerEngine) {
       }
 
       newEgg.number = 0;
-      newEgg.sound = 'melody';
-      newEgg.hp = Math.floor(Math.random() * numPlayers * 3 + numPlayers * 5);
+      newEgg.sound = sound;
+      newEgg.hp = Math.floor(Math.random() * numPlayers * hpRange + numPlayers * hpMin);
       this.assignObjectToRoom(newEgg, roomName);
       this.gameEngine.addObjectToWorld(newEgg);
     }
@@ -394,7 +409,7 @@ function (_ServerEngine) {
           try {
             for (var _iterator7 = this.myRooms[k][Symbol.iterator](), _step7; !(_iteratorNormalCompletion7 = (_step7 = _iterator7.next()).done); _iteratorNormalCompletion7 = true) {
               var p = _step7.value;
-              p.ammo += 4;
+              p.ammo += ammoInc;
             }
           } catch (err) {
             _didIteratorError7 = true;
@@ -412,6 +427,12 @@ function (_ServerEngine) {
           }
         }
       }
+    }
+  }, {
+    key: "getEmptyGridStringByPalette",
+    value: function getEmptyGridStringByPalette(p) {
+      var gridString = new Array(this.gameEngine.paletteAttributes[p].gridWidth).fill(new Array(this.gameEngine.paletteAttributes[p].gridHeight).fill(p));
+      return JSON.stringify(gridString);
     }
   }]);
 

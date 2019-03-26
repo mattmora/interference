@@ -1,52 +1,59 @@
 import { Renderer, TwoVector } from 'lance-gg';
+import Note from '../common/Note';
 import Performer from '../common/Performer';
 import Egg from '../common/Egg';
 import { Frequency } from 'tone';
 
-const paletteTable = {
-    'rain': {   
+const paletteTable = [
+    //'default': 
+    {
+        bg: 'black',
+        c1: 'white',
+        c2: 'white',
+        c3: 'white',
+        c4: 'white'
+    },
+    //'rain': 
+    {   
         bg: '#3e2f5b', 
         c1: '#d7dedc',
         c2: '#706563',
         c3: '#457eac',
         c4: '#748386' 
     },
-    'celeste': {   
+    //'celeste': 
+    {   
         bg: '#a5d8ff', 
         c1: '#ff8266',
         c2: '#4381af',
         c3: '#ac86b0',
         c4: '#4b719c' 
     },
-    'pyre': {   
+    //'pyre': 
+    {   
         bg: '#a32323', 
         c1: '#2375a8',
         c2: '#fbf6f7',
         c3: '#f0ae62',
         c4: '#011936' 
     },
-    'journey': {   
+    //'journey': 
+    {   
         bg: '#fad68a', 
         c1: '#7f2819',
         c2: '#a25a11',
         c3: '#d5a962',
         c4: '#fef8e8' 
     },
-    'kirby': {   
+    //'kirby': 
+    {   
         bg: '#a8c256', 
         c1: '#f4a4a7',
         c2: '#e84c41',
         c3: '#f9df6a',
         c4: '#fa8334' 
-    },
-    'default': {
-        bg: 'black',
-        c1: 'white',
-        c2: 'white',
-        c3: 'white',
-        c4: 'white'
     }
-}
+]
 
 const animLengths = {
     eggSpawn: 20,
@@ -67,17 +74,16 @@ let time = 0;
 let players = []; 
 let playerId = 0;
 let thisPlayer = null;
-let graphicNotes = {};
 let eggs = [];
 
 let prevNotestack = '';
 let prevRhythmstack = '';
 
-let bg = paletteTable['default'].bg;
-let c1 = paletteTable['default'].c1;
-let c2 = paletteTable['default'].c2;
-let c3 = paletteTable['default'].c3;
-let c4 = paletteTable['default'].c4;
+let bg = paletteTable[0].bg;
+let c1 = paletteTable[0].c1;
+let c2 = paletteTable[0].c2;
+let c3 = paletteTable[0].c3;
+let c4 = paletteTable[0].c4;
 
 export default class InterferenceRenderer extends Renderer {
 
@@ -109,7 +115,7 @@ export default class InterferenceRenderer extends Renderer {
     draw(t, dt) {
         super.draw(t, dt);
 
-        if (client.room === null) return
+        if (client.room == null) return
 
         time = client.syncClient.getSyncTime();
         playerId = game.playerId;
@@ -125,7 +131,6 @@ export default class InterferenceRenderer extends Renderer {
             rightViewBound = players.length * game.playerWidth;
         }
 
-        graphicNotes = client.graphicNotes;
         eggs = game.world.queryObjects({ instanceType: Egg });
 
         bg = paletteTable[thisPlayer.palette].bg;
@@ -156,7 +161,7 @@ export default class InterferenceRenderer extends Renderer {
         //ctx.scale(this.clientEngine.zoom, this.clientEngine.zoom);  // Zoom in and flip y axis
         // Draw all things
         this.drawPlayers();
-        this.drawNoteGraphics();
+        this.drawSequences();
         this.drawEggs();
 
         /*()
@@ -179,20 +184,24 @@ export default class InterferenceRenderer extends Renderer {
             let i = p.number - (leftViewBound / game.playerWidth);
             let x = ((w / n) * i);
             this.fillColor(p, 'bg', 0);
-            ctx[0].fillRect(x, 0, w / n, h / n)
+            this.fillRect(x, 0, w / n, h / n, false, 0)
         }
         let i = thisPlayer.number;
         let x = (w / n) * (i + 0.5);
         ctx[0].fillStyle = 'white';
         this.fillTriangle(  x,                      (1.05 * h) / n, 
                             x - ((0.25 * w) / n),   (1.15 * h) / n,
-                            x + ((0.25 * w) / n),   (1.15 * h) / n, 0 );   
+                            x + ((0.25 * w) / n),   (1.15 * h) / n, false, 0 );   
     }
 
-    drawNoteGraphics() {
-        for (let n of graphicNotes.egg.perc) this.drawEggPercNote(n);
-        for (let n of graphicNotes.egg.bass) this.drawEggBassNote(n);
-        for (let n of graphicNotes.egg.melody) this.drawEggMelodyNote(n);
+    drawSequences() {
+        for (let p of players) {
+            if (p.sequences != null) {
+                for (let step of p.sequences.perc) if (step != null) this.drawStep(p, step, 'perc');
+                for (let step of p.sequences.bass) if (step != null) this.drawStep(p, step, 'bass');
+                for (let step of p.sequences.melody) if (step != null) this.drawStep(p, step, 'melody');                      
+            }
+        }
     }
 
     drawEggs() {
@@ -203,76 +212,81 @@ export default class InterferenceRenderer extends Renderer {
                 let scale = this.mapToRange(e.animFrames.spawn, 0, animLengths.eggSpawn, 0.0, 1.0);
                 ctx[1].fillStyle = 'white';
                 ctx[1].strokeStyle = 'black';
-                let gamePos = game.quantizedPosition(e.position.x, e.position.y, 16, 9);
-                let pos = this.gamePositionToCanvasPosition(gamePos[0] + (game.playerWidth / 32), gamePos[1] + (game.playerHeight / 18));
+                //let gamePos = game.quantizedPosition(e.position.x, e.position.y, 32, 18);
+                //let pos = this.gamePositionToCanvasPosition(gamePos[0], gamePos[1]);
+                let pos = this.gamePositionToCanvasPosition(e.position.x, e.position.y);
+                let x = pos[0];
+                let y = pos[1];
+                let dimX = this.gameXDimToCanvasXDim(game.eggRadius) * scale;
+                let dimY = this.gameYDimToCanvasYDim(game.eggRadius) * scale;
                 if (e.hp > 0) {
-                    this.ellipse(pos[0], pos[1], 
-                        this.gameXDimToCanvasXDim(game.eggRadius) * scale, 
-                        this.gameYDimToCanvasYDim(game.eggRadius) * scale,
-                        0, 0, 2*Math.PI, true, 1);
+                    if (e.sound === 'melody') {
+                        this.fillEllipse(x, y, dimX, dimY, 0, 0, 2*Math.PI, true, 1);
+                    }
+                    else if (e.sound === 'bass') {
+                        this.fillRect(x - dimX, y - dimY, dimX * 2, dimY * 2, true, 1);
+                    }
+                    else if (e.sound === 'perc') {
+                        this.fillQuad(  x - dimX, y, x, y - dimY, 
+                                        x + dimX, y, x, y + dimY, true, 1);
+                    }
                 }
-                else this.drawBrokenEgg(e, pos[0], pos[1], 
-                    this.gameXDimToCanvasXDim(game.eggRadius), this.gameYDimToCanvasYDim(game.eggRadius), true, 1);
+                else this.drawBrokenEgg(e, x, y, dimX, dimY, true, 1);
             }
-        if (e.animFrames.spawn < animLengths.eggSpawn) e.animFrames.spawn++;
+            if (e.animFrames.spawn < animLengths.eggSpawn) e.animFrames.spawn++;
         }
     }
 
-    drawEggMelodyNote(n) {
-        let pos = this.playerCellToCanvasPosition(thisPlayer, n.cell.x, n.cell.y, n.sequence.length, n.sequence.range);
-        let dimX = this.gameXDimToCanvasXDim(game.playerWidth / n.sequence.length) / 2; 
-        let dimY = this.gameYDimToCanvasYDim(game.playerHeight / n.sequence.range) / 2;
-        let x = pos[0] + dimX;
-        let y = pos[1] + dimY;
-        dimY *= this.mapToRange(n.animFrame, 0, animLengths.eggNote, n.sequence.range, 1);
-        dimX *= this.mapToRange(n.animFrame, 0, animLengths.eggNote, n.sequence.length, 1);
-        // color
-        let c = 'c2';
-        let layer = 0;
-        if (n.duration === '2n') {
-            c = 'c4';
-            layer = 1;
+    drawStep(p, step, sound) {
+        for (let n of step) {
+            if (p.animFrames[sound][step] == null) p.animFrames[sound][step] = [];
+            if (p.animFrames[sound][step][n.pitch] == null) p.animFrames[sound][step][n.pitch] = 0;
+            let animFrame = p.animFrames[sound][step][n.pitch];
+            //console.log(p.animFrames[sound][step][n.pitch]);
+
+            let pal = p.palette;
+            let gridWidth = game.paletteAttributes[pal].gridWidth;
+            let gridHeight = game.paletteAttributes[pal].gridHeight;
+            let pos = this.playerCellToCanvasPosition(p, n.cell.x, n.cell.y, game.paletteAttributes[pal].gridWidth, gridHeight);
+            let dimX = this.gameXDimToCanvasXDim(game.playerWidth / gridWidth); 
+            let dimY = this.gameYDimToCanvasYDim(game.playerHeight / gridHeight);
+            let x = pos[0];
+            let y = pos[1];
+            let c = 'c4';
+            let layer = 1;
+            if (sound === 'melody') {
+                x += dimX * 0.5;
+                y += dimY * 0.5;
+                dimX *= this.mapToRange(animFrame, 0, animLengths.eggNote, gridWidth, 1);
+                dimY *= this.mapToRange(animFrame, 0, animLengths.eggNote, gridHeight, 1);
+                if (n.step !== client.currentStep) {
+                    if (n.dur === '2n') { c = 'c2'; layer = 0; }
+                    else c = 'c1';
+                }
+                this.fillColor(p, c, layer);
+                this.fillEllipse(x, y, dimX / 2, dimY / 2, 0, 0, 2*Math.PI, false, layer);
+            }
+            else if (sound === 'bass') {
+                y = this.mapToRange(animFrame, 0, animLengths.eggNote, 0, y);
+                dimY *= this.mapToRange(animFrame, 0, animLengths.eggNote, gridHeight, 1);
+                if (n.step !== client.currentStep) {
+                    if (n.dur === '2n') { c = 'c3'; dimX *= (gridWidth / 2); layer = 0; }
+                    else c = 'c2';
+                }   
+                this.fillColor(p, c, layer);
+                this.fillRect(x, y, dimX, dimY, false, layer);
+            }
+            else if (sound === 'perc') {
+                if (n.step !== client.currentStep) {
+                    if (n.dur === '2n') { c = 'c1'; layer = 0; }
+                    else c = 'c3';
+                }   
+                this.fillColor(p, c, layer);
+                this.fillRect(x, y, dimX, dimY, false, layer);
+            }
+
+            if (p.animFrames[sound][step][n.pitch] < animLengths.eggNote) p.animFrames[sound][step][n.pitch]++;
         }
-        if (n.step === client.currentStep) c = 'c3'
-        this.fillColor(thisPlayer, c, layer);
-        this.ellipse(x, y, dimX, dimY, 0, 0, 2*Math.PI, false, layer);
-        if (n.animFrame < animLengths.eggNote) n.animFrame++;
-    }
-
-    drawEggBassNote(n) {
-        // generic position and dimensions of any egg sequence note
-        let pos = this.playerCellToCanvasPosition(thisPlayer, n.cell.x, n.cell.y, n.sequence.length, n.sequence.range);
-        let dimX = this.gameXDimToCanvasXDim(game.playerWidth / n.sequence.length); 
-        let dimY = this.gameYDimToCanvasYDim(game.playerHeight / n.sequence.range);
-        ////////////////////////////////////////
-        // adjust generic values for animation
-        let x = pos[0];
-        let y = this.mapToRange(n.animFrame, 0, animLengths.eggNote, 0, pos[1]);
-        dimY *= this.mapToRange(n.animFrame, 0, animLengths.eggNote, n.sequence.range, 1);
-        // color
-        let c = 'c1';
-        let layer = 1;
-        if (n.duration === '2n') {
-            c = 'c3';
-            dimX *= n.sequence.length / 2;
-            layer = 0;
-        }
-        if (n.step === client.currentStep) c = 'c2'
-        this.fillColor(thisPlayer, c, layer);
-        ctx[layer].fillRect(x, y, dimX, dimY);
-        if (n.animFrame < animLengths.eggNote) n.animFrame++;
-    }
-
-    drawEggPercNote(n) {
-
-    }
-
-    drawEggPercNode(n) {
-        // generic position and dimensions of any egg sequence note
-        let pos = this.playerCellToCanvasPosition(thisPlayer, n.cell.x, n.cell.y, n.sequence.length, n.sequence.range);
-        let dimX = this.gameXDimToCanvasXDim(game.playerWidth / n.sequence.length); 
-        let dimY = this.gameYDimToCanvasYDim((game.playerHeight / n.sequence.range));
-        ////////////////////////////////////////
     }
 
     setRendererSize() {
@@ -309,10 +323,10 @@ export default class InterferenceRenderer extends Renderer {
     drawBrokenEgg(e, x, y, radiusX, radiusY, stroke, layer) {
         let gapX = radiusX * (e.animFrames.break / animLengths.eggBreak);
         let gapY = radiusY * (e.animFrames.break / animLengths.eggBreak);
-        this.ellipse(x+gapX, y-gapY, radiusX, radiusY, 0, 0, 0.5*Math.PI, stroke, layer)
-        this.ellipse(x-gapX, y-gapY, radiusX, radiusY, 0, 0.5*Math.PI, Math.PI, stroke, layer)
-        this.ellipse(x-gapX, y+gapY, radiusX, radiusY, 0, Math.PI, 1.5*Math.PI, stroke, layer)
-        this.ellipse(x+gapX, y+gapY, radiusX, radiusY, 0, 1.5*Math.PI, 2*Math.PI, stroke, layer)
+        this.fillEllipse(x+gapX, y-gapY, radiusX, radiusY, 0, 0, 0.5*Math.PI, stroke, layer)
+        this.fillEllipse(x-gapX, y-gapY, radiusX, radiusY, 0, 0.5*Math.PI, Math.PI, stroke, layer)
+        this.fillEllipse(x-gapX, y+gapY, radiusX, radiusY, 0, Math.PI, 1.5*Math.PI, stroke, layer)
+        this.fillEllipse(x+gapX, y+gapY, radiusX, radiusY, 0, 1.5*Math.PI, 2*Math.PI, stroke, layer)
         if (e.animFrames.break < animLengths.eggBreak) e.animFrames.break++
     }
 
@@ -320,23 +334,39 @@ export default class InterferenceRenderer extends Renderer {
         if (paletteTable[p.palette]) {
             ctx[layer].fillStyle = paletteTable[p.palette][which];
         }  
-        else ctx[layer].fillStyle = paletteTable['default'][which];
+        else ctx[layer].fillStyle = paletteTable[0][which];
     }
 
-    ellipse(x, y, radiusX, radiusY, rotation, startAngle, endAngle, stroke, layer) {
+    fillEllipse(x, y, radiusX, radiusY, rotation, startAngle, endAngle, stroke, layer) {
         ctx[layer].beginPath();
         ctx[layer].ellipse(x, y, radiusX, radiusY, rotation, startAngle, endAngle);
         ctx[layer].fill();
         if (stroke) ctx[layer].stroke();
     }
 
-    fillTriangle(x1, y1, x2, y2, x3, y3, layer) {
+    fillTriangle(x1, y1, x2, y2, x3, y3, stroke, layer) {
         ctx[layer].beginPath();
         ctx[layer].moveTo(x1, y1);
         ctx[layer].lineTo(x2, y2);
         ctx[layer].lineTo(x3, y3);
         ctx[layer].fill();
         ctx[layer].closePath();
+        if (stroke) ctx[layer].stroke();
     }
 
+    fillRect(x, y, dimX, dimY, stroke, layer) {
+        ctx[layer].fillRect(x, y, dimX, dimY);
+        if (stroke) ctx[layer].strokeRect(x, y, dimX, dimY);
+    }
+
+    fillQuad(x1, y1, x2, y2, x3, y3, x4, y4, stroke, layer) {
+        ctx[layer].beginPath();
+        ctx[layer].moveTo(x1, y1);
+        ctx[layer].lineTo(x2, y2);
+        ctx[layer].lineTo(x3, y3);
+        ctx[layer].lineTo(x4, y4);
+        ctx[layer].fill();
+        ctx[layer].closePath();
+        if (stroke) ctx[layer].stroke();
+    }
 }

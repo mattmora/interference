@@ -1,8 +1,9 @@
 import { GameEngine, SimplePhysicsEngine, TwoVector } from 'lance-gg';
+import Note from './Note';
 import Performer from './Performer';
 import Egg from './Egg';
 
-const palettes = ['rain', 'celeste', 'pyre', 'journey', 'kirby'];
+//const palettes = ['rain', 'celeste', 'pyre', 'journey', 'kirby'];
 
 export default class InterferenceGameEngine extends GameEngine {
 
@@ -17,7 +18,41 @@ export default class InterferenceGameEngine extends GameEngine {
         Object.assign(this, {
             cellWidth: 1, cellHeight: 1, playerWidth: 16, playerHeight: 9, 
             leftBound: 0, topBound: 0, bottomBound: 9,
-            transportSyncInterval: 200, eggRadius: 1, eggBaseXVelocity: 0.1
+            transportSyncInterval: 200, eggRadius: 1, eggBaseXVelocity: 0.15,
+            palettes: [1, 2, 3, 4, 5],
+            paletteAttributes: [
+                { //default
+                    scale: [0, 2, 4, 5, 7], 
+                    gridWidth: 0,
+                    gridHeight: 0
+
+                },
+                { //rain
+                    scale: [0, 4, 6, 9, 11], 
+                    gridWidth: 16,
+                    gridHeight: 9
+                },
+                { //celeste
+                    scale: [0, 2, 3, 5, 7], 
+                    gridWidth: 16,
+                    gridHeight: 9
+                },
+                { //pyre
+                    scale: [0, 2, 3, 7, 10], 
+                    gridWidth: 16,
+                    gridHeight: 9
+                },
+                { //journey
+                    scale: [0, 2, 4, 7, 9], 
+                    gridWidth: 16,
+                    gridHeight: 9
+                },
+                { //kirby
+                    scale: [0, 2, 4, 5, 7], 
+                    gridWidth: 16,
+                    gridHeight: 9
+                }
+            ]
         });
 
         // dependent game constants
@@ -157,8 +192,40 @@ export default class InterferenceGameEngine extends GameEngine {
     }
 
     playerHitEgg(p, e, isServer) {
+
         if (e.hp <= 0) return;
         if (p.ammo <= 0) return;
+
+        let pal = p.palette;
+        let pos = this.playerQuantizedPosition(p, e.position.x, e.position.y, 
+            this.paletteAttributes[pal].gridWidth, this.paletteAttributes[pal].gridHeight);
+        let scale = this.paletteAttributes[pal].scale; //TODO should base this on grid
+        let step = pos[0];
+        let pitch = (this.paletteAttributes[pal].gridHeight - pos[1]) + (scale.length * 4);
+        let dur = '16n';
+
+        let seq = p.sequences[e.sound];
+        if (seq[step]) {
+            for (let note of seq[step]) {
+                if (note.pitch === pitch) note = '2n';
+                else seq[step].push(new Note({ 
+                    pitch: pitch,
+                    dur: dur,
+                    vel: 1,
+                    cell: { x: pos[0], y: pos[1] },
+                    step: step
+                }));    
+            }
+        }
+        else seq[step] = [new Note({ 
+            pitch: pitch,
+            dur: dur,
+            vel: 1,
+            cell: { x: pos[0], y: pos[1] },
+            step: step
+        })];
+        p[e.sound] = JSON.stringify(seq);
+
         p.ammo--;
         this.emit('playerHitEgg', e);
         if (isServer) {
@@ -174,8 +241,8 @@ export default class InterferenceGameEngine extends GameEngine {
     }
 
     quantizedPosition(x, y, divX, divY) {
-        let cellX = Math.floor(x / (this.playerWidth / divX));
-        let cellY = Math.floor(y / (this.playerHeight / divY));
+        let cellX = Math.floor(x / (this.playerWidth / divX)) * (this.playerWidth / divX);
+        let cellY = Math.floor(y / (this.playerHeight / divY)) * (this.playerHeight / divY);
         return [cellX, cellY];
     }
 
@@ -201,10 +268,14 @@ export default class InterferenceGameEngine extends GameEngine {
         let player = this.world.queryObject({ playerId });
         let players = this.playersByRoom[player._roomName];
         let eggs = this.eggsByRoom[player._roomName];
+        let eggsByType = {};
+        if (eggs) {
+            eggsByType = this.groupBy(eggs, 'sound');
+        }
 
         if (player.stage === 'setup') {
             if (inputData.input == 'c') {
-                player.palette = palettes[(palettes.indexOf(player.palette)+1)%palettes.length];
+                player.palette = this.palettes[(this.palettes.indexOf(player.palette)+1)%this.palettes.length];
                 console.log(player.palette);
             }
             if (isServer) { 
@@ -233,17 +304,33 @@ export default class InterferenceGameEngine extends GameEngine {
             }
         }
         else if (player.stage === 'intro') {
-            if (inputData.input == 'space') {
-                for (let e of eggs) {
-                    if (this.positionIsInPlayer(e.position.x, player)) {
-                        this.playerHitEgg(player, e, isServer);
+            if (isServer) {
+                if (inputData.input == 'q') {
+                    for (let e of eggsByType.melody) {
+                        if (this.positionIsInPlayer(e.position.x, player)) {
+                            this.playerHitEgg(player, e, isServer);
+                        }
+                    }
+                }
+                if (inputData.input == 'w') {
+                    for (let e of eggsByType.perc) {
+                        if (this.positionIsInPlayer(e.position.x, player)) {
+                            this.playerHitEgg(player, e, isServer);
+                        }
+                    }
+                }
+                if (inputData.input == 'e') {
+                    for (let e of eggsByType.bass) {
+                        if (this.positionIsInPlayer(e.position.x, player)) {
+                            this.playerHitEgg(player, e, isServer);
+                        }
                     }
                 }
             }
         }
         /*
         else if (inputData.input == 'n') {
-            let scale = scaleTable[player.palette];
+            let scale = paletteAttributes.scale[player.palette];
             player.notestack = player.notestack.concat(
                 String.fromCharCode(scale[Math.floor(Math.random() * scale.length)])
             );

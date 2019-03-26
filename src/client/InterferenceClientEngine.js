@@ -1,23 +1,11 @@
 import { ClientEngine, KeyboardControls } from 'lance-gg';
 import SyncClient from '@ircam/sync/client';
 import InterferenceRenderer from '../client/InterferenceRenderer';
+import Note from '../common/Note';
 import Performer from '../common/Performer';
 import Egg from '../common/Egg';
 import { Transport, Frequency, Part, Sequence, Synth, MonoSynth, PolySynth, NoiseSynth, FMSynth } from 'tone';
 import { Reverb, FeedbackDelay, BitCrusher, AutoWah } from 'tone';
-
-const durs = ['4n', '8n', '6n'];
-const scaleTable = {
-    'rain':     [0, 4, 6, 9, 11],
-    'celeste':  [0, 2, 3, 5, 7],
-    'pyre':     [0, 2, 3, 7, 10],
-    'journey':  [0, 2, 4, 7, 9],
-    'kirby':    [0, 2, 4, 5, 7],
-    'default':  [0, 2, 4, 5, 7]
-}
-let noteIndex = 0;
-let rhythmIndex = 0;
-let viewLock = false;
 
 export default class InterferenceClientEngine extends ClientEngine {
 
@@ -34,6 +22,7 @@ export default class InterferenceClientEngine extends ClientEngine {
         this.eggs = [];
         this.eggSounds = {};
         this.performanceView = false;
+        this.viewLock = false;
         this.controls = new KeyboardControls(this);
         this.prevState = 'setup';
         this.fullscreen = false;
@@ -45,25 +34,11 @@ export default class InterferenceClientEngine extends ClientEngine {
             'KeyV': 'ToggleView',
             'Slash': 'ToggleLock'
         };
-        this.graphicNotes = {
-            egg: {
-                melody: [],
-                bass: [],
-                perc: []
-            }
-        };
-        this.sequences = {
-            egg: {
-                melody: [],
-                bass: [],
-                perc: []
-            }
-        };
         this.currentStep = null;
 
         this.gameEngine.on('client__postStep', this.stepLogic.bind(this));
         this.gameEngine.on('eggBounce', e => { this.onEggBounce(e) });
-        this.gameEngine.on('playerHitEgg', e => { this.onPlayerHitEgg(e) });
+        //this.gameEngine.on('playerHitEgg', e => { this.onPlayerHitEgg(e) });
         this.gameEngine.on('eggBroke', e => { this.onEggBroke(e) });
     }
 
@@ -79,7 +54,7 @@ export default class InterferenceClientEngine extends ClientEngine {
             }
         }
         else if (controlString === 'ToggleFullscreen') {
-            if (!viewLock) {
+            if (!this.viewLock) {
                 let elem = this.renderer.canvas;
                 if (!document.fullscreenElement) {
                     elem.requestFullscreen({navigationUI: 'hide'}).then({}).catch(err => {
@@ -91,7 +66,7 @@ export default class InterferenceClientEngine extends ClientEngine {
             }
         }
         else if (controlString === 'ToggleCursor') {
-            if (!viewLock) {
+            if (!this.viewLock) {
                 if (document.pointerLockElement === document.body || 
                     document.mozPointerLockElement === document.body) {
                     document.exitPointerLock();
@@ -102,11 +77,11 @@ export default class InterferenceClientEngine extends ClientEngine {
         }
         else if (controlString === 'ToggleView') {
             //console.log('view');
-            if (!viewLock) this.performanceView = !this.performanceView;
+            if (!this.viewLock) this.performanceView = !this.performanceView;
         }
         else if (controlString === 'ToggleLock') {
             //console.log('lock');
-            viewLock = !viewLock;
+            this.viewLock = !this.viewLock;
         }
     }
 
@@ -123,7 +98,7 @@ export default class InterferenceClientEngine extends ClientEngine {
 
         btn.onclick = () => {
             let regex = /^\w+$/;
-            if (regex.exec(roomNameInput.value) !== null) {
+            if (regex.exec(roomNameInput.value) != null) {
                 this.assignToRoom(roomNameInput.value.substring(0, 20));
             } else {
                 roomNameErrorText.style.display = 'inline';
@@ -139,7 +114,7 @@ export default class InterferenceClientEngine extends ClientEngine {
             if (document.activeElement === roomNameInput) {
                 if (e.code === 'Enter') {
                     let regex = /^\w+$/;
-                    if (regex.exec(roomNameInput.value) !== null) {
+                    if (regex.exec(roomNameInput.value) != null) {
                         this.assignToRoom(roomNameInput.value.substring(0, 20));
                     } else {
                         roomNameErrorText.style.display = 'inline';
@@ -184,8 +159,8 @@ export default class InterferenceClientEngine extends ClientEngine {
         let events = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
         this.eggMelodySequence = new Sequence((time, step) => {
             this.currentStep = step;
-            let seqStep = this.sequences.egg.melody[step];
-            if (seqStep) this.playScaleNoteOnPolySynth(this.eggMelodySynth, seqStep.notes, 1, seqStep.durs, time)
+            let seqStep = this.player.sequences.melody[step];
+            if (seqStep) this.playStepOnSynth(this.eggMelodySynth, seqStep, 1, time, true);
         }, events, '16n');
  
         /*
@@ -281,12 +256,15 @@ export default class InterferenceClientEngine extends ClientEngine {
             // NETWORKED CONTROLS
             // These inputs will also be processed on the server
             //console.log('binding keys');
-            this.controls.bindKey('space', 'space');
+            //this.controls.bindKey('space', 'space');
             this.controls.bindKey('open bracket', '[');
             this.controls.bindKey('close bracket / å', ']');
             this.controls.bindKey('n', 'n');
             this.controls.bindKey('b', 'b'); // begin
             this.controls.bindKey('c', 'c'); // change color
+            this.controls.bindKey('q', 'q');
+            this.controls.bindKey('w', 'w');
+            this.controls.bindKey('e', 'e');
         }
     } 
 
@@ -294,9 +272,15 @@ export default class InterferenceClientEngine extends ClientEngine {
     /// SOUND HANDLING AND CLIENT LOGIC
 
     stepLogic() {
-        if (this.room === null) return //if we yet to be assigned a room, don't do this stuff
+        if (this.room == null) return //if we yet to be assigned a room, don't do this stuff
         this.player = this.gameEngine.world.queryObject({ playerId: this.gameEngine.playerId });
         this.players = this.gameEngine.world.queryObjects({ instanceType: Performer });
+        for (let p of this.players) {
+            if (p.gridString != null) p.grid = JSON.parse(p.gridString);
+            for (let sound of Object.keys(p.sequences)) {
+                p.sequences[sound] = JSON.parse(p[sound]);
+            }
+        }
         this.eggs = this.gameEngine.world.queryObjects({ instanceType: Egg });
         let stage = this.player.stage;
         if (stage === 'setup') {
@@ -328,39 +312,6 @@ export default class InterferenceClientEngine extends ClientEngine {
         }
     }
 
-    onPlayerHitEgg(e) {
-        let scale = scaleTable[this.player.palette];
-        let pos = this.gameEngine.playerQuantizedPosition(this.player, e.position.x, e.position.y, 16, 9);
-        let step = pos[0];
-        let note = (this.gameEngine.playerCellHeight - pos[1]) + (scale.length * 4);
-        let dur = '16n';
-        //let note = (this.gameEngine.cellsPerPlayer - 1) - ((pos[1] * this.gameEngine.playerCellWidth) + pos[0]);
-        if (this.sequences.egg[e.sound][step]) {
-            if (this.sequences.egg[e.sound][step].notes.includes(note)) {
-                this.sequences.egg[e.sound][step].durs[this.sequences.egg[e.sound][step].notes.indexOf(note)] = '2n';
-                dur = '2n';
-            }
-            else {
-                this.sequences.egg[e.sound][step].notes.push(note);
-                this.sequences.egg[e.sound][step].durs.push('16n');
-            }
-        }
-        else this.sequences.egg[e.sound][step] = { notes: [note], durs: ['16n'] };
-        this.graphicNotes.egg[e.sound].push({
-            duration: dur,
-            step: step,
-            cell: { 
-                x: pos[0], 
-                y: pos[1] 
-            },
-            sequence: {
-                length: 16,
-                range: 9
-            },
-            animFrame: 0
-        });
-    }
-
     onEggBroke(e) {
         console.log('egg broke');
         this.eggSounds[e.toString()].drone.triggerRelease();
@@ -377,7 +328,7 @@ export default class InterferenceClientEngine extends ClientEngine {
 
     constructEggSounds(e) {
         //console.log('making egg sounds');
-        let scale = scaleTable[this.player.palette]
+        let scale = this.gameEngine.paletteAttributes[this.player.palette].scale;
         let synth = new Synth({
             oscillator: {
                 type: 'triangle',
@@ -414,7 +365,8 @@ export default class InterferenceClientEngine extends ClientEngine {
             }).toMaster(),
             breakSynth: synth.toMaster(), 
             break: new Sequence((time, note) => {
-                this.playScaleNoteOnSynth(synth, note, 6, '64n', time)
+                let scale = this.gameEngine.paletteAttributes[this.player.palette].scale;
+                this.playScaleNoteOnSynth(synth, note, scale, 6, '64n', time, 0.5);
             }, [[0, 1, 2, 3, 1, 2, 3, 4], null, null, null], '4n')
         };
 
@@ -425,28 +377,25 @@ export default class InterferenceClientEngine extends ClientEngine {
         this.eggSounds[e.toString()].break.loop = true;
     }
 
-    playScaleNoteOnSynth(synth, note, octaveShift, dur, time) {
+    playScaleNoteOnSynth(synth, note, scale, octaveShift, dur, time, vel) {
         if (!note) return;
         //console.log(note);
-        let scale = scaleTable[this.player.palette];
         let degree = note % scale.length;
         let octave = Math.floor(note / scale.length) + octaveShift;
+        let pitch = Frequency(scale[degree] + (12 * octave), 'midi');
         //console.log(scale[degree] + (12 * octave));
-        synth.triggerAttackRelease(Frequency(scale[degree] + (12 * octave), 'midi'), dur, time);
+        synth.triggerAttackRelease(pitch, dur, time, vel);
     }
 
-    playScaleNoteOnPolySynth(synth, notes, octaveShift, durs, time) {
-        if (!notes) return;
+    playStepOnSynth(synth, stepArray, octaveShift, time) {
+        if (!stepArray) return;
+
         //console.log(note);
-        let chord = [];
-        for (let note of notes) {
-            let scale = scaleTable[this.player.palette];
-            let degree = note % scale.length;
-            let octave = Math.floor(note / scale.length) + octaveShift;
-            //console.log(scale[degree] + (12 * octave));
-            chord.push(Frequency(scale[degree] + (12 * octave), 'midi'));
+        for (let note of stepArray) {
+            //let scale = this.gameEngine.paletteAttributes[this.player.grid[note.cell.x][note.cell.y]];
+            let scale = this.gameEngine.paletteAttributes[this.player.palette].scale;
+            this.playScaleNoteOnSynth(synth, note.pitch, scale, octaveShift, note.dur, time, note.vel);
         }
-        synth.triggerAttackRelease(chord, durs, time);
     }
 
     nextDiv(div) {

@@ -1,9 +1,15 @@
 import { ServerEngine } from 'lance-gg';
 import SyncServer from '@ircam/sync/server';
+import Note from '../common/Note';
 import Performer from '../common/Performer';
 import Egg from '../common/Egg';
 
-const palettes = ['rain', 'celeste', 'pyre', 'journey', 'kirby'];
+//const palettes = ['rain', 'celeste', 'pyre', 'journey', 'kirby'];
+
+const hpRange = 5;
+const hpMin = 5;
+const initAmmo = 4;
+const ammoInc = 4;
 
 export default class InterferenceServerEngine extends ServerEngine {
 
@@ -34,11 +40,14 @@ export default class InterferenceServerEngine extends ServerEngine {
 
         let player = new Performer(this.gameEngine, null, {});
         player.number = -1;
-        player.palette = 'default';
-        player.notestack = '';
-        player.rhythmstack = '';
+        player.palette = 0; //default
         player.ammo = 0;
-        player.stage = 'setup'
+        player.stage = 'setup';
+        player.gridString = this.getEmptyGridStringByPalette(0);
+        player.melody = JSON.stringify([]);
+        player.bass = JSON.stringify([]);
+        player.perc = JSON.stringify([]);
+
         console.log(player.number);
         player.playerId = socket.playerId;
         this.gameEngine.addObjectToWorld(player);
@@ -51,14 +60,20 @@ export default class InterferenceServerEngine extends ServerEngine {
                 this.roomStages[roomName] = 'setup';
             }
             player.number = this.myRooms[roomName].length;
-            player.palette = palettes[player.number%palettes.length];
+            player.palette = this.gameEngine.palettes[player.number%this.gameEngine.palettes.length];
             player.stage = this.roomStages[roomName];
+            player.gridString = this.getEmptyGridStringByPalette(player.palette);
+            player.melody = JSON.stringify([]);
+            player.bass = JSON.stringify([]);
+            player.perc = JSON.stringify([]);
+
             if (player.stage === 'intro') {
-                player.ammo += 8;
+                player.ammo = initAmmo;
                 for (let e of this.gameEngine.eggsByRoom[roomName]) {
-                    e.hp += Math.floor((Math.random() * 3) + 5);
+                    e.hp += Math.floor((Math.random() * hpRange) + hpMin);
                 }
             }
+
             console.log(player.number);
             this.myRooms[roomName].push(player);
             this.assignPlayerToRoom(player.playerId, roomName);
@@ -136,17 +151,19 @@ export default class InterferenceServerEngine extends ServerEngine {
         this.roomStages[r] = 'intro';
         for (let p of this.myRooms[r])
             p.stage = 'intro';
-        this.addEgg(r);
+        this.addEgg('melody', r);
+        this.addEgg('bass', r);
+        this.addEgg('perc', r);
     }
 
-    addEgg(roomName) {
+    addEgg(sound, roomName) {
         let newEgg = new Egg(this.gameEngine, null, {   position: this.gameEngine.randPos(roomName), 
                                                         velocity: this.gameEngine.velRandY() });
         let numPlayers = this.myRooms[roomName].length;
-        for (let p of this.myRooms[roomName]) p.ammo += 8;
+        for (let p of this.myRooms[roomName]) p.ammo += initAmmo;
         newEgg.number = 0;
-        newEgg.sound = 'melody';
-        newEgg.hp = Math.floor((Math.random() * numPlayers * 3) + (numPlayers * 5));
+        newEgg.sound = sound;
+        newEgg.hp = Math.floor((Math.random() * numPlayers * hpRange) + (numPlayers * hpMin));
         this.assignObjectToRoom(newEgg, roomName)
         this.gameEngine.addObjectToWorld(newEgg);
     }
@@ -181,9 +198,15 @@ export default class InterferenceServerEngine extends ServerEngine {
             }
             if (reload) {
                 for (let p of this.myRooms[k]) {
-                    p.ammo += 4;
+                    p.ammo += ammoInc;
                 }
             }
         }
+    }
+
+    getEmptyGridStringByPalette(p) {
+        let gridString = new Array(this.gameEngine.paletteAttributes[p].gridWidth).fill(
+            new Array(this.gameEngine.paletteAttributes[p].gridHeight).fill(p));
+        return JSON.stringify(gridString);
     }
 }

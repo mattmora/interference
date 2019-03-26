@@ -7,6 +7,8 @@ exports.default = void 0;
 
 var _lanceGg = require("lance-gg");
 
+var _Note = _interopRequireDefault(require("./Note"));
+
 var _Performer = _interopRequireDefault(require("./Performer"));
 
 var _Egg = _interopRequireDefault(require("./Egg"));
@@ -35,8 +37,7 @@ function _inherits(subClass, superClass) { if (typeof superClass !== "function" 
 
 function _setPrototypeOf(o, p) { _setPrototypeOf = Object.setPrototypeOf || function _setPrototypeOf(o, p) { o.__proto__ = p; return o; }; return _setPrototypeOf(o, p); }
 
-var palettes = ['rain', 'celeste', 'pyre', 'journey', 'kirby'];
-
+//const palettes = ['rain', 'celeste', 'pyre', 'journey', 'kirby'];
 var InterferenceGameEngine =
 /*#__PURE__*/
 function (_GameEngine) {
@@ -65,7 +66,39 @@ function (_GameEngine) {
       bottomBound: 9,
       transportSyncInterval: 200,
       eggRadius: 1,
-      eggBaseXVelocity: 0.1
+      eggBaseXVelocity: 0.15,
+      palettes: [1, 2, 3, 4, 5],
+      paletteAttributes: [{
+        //default
+        scale: [0, 2, 4, 5, 7],
+        gridWidth: 0,
+        gridHeight: 0
+      }, {
+        //rain
+        scale: [0, 4, 6, 9, 11],
+        gridWidth: 16,
+        gridHeight: 9
+      }, {
+        //celeste
+        scale: [0, 2, 3, 5, 7],
+        gridWidth: 16,
+        gridHeight: 9
+      }, {
+        //pyre
+        scale: [0, 2, 3, 7, 10],
+        gridWidth: 16,
+        gridHeight: 9
+      }, {
+        //journey
+        scale: [0, 2, 4, 7, 9],
+        gridWidth: 16,
+        gridHeight: 9
+      }, {
+        //kirby
+        scale: [0, 2, 4, 5, 7],
+        gridWidth: 16,
+        gridHeight: 9
+      }]
     }); // dependent game constants
 
     Object.assign(_assertThisInitialized(_this), {
@@ -322,6 +355,60 @@ function (_GameEngine) {
     value: function playerHitEgg(p, e, isServer) {
       if (e.hp <= 0) return;
       if (p.ammo <= 0) return;
+      var pal = p.palette;
+      var pos = this.playerQuantizedPosition(p, e.position.x, e.position.y, this.paletteAttributes[pal].gridWidth, this.paletteAttributes[pal].gridHeight);
+      var scale = this.paletteAttributes[pal].scale; //TODO should base this on grid
+
+      var step = pos[0];
+      var pitch = this.paletteAttributes[pal].gridHeight - pos[1] + scale.length * 4;
+      var dur = '16n';
+      var seq = p.sequences[e.sound];
+
+      if (seq[step]) {
+        var _iteratorNormalCompletion6 = true;
+        var _didIteratorError6 = false;
+        var _iteratorError6 = undefined;
+
+        try {
+          for (var _iterator6 = seq[step][Symbol.iterator](), _step6; !(_iteratorNormalCompletion6 = (_step6 = _iterator6.next()).done); _iteratorNormalCompletion6 = true) {
+            var note = _step6.value;
+            if (note.pitch === pitch) note = '2n';else seq[step].push(new _Note.default({
+              pitch: pitch,
+              dur: dur,
+              vel: 1,
+              cell: {
+                x: pos[0],
+                y: pos[1]
+              },
+              step: step
+            }));
+          }
+        } catch (err) {
+          _didIteratorError6 = true;
+          _iteratorError6 = err;
+        } finally {
+          try {
+            if (!_iteratorNormalCompletion6 && _iterator6.return != null) {
+              _iterator6.return();
+            }
+          } finally {
+            if (_didIteratorError6) {
+              throw _iteratorError6;
+            }
+          }
+        }
+      } else seq[step] = [new _Note.default({
+        pitch: pitch,
+        dur: dur,
+        vel: 1,
+        cell: {
+          x: pos[0],
+          y: pos[1]
+        },
+        step: step
+      })];
+
+      p[e.sound] = JSON.stringify(seq);
       p.ammo--;
       this.emit('playerHitEgg', e);
 
@@ -340,8 +427,8 @@ function (_GameEngine) {
   }, {
     key: "quantizedPosition",
     value: function quantizedPosition(x, y, divX, divY) {
-      var cellX = Math.floor(x / (this.playerWidth / divX));
-      var cellY = Math.floor(y / (this.playerHeight / divY));
+      var cellX = Math.floor(x / (this.playerWidth / divX)) * (this.playerWidth / divX);
+      var cellY = Math.floor(y / (this.playerHeight / divY)) * (this.playerHeight / divY);
       return [cellX, cellY];
     }
   }, {
@@ -371,10 +458,15 @@ function (_GameEngine) {
       });
       var players = this.playersByRoom[player._roomName];
       var eggs = this.eggsByRoom[player._roomName];
+      var eggsByType = {};
+
+      if (eggs) {
+        eggsByType = this.groupBy(eggs, 'sound');
+      }
 
       if (player.stage === 'setup') {
         if (inputData.input == 'c') {
-          player.palette = palettes[(palettes.indexOf(player.palette) + 1) % palettes.length];
+          player.palette = this.palettes[(this.palettes.indexOf(player.palette) + 1) % this.palettes.length];
           console.log(player.palette);
         }
 
@@ -385,43 +477,14 @@ function (_GameEngine) {
           if (inputData.input == '[') {
             var newNumber = player.number - 1;
             if (newNumber < 0) newNumber = players.length - 1;
-            var _iteratorNormalCompletion6 = true;
-            var _didIteratorError6 = false;
-            var _iteratorError6 = undefined;
-
-            try {
-              for (var _iterator6 = players[Symbol.iterator](), _step6; !(_iteratorNormalCompletion6 = (_step6 = _iterator6.next()).done); _iteratorNormalCompletion6 = true) {
-                var p = _step6.value;
-                if (p.number === newNumber) p.number = player.number;
-              }
-            } catch (err) {
-              _didIteratorError6 = true;
-              _iteratorError6 = err;
-            } finally {
-              try {
-                if (!_iteratorNormalCompletion6 && _iterator6.return != null) {
-                  _iterator6.return();
-                }
-              } finally {
-                if (_didIteratorError6) {
-                  throw _iteratorError6;
-                }
-              }
-            }
-
-            player.number = newNumber;
-          } else if (inputData.input == ']') {
-            var _newNumber = player.number + 1;
-
-            if (_newNumber >= players.length) _newNumber = 0;
             var _iteratorNormalCompletion7 = true;
             var _didIteratorError7 = false;
             var _iteratorError7 = undefined;
 
             try {
               for (var _iterator7 = players[Symbol.iterator](), _step7; !(_iteratorNormalCompletion7 = (_step7 = _iterator7.next()).done); _iteratorNormalCompletion7 = true) {
-                var _p = _step7.value;
-                if (_p.number === _newNumber) _p.number = player.number;
+                var p = _step7.value;
+                if (p.number === newNumber) p.number = player.number;
               }
             } catch (err) {
               _didIteratorError7 = true;
@@ -438,36 +501,125 @@ function (_GameEngine) {
               }
             }
 
+            player.number = newNumber;
+          } else if (inputData.input == ']') {
+            var _newNumber = player.number + 1;
+
+            if (_newNumber >= players.length) _newNumber = 0;
+            var _iteratorNormalCompletion8 = true;
+            var _didIteratorError8 = false;
+            var _iteratorError8 = undefined;
+
+            try {
+              for (var _iterator8 = players[Symbol.iterator](), _step8; !(_iteratorNormalCompletion8 = (_step8 = _iterator8.next()).done); _iteratorNormalCompletion8 = true) {
+                var _p = _step8.value;
+                if (_p.number === _newNumber) _p.number = player.number;
+              }
+            } catch (err) {
+              _didIteratorError8 = true;
+              _iteratorError8 = err;
+            } finally {
+              try {
+                if (!_iteratorNormalCompletion8 && _iterator8.return != null) {
+                  _iterator8.return();
+                }
+              } finally {
+                if (_didIteratorError8) {
+                  throw _iteratorError8;
+                }
+              }
+            }
+
             player.number = _newNumber;
           } else if (inputData.input == 'b') {
             this.emit('beginPerformance', player);
           }
         }
       } else if (player.stage === 'intro') {
-        if (inputData.input == 'space') {
-          var _iteratorNormalCompletion8 = true;
-          var _didIteratorError8 = false;
-          var _iteratorError8 = undefined;
+        if (isServer) {
+          if (inputData.input == 'q') {
+            var _iteratorNormalCompletion9 = true;
+            var _didIteratorError9 = false;
+            var _iteratorError9 = undefined;
 
-          try {
-            for (var _iterator8 = eggs[Symbol.iterator](), _step8; !(_iteratorNormalCompletion8 = (_step8 = _iterator8.next()).done); _iteratorNormalCompletion8 = true) {
-              var e = _step8.value;
+            try {
+              for (var _iterator9 = eggsByType.melody[Symbol.iterator](), _step9; !(_iteratorNormalCompletion9 = (_step9 = _iterator9.next()).done); _iteratorNormalCompletion9 = true) {
+                var e = _step9.value;
 
-              if (this.positionIsInPlayer(e.position.x, player)) {
-                this.playerHitEgg(player, e, isServer);
+                if (this.positionIsInPlayer(e.position.x, player)) {
+                  this.playerHitEgg(player, e, isServer);
+                }
+              }
+            } catch (err) {
+              _didIteratorError9 = true;
+              _iteratorError9 = err;
+            } finally {
+              try {
+                if (!_iteratorNormalCompletion9 && _iterator9.return != null) {
+                  _iterator9.return();
+                }
+              } finally {
+                if (_didIteratorError9) {
+                  throw _iteratorError9;
+                }
               }
             }
-          } catch (err) {
-            _didIteratorError8 = true;
-            _iteratorError8 = err;
-          } finally {
+          }
+
+          if (inputData.input == 'w') {
+            var _iteratorNormalCompletion10 = true;
+            var _didIteratorError10 = false;
+            var _iteratorError10 = undefined;
+
             try {
-              if (!_iteratorNormalCompletion8 && _iterator8.return != null) {
-                _iterator8.return();
+              for (var _iterator10 = eggsByType.perc[Symbol.iterator](), _step10; !(_iteratorNormalCompletion10 = (_step10 = _iterator10.next()).done); _iteratorNormalCompletion10 = true) {
+                var _e = _step10.value;
+
+                if (this.positionIsInPlayer(_e.position.x, player)) {
+                  this.playerHitEgg(player, _e, isServer);
+                }
               }
+            } catch (err) {
+              _didIteratorError10 = true;
+              _iteratorError10 = err;
             } finally {
-              if (_didIteratorError8) {
-                throw _iteratorError8;
+              try {
+                if (!_iteratorNormalCompletion10 && _iterator10.return != null) {
+                  _iterator10.return();
+                }
+              } finally {
+                if (_didIteratorError10) {
+                  throw _iteratorError10;
+                }
+              }
+            }
+          }
+
+          if (inputData.input == 'e') {
+            var _iteratorNormalCompletion11 = true;
+            var _didIteratorError11 = false;
+            var _iteratorError11 = undefined;
+
+            try {
+              for (var _iterator11 = eggsByType.bass[Symbol.iterator](), _step11; !(_iteratorNormalCompletion11 = (_step11 = _iterator11.next()).done); _iteratorNormalCompletion11 = true) {
+                var _e2 = _step11.value;
+
+                if (this.positionIsInPlayer(_e2.position.x, player)) {
+                  this.playerHitEgg(player, _e2, isServer);
+                }
+              }
+            } catch (err) {
+              _didIteratorError11 = true;
+              _iteratorError11 = err;
+            } finally {
+              try {
+                if (!_iteratorNormalCompletion11 && _iterator11.return != null) {
+                  _iterator11.return();
+                }
+              } finally {
+                if (_didIteratorError11) {
+                  throw _iteratorError11;
+                }
               }
             }
           }
@@ -475,7 +627,7 @@ function (_GameEngine) {
       }
       /*
       else if (inputData.input == 'n') {
-          let scale = scaleTable[player.palette];
+          let scale = paletteAttributes.scale[player.palette];
           player.notestack = player.notestack.concat(
               String.fromCharCode(scale[Math.floor(Math.random() * scale.length)])
           );

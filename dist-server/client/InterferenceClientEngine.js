@@ -11,6 +11,8 @@ var _client = _interopRequireDefault(require("@ircam/sync/client"));
 
 var _InterferenceRenderer = _interopRequireDefault(require("../client/InterferenceRenderer"));
 
+var _Note = _interopRequireDefault(require("../common/Note"));
+
 var _Performer = _interopRequireDefault(require("../common/Performer"));
 
 var _Egg = _interopRequireDefault(require("../common/Egg"));
@@ -41,19 +43,6 @@ function _inherits(subClass, superClass) { if (typeof superClass !== "function" 
 
 function _setPrototypeOf(o, p) { _setPrototypeOf = Object.setPrototypeOf || function _setPrototypeOf(o, p) { o.__proto__ = p; return o; }; return _setPrototypeOf(o, p); }
 
-var durs = ['4n', '8n', '6n'];
-var scaleTable = {
-  'rain': [0, 4, 6, 9, 11],
-  'celeste': [0, 2, 3, 5, 7],
-  'pyre': [0, 2, 3, 7, 10],
-  'journey': [0, 2, 4, 7, 9],
-  'kirby': [0, 2, 4, 5, 7],
-  'default': [0, 2, 4, 5, 7]
-};
-var noteIndex = 0;
-var rhythmIndex = 0;
-var viewLock = false;
-
 var InterferenceClientEngine =
 /*#__PURE__*/
 function (_ClientEngine) {
@@ -75,30 +64,17 @@ function (_ClientEngine) {
     _this.eggs = [];
     _this.eggSounds = {};
     _this.performanceView = false;
+    _this.viewLock = false;
     _this.controls = new _lanceGg.KeyboardControls(_assertThisInitialized(_this));
     _this.prevState = 'setup';
     _this.fullscreen = false;
     _this.optionSelection = {};
     _this.localControls = {
-      'Backquote': 'ToggleTransport',
+      //'Backquote': 'ToggleTransport',
       'KeyF': 'ToggleFullscreen',
       'KeyH': 'ToggleCursor',
       'KeyV': 'ToggleView',
       'Slash': 'ToggleLock'
-    };
-    _this.graphicNotes = {
-      egg: {
-        melody: [],
-        bass: [],
-        perc: []
-      }
-    };
-    _this.sequences = {
-      egg: {
-        melody: [],
-        bass: [],
-        perc: []
-      }
     };
     _this.currentStep = null;
 
@@ -106,11 +82,8 @@ function (_ClientEngine) {
 
     _this.gameEngine.on('eggBounce', function (e) {
       _this.onEggBounce(e);
-    });
+    }); //this.gameEngine.on('playerHitEgg', e => { this.onPlayerHitEgg(e) });
 
-    _this.gameEngine.on('playerHitEgg', function (e) {
-      _this.onPlayerHitEgg(e);
-    });
 
     _this.gameEngine.on('eggBroke', function (e) {
       _this.onEggBroke(e);
@@ -130,7 +103,7 @@ function (_ClientEngine) {
           this.transport.pause();
         }
       } else if (controlString === 'ToggleFullscreen') {
-        if (!viewLock) {
+        if (!this.viewLock) {
           var elem = this.renderer.canvas;
 
           if (!document.fullscreenElement) {
@@ -143,7 +116,7 @@ function (_ClientEngine) {
           }
         }
       } else if (controlString === 'ToggleCursor') {
-        if (!viewLock) {
+        if (!this.viewLock) {
           if (document.pointerLockElement === document.body || document.mozPointerLockElement === document.body) {
             document.exitPointerLock();
           } else {
@@ -152,10 +125,10 @@ function (_ClientEngine) {
         }
       } else if (controlString === 'ToggleView') {
         //console.log('view');
-        if (!viewLock) this.performanceView = !this.performanceView;
+        if (!this.viewLock) this.performanceView = !this.performanceView;
       } else if (controlString === 'ToggleLock') {
         //console.log('lock');
-        viewLock = !viewLock;
+        this.viewLock = !this.viewLock;
       }
     }
   }, {
@@ -177,7 +150,7 @@ function (_ClientEngine) {
       btn.onclick = function () {
         var regex = /^\w+$/;
 
-        if (regex.exec(roomNameInput.value) !== null) {
+        if (regex.exec(roomNameInput.value) != null) {
           _this2.assignToRoom(roomNameInput.value.substring(0, 20));
         } else {
           roomNameErrorText.style.display = 'inline';
@@ -193,7 +166,7 @@ function (_ClientEngine) {
           if (e.code === 'Enter') {
             var regex = /^\w+$/;
 
-            if (regex.exec(roomNameInput.value) !== null) {
+            if (regex.exec(roomNameInput.value) != null) {
               _this2.assignToRoom(roomNameInput.value.substring(0, 20));
             } else {
               roomNameErrorText.style.display = 'inline';
@@ -232,8 +205,8 @@ function (_ClientEngine) {
       var events = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
       this.eggMelodySequence = new _tone.Sequence(function (time, step) {
         _this2.currentStep = step;
-        var seqStep = _this2.sequences.egg.melody[step];
-        if (seqStep) _this2.playScaleNoteOnPolySynth(_this2.eggMelodySynth, seqStep.notes, 1, seqStep.durs, time);
+        var seqStep = _this2.player.sequences.melody[step];
+        if (seqStep) _this2.playStepOnSynth(_this2.eggMelodySynth, seqStep, 1, time, true);
       }, events, '16n');
       /*
       // show try-again button
@@ -334,14 +307,18 @@ function (_ClientEngine) {
         document.getElementById('startMenuWrapper').style.display = 'none'; // NETWORKED CONTROLS
         // These inputs will also be processed on the server
         //console.log('binding keys');
+        //this.controls.bindKey('space', 'space');
 
-        this.controls.bindKey('space', 'space');
         this.controls.bindKey('open bracket', '[');
         this.controls.bindKey('close bracket / å', ']');
         this.controls.bindKey('n', 'n');
         this.controls.bindKey('b', 'b'); // begin
 
         this.controls.bindKey('c', 'c'); // change color
+
+        this.controls.bindKey('q', 'q');
+        this.controls.bindKey('w', 'w');
+        this.controls.bindKey('e', 'e');
       }
     } ///////////////////////////////////////////////////////////////////////////////////////////
     /// SOUND HANDLING AND CLIENT LOGIC
@@ -349,7 +326,7 @@ function (_ClientEngine) {
   }, {
     key: "stepLogic",
     value: function stepLogic() {
-      if (this.room === null) return; //if we yet to be assigned a room, don't do this stuff
+      if (this.room == null) return; //if we yet to be assigned a room, don't do this stuff
 
       this.player = this.gameEngine.world.queryObject({
         playerId: this.gameEngine.playerId
@@ -357,13 +334,45 @@ function (_ClientEngine) {
       this.players = this.gameEngine.world.queryObjects({
         instanceType: _Performer.default
       });
+      var _iteratorNormalCompletion = true;
+      var _didIteratorError = false;
+      var _iteratorError = undefined;
+
+      try {
+        for (var _iterator = this.players[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
+          var p = _step.value;
+          if (p.gridString != null) p.grid = JSON.parse(p.gridString);
+
+          var _arr = Object.keys(p.sequences);
+
+          for (var _i = 0; _i < _arr.length; _i++) {
+            var sound = _arr[_i];
+            p.sequences[sound] = JSON.parse(p[sound]);
+          }
+        }
+      } catch (err) {
+        _didIteratorError = true;
+        _iteratorError = err;
+      } finally {
+        try {
+          if (!_iteratorNormalCompletion && _iterator.return != null) {
+            _iterator.return();
+          }
+        } finally {
+          if (_didIteratorError) {
+            throw _iteratorError;
+          }
+        }
+      }
+
       this.eggs = this.gameEngine.world.queryObjects({
         instanceType: _Egg.default
       });
       var stage = this.player.stage;
 
       if (stage === 'setup') {} else if (stage === 'intro') {
-        if (this.transport.state !== 'started' && this.prevStage !== stage) {
+        if (this.transport.state !== 'started') {
+          // && this.prevStage !== stage) {
           this.transport.start();
           this.transport.seconds = this.syncClient.getSyncTime();
         }
@@ -373,29 +382,29 @@ function (_ClientEngine) {
           this.eggMelodySequence.start(this.nextDiv('1m'));
         }
 
-        var _iteratorNormalCompletion = true;
-        var _didIteratorError = false;
-        var _iteratorError = undefined;
+        var _iteratorNormalCompletion2 = true;
+        var _didIteratorError2 = false;
+        var _iteratorError2 = undefined;
 
         try {
-          for (var _iterator = this.eggs[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
-            var e = _step.value;
+          for (var _iterator2 = this.eggs[Symbol.iterator](), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
+            var e = _step2.value;
             if (!Object.keys(this.eggSounds).includes(e.toString())) this.constructEggSounds(e);
             var vol = 1 - 0.3 * Math.abs(this.player.number - Math.floor(e.position.x / this.gameEngine.playerWidth));
             if (vol < 0) vol = 0;
             this.eggSounds[e.toString()].drone.volume.rampTo(vol, 0.1);
           }
         } catch (err) {
-          _didIteratorError = true;
-          _iteratorError = err;
+          _didIteratorError2 = true;
+          _iteratorError2 = err;
         } finally {
           try {
-            if (!_iteratorNormalCompletion && _iterator.return != null) {
-              _iterator.return();
+            if (!_iteratorNormalCompletion2 && _iterator2.return != null) {
+              _iterator2.return();
             }
           } finally {
-            if (_didIteratorError) {
-              throw _iteratorError;
+            if (_didIteratorError2) {
+              throw _iteratorError2;
             }
           }
         }
@@ -411,42 +420,6 @@ function (_ClientEngine) {
       if (this.gameEngine.positionIsInPlayer(e.position.x, this.player)) {
         this.eggSounds[e.toString()].bounce.triggerAttackRelease('8n');
       }
-    }
-  }, {
-    key: "onPlayerHitEgg",
-    value: function onPlayerHitEgg(e) {
-      var scale = scaleTable[this.player.palette];
-      var pos = this.gameEngine.playerQuantizedPosition(this.player, e.position.x, e.position.y, 16, 9);
-      var step = pos[0];
-      var note = this.gameEngine.playerCellHeight - pos[1] + scale.length * 4;
-      var dur = '16n'; //let note = (this.gameEngine.cellsPerPlayer - 1) - ((pos[1] * this.gameEngine.playerCellWidth) + pos[0]);
-
-      if (this.sequences.egg[e.sound][step]) {
-        if (this.sequences.egg[e.sound][step].notes.includes(note)) {
-          this.sequences.egg[e.sound][step].durs[this.sequences.egg[e.sound][step].notes.indexOf(note)] = '2n';
-          dur = '2n';
-        } else {
-          this.sequences.egg[e.sound][step].notes.push(note);
-          this.sequences.egg[e.sound][step].durs.push('16n');
-        }
-      } else this.sequences.egg[e.sound][step] = {
-        notes: [note],
-        durs: ['16n']
-      };
-
-      this.graphicNotes.egg[e.sound].push({
-        duration: dur,
-        step: step,
-        cell: {
-          x: pos[0],
-          y: pos[1]
-        },
-        sequence: {
-          length: 16,
-          range: 9
-        },
-        animFrame: 0
-      });
     }
   }, {
     key: "onEggBroke",
@@ -471,7 +444,7 @@ function (_ClientEngine) {
       var _this5 = this;
 
       //console.log('making egg sounds');
-      var scale = scaleTable[this.player.palette];
+      var scale = this.gameEngine.paletteAttributes[this.player.palette].scale;
       var synth = new _tone.Synth({
         oscillator: {
           type: 'triangle'
@@ -508,7 +481,9 @@ function (_ClientEngine) {
         }).toMaster(),
         breakSynth: synth.toMaster(),
         break: new _tone.Sequence(function (time, note) {
-          _this5.playScaleNoteOnSynth(synth, note, 6, '64n', time);
+          var scale = _this5.gameEngine.paletteAttributes[_this5.player.palette].scale;
+
+          _this5.playScaleNoteOnSynth(synth, note, scale, 6, '64n', time, 0.5);
         }, [[0, 1, 2, 3, 1, 2, 3, 4], null, null, null], '4n')
       };
       this.eggSounds[e.toString()].drone.connect(this.autowah);
@@ -519,50 +494,45 @@ function (_ClientEngine) {
     }
   }, {
     key: "playScaleNoteOnSynth",
-    value: function playScaleNoteOnSynth(synth, note, octaveShift, dur, time) {
+    value: function playScaleNoteOnSynth(synth, note, scale, octaveShift, dur, time, vel) {
       if (!note) return; //console.log(note);
 
-      var scale = scaleTable[this.player.palette];
       var degree = note % scale.length;
-      var octave = Math.floor(note / scale.length) + octaveShift; //console.log(scale[degree] + (12 * octave));
+      var octave = Math.floor(note / scale.length) + octaveShift;
+      var pitch = (0, _tone.Frequency)(scale[degree] + 12 * octave, 'midi'); //console.log(scale[degree] + (12 * octave));
 
-      synth.triggerAttackRelease((0, _tone.Frequency)(scale[degree] + 12 * octave, 'midi'), dur, time);
+      synth.triggerAttackRelease(pitch, dur, time, vel);
     }
   }, {
-    key: "playScaleNoteOnPolySynth",
-    value: function playScaleNoteOnPolySynth(synth, notes, octaveShift, durs, time) {
-      if (!notes) return; //console.log(note);
+    key: "playStepOnSynth",
+    value: function playStepOnSynth(synth, stepArray, octaveShift, time) {
+      if (!stepArray) return; //console.log(note);
 
-      var chord = [];
-      var _iteratorNormalCompletion2 = true;
-      var _didIteratorError2 = false;
-      var _iteratorError2 = undefined;
+      var _iteratorNormalCompletion3 = true;
+      var _didIteratorError3 = false;
+      var _iteratorError3 = undefined;
 
       try {
-        for (var _iterator2 = notes[Symbol.iterator](), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
-          var note = _step2.value;
-          var scale = scaleTable[this.player.palette];
-          var degree = note % scale.length;
-          var octave = Math.floor(note / scale.length) + octaveShift; //console.log(scale[degree] + (12 * octave));
-
-          chord.push((0, _tone.Frequency)(scale[degree] + 12 * octave, 'midi'));
+        for (var _iterator3 = stepArray[Symbol.iterator](), _step3; !(_iteratorNormalCompletion3 = (_step3 = _iterator3.next()).done); _iteratorNormalCompletion3 = true) {
+          var note = _step3.value;
+          //let scale = this.gameEngine.paletteAttributes[this.player.grid[note.cell.x][note.cell.y]];
+          var scale = this.gameEngine.paletteAttributes[this.player.palette].scale;
+          this.playScaleNoteOnSynth(synth, note.pitch, scale, octaveShift, note.dur, time, note.vel);
         }
       } catch (err) {
-        _didIteratorError2 = true;
-        _iteratorError2 = err;
+        _didIteratorError3 = true;
+        _iteratorError3 = err;
       } finally {
         try {
-          if (!_iteratorNormalCompletion2 && _iterator2.return != null) {
-            _iterator2.return();
+          if (!_iteratorNormalCompletion3 && _iterator3.return != null) {
+            _iterator3.return();
           }
         } finally {
-          if (_didIteratorError2) {
-            throw _iteratorError2;
+          if (_didIteratorError3) {
+            throw _iteratorError3;
           }
         }
       }
-
-      synth.triggerAttackRelease(chord, durs, time);
     }
   }, {
     key: "nextDiv",
