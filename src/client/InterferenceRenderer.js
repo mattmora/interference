@@ -74,6 +74,7 @@ let time = 0;
 let players = []; 
 let playerId = 0;
 let thisPlayer = null;
+let sequences = null;
 let eggs = [];
 
 let prevNotestack = '';
@@ -98,11 +99,10 @@ export default class InterferenceRenderer extends Renderer {
 
         canvas[0] = document.createElement('canvas');
         ctx[0] = canvas[0].getContext('2d');
-        ctx[0].lineWidth = 1;
+
 
         canvas[1] = document.createElement('canvas');
         ctx[1] = canvas[1].getContext('2d');
-        ctx[1].lineWidth = 1;
 
         w = canvas[0].width = canvas[1].width = this.canvas.width = window.innerWidth;
         h = canvas[0].height = canvas[1].height = this.canvas.height = window.innerHeight;
@@ -130,7 +130,7 @@ export default class InterferenceRenderer extends Renderer {
             leftViewBound = 0;
             rightViewBound = players.length * game.playerWidth;
         }
-
+        sequences = client.sequences;
         eggs = game.world.queryObjects({ instanceType: Egg });
 
         bg = paletteTable[thisPlayer.palette].bg;
@@ -164,13 +164,18 @@ export default class InterferenceRenderer extends Renderer {
         this.drawSequences();
         this.drawEggs();
 
-        /*()
-        ctx[1].fillStyle = c1;
-        ctx[1].font = "20px Lucida Console";
-        ctx[1].fillText(playerId, 50, 25);
-        ctx[1].fillText(time, 50, 50);
-        ctx[1].fillText(client.transport.position, 50, 75);
-        */
+        if (!client.performanceView) {
+            ctx[1].fillStyle = 'white';
+            ctx[1].strokeStyle = 'black';
+            this.strokeWeight(1, 1);
+            ctx[1].font = "20px Lucida Console";
+            //ctx[1].fillText(playerId, 50, 25);
+            time = Number(time).toFixed(3);
+            ctx[1].fillText(time, w * 0.05, h * 0.95);
+            ctx[1].strokeText(time, w * 0.05, h * 0.95);
+            //ctx[1].fillText(client.transport.position, 50, 75);
+        }
+
         this.ctx.drawImage(canvas[0], 0, 0);
         this.ctx.drawImage(canvas[1], 0, 0);
 
@@ -183,8 +188,16 @@ export default class InterferenceRenderer extends Renderer {
         for (let p of players) {
             let i = p.number - (leftViewBound / game.playerWidth);
             let x = ((w / n) * i);
-            this.fillColor(p, 'bg', 0);
+            this.fillColor(p.palette, 'bg', 0);
             this.fillRect(x, 0, w / n, h / n, false, 0)
+            this.fillColor('default', 'bg', 1);
+            for (let a = 0; a < p.ammo; a++) {
+                let x1 = x + ((a + 1) * ((w / n) / (p.ammo + 1)));
+                let y1 = (h / n) * 0.92;
+                this.fillTriangle(  x1, y1, 
+                                    x1 - ((0.02 * w) / n), y1 + ((0.04 * h) / n),
+                                    x1 + ((0.02 * w) / n), y1 + ((0.04 * h) / n), false, 1);
+            }
         }
         let i = thisPlayer.number;
         let x = (w / n) * (i + 0.5);
@@ -195,12 +208,12 @@ export default class InterferenceRenderer extends Renderer {
     }
 
     drawSequences() {
-        for (let p of players) {
-            if (p.sequences != null) {
-                for (let step of p.sequences.perc) if (step != null) this.drawStep(p, step, 'perc');
-                for (let step of p.sequences.bass) if (step != null) this.drawStep(p, step, 'bass');
-                for (let step of p.sequences.melody) if (step != null) this.drawStep(p, step, 'melody');                      
-            }
+        this.strokeWeight(2, 0);
+        this.strokeWeight(2, 1);
+        for (let ownerId of Object.keys(sequences)) {
+            if (sequences[ownerId].bass != null) for (let step of sequences[ownerId].bass) if (step != null) this.drawStep(sequences[ownerId].player, step, 'bass');
+            if (sequences[ownerId].melody != null) for (let step of sequences[ownerId].melody) if (step != null) this.drawStep(sequences[ownerId].player, step, 'melody'); 
+            if (sequences[ownerId].perc != null) for (let step of sequences[ownerId].perc) if (step != null) this.drawStep(sequences[ownerId].player, step, 'perc');                     
         }
     }
 
@@ -210,8 +223,8 @@ export default class InterferenceRenderer extends Renderer {
         for (let e of eggs) {
             if (leftBound < e.position.x && e.position.x < rightBound) {
                 let scale = this.mapToRange(e.animFrames.spawn, 0, animLengths.eggSpawn, 0.0, 1.0);
-                ctx[1].fillStyle = 'white';
-                ctx[1].strokeStyle = 'black';
+                this.fillColor(0, 'c1', 1);
+                this.strokeColor(0, 'bg', 1);
                 //let gamePos = game.quantizedPosition(e.position.x, e.position.y, 32, 18);
                 //let pos = this.gamePositionToCanvasPosition(gamePos[0], gamePos[1]);
                 let pos = this.gamePositionToCanvasPosition(e.position.x, e.position.y);
@@ -219,6 +232,7 @@ export default class InterferenceRenderer extends Renderer {
                 let y = pos[1];
                 let dimX = this.gameXDimToCanvasXDim(game.eggRadius) * scale;
                 let dimY = this.gameYDimToCanvasYDim(game.eggRadius) * scale;
+                this.strokeWeight((dimX + dimY) * 0.125, 1);
                 if (e.hp > 0) {
                     if (e.sound === 'melody') {
                         this.fillEllipse(x, y, dimX, dimY, 0, 0, 2*Math.PI, true, 1);
@@ -238,54 +252,75 @@ export default class InterferenceRenderer extends Renderer {
     }
 
     drawStep(p, step, sound) {
+        if (p == null) return;
         for (let n of step) {
-            if (p.animFrames[sound][step] == null) p.animFrames[sound][step] = [];
-            if (p.animFrames[sound][step][n.pitch] == null) p.animFrames[sound][step][n.pitch] = 0;
-            let animFrame = p.animFrames[sound][step][n.pitch];
             //console.log(p.animFrames[sound][step][n.pitch]);
-
-            let pal = p.palette;
-            let gridWidth = game.paletteAttributes[pal].gridWidth;
-            let gridHeight = game.paletteAttributes[pal].gridHeight;
-            let pos = this.playerCellToCanvasPosition(p, n.cell.x, n.cell.y, game.paletteAttributes[pal].gridWidth, gridHeight);
+            let gridWidth = game.paletteAttributes[n.palette].gridWidth;
+            let gridHeight = game.paletteAttributes[n.palette].gridHeight;
+            let pos = this.playerCellToCanvasPosition(p, n.xCell, n.yCell, gridWidth, gridHeight);
             let dimX = this.gameXDimToCanvasXDim(game.playerWidth / gridWidth); 
             let dimY = this.gameYDimToCanvasYDim(game.playerHeight / gridHeight);
             let x = pos[0];
             let y = pos[1];
-            let c = 'c4';
+            let c = 'bg';
             let layer = 1;
             if (sound === 'melody') {
                 x += dimX * 0.5;
                 y += dimY * 0.5;
-                dimX *= this.mapToRange(animFrame, 0, animLengths.eggNote, gridWidth, 1);
-                dimY *= this.mapToRange(animFrame, 0, animLengths.eggNote, gridHeight, 1);
-                if (n.step !== client.currentStep) {
-                    if (n.dur === '2n') { c = 'c2'; layer = 0; }
-                    else c = 'c1';
+                //dimX *= this.mapToRange(n.animFrame, 0, animLengths.eggNote, gridWidth, 1);
+                dimY *= this.mapToRange(n.animFrame, 0, animLengths.eggNote, gridHeight, 1);
+                c = 'c1';
+                if (n.dur === '2n') { 
+                    c = 'c2'; 
+                    dimX *= 2;
+                    dimY *= 2;
+                    layer = 0; 
                 }
-                this.fillColor(p, c, layer);
-                this.fillEllipse(x, y, dimX / 2, dimY / 2, 0, 0, 2*Math.PI, false, layer);
+                if (n.step === client.melodyStep) c = 'c4';
+                this.fillColor(n.palette, c, layer);
+                this.strokeColor(n.palette, 'bg', layer);
+                this.fillEllipse(x, y, dimX / 2, dimY / 2, 0, 0, 2*Math.PI, true, layer);
             }
             else if (sound === 'bass') {
-                y = this.mapToRange(animFrame, 0, animLengths.eggNote, 0, y);
-                dimY *= this.mapToRange(animFrame, 0, animLengths.eggNote, gridHeight, 1);
-                if (n.step !== client.currentStep) {
-                    if (n.dur === '2n') { c = 'c3'; dimX *= (gridWidth / 2); layer = 0; }
-                    else c = 'c2';
-                }   
-                this.fillColor(p, c, layer);
+                y = this.mapToRange(n.animFrame, 0, animLengths.eggNote, 0, y);
+                dimY *= this.mapToRange(n.animFrame, 0, animLengths.eggNote, gridHeight, 1);
+                c = 'c2';
+                if (n.dur === '2n') { 
+                    c = 'c3'; 
+                    dimX *= (gridWidth / 2); 
+                    layer = 0; 
+                }
+                if (n.step === client.bassStep) c = 'c4';
+                this.fillColor(n.palette, c, layer);
+                this.strokeColor(n.palette, 'bg', layer);
                 this.fillRect(x, y, dimX, dimY, false, layer);
             }
             else if (sound === 'perc') {
-                if (n.step !== client.currentStep) {
-                    if (n.dur === '2n') { c = 'c1'; layer = 0; }
-                    else c = 'c3';
-                }   
-                this.fillColor(p, c, layer);
-                this.fillRect(x, y, dimX, dimY, false, layer);
+                x += dimX * 0.5;
+                y += dimY * 0.5;
+                dimY *= this.mapToRange(n.animFrame, 0, animLengths.eggNote, gridHeight / 2, 1);
+                let x1 = x - (dimX * 0.5);
+                let y1 = y;
+                let x2 = x;
+                let y2 = y - (dimY * 0.5);
+                let x3 = x + (dimX * 0.5);
+                let y3 = y;
+                let x4 = x;
+                let y4 = y + (dimY * 0.5);
+                c = 'c3'
+                if (n.dur === '2n') { 
+                    c = 'c1'; 
+                    x2 += dimX;
+                    x4 -= dimX
+                    layer = 0;             
+                }
+                if (n.step === client.percStep) c = 'c4';
+                this.fillColor(n.palette, c, layer);
+                this.strokeColor(n.palette, 'bg', layer);
+                this.fillQuad(x1, y1, x2, y2, x3, y3, x4, y4, true, layer);
             }
 
-            if (p.animFrames[sound][step][n.pitch] < animLengths.eggNote) p.animFrames[sound][step][n.pitch]++;
+            if (n.animFrame < animLengths.eggNote) n.animFrame++;
         }
     }
 
@@ -329,10 +364,21 @@ export default class InterferenceRenderer extends Renderer {
         this.fillEllipse(x+gapX, y+gapY, radiusX, radiusY, 0, 1.5*Math.PI, 2*Math.PI, stroke, layer)
         if (e.animFrames.break < animLengths.eggBreak) e.animFrames.break++
     }
+    
+    strokeWeight(weight, layer) {
+        ctx[layer].lineWidth = weight;
+    }
 
-    fillColor(p, which, layer) {
-        if (paletteTable[p.palette]) {
-            ctx[layer].fillStyle = paletteTable[p.palette][which];
+    strokeColor(pal, which, layer) {
+        if (paletteTable[pal]) {
+            ctx[layer].strokeStyle = paletteTable[pal][which];
+        }  
+        else ctx[layer].strokeStyle = paletteTable[0][which];
+    }
+
+    fillColor(pal, which, layer) {
+        if (paletteTable[pal]) {
+            ctx[layer].fillStyle = paletteTable[pal][which];
         }  
         else ctx[layer].fillStyle = paletteTable[0][which];
     }

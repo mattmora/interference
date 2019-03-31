@@ -57,6 +57,11 @@ function (_GameEngine) {
     }); // game constants
 
     Object.assign(_assertThisInitialized(_this), {
+      // map: { setup: { variations: [0]['intro'], 
+      // intro: ['buildMelody', 'buildBass', 'buildPerc'],
+      // buildMelody: ['fight']
+      // fight
+      // },
       playerWidth: 16,
       playerHeight: 9,
       eggHPRange: 4,
@@ -75,41 +80,108 @@ function (_GameEngine) {
         scale: [0, 2, 4, 5, 7],
         gridWidth: 0,
         gridHeight: 0,
-        subdivision: '1n'
+        melody: {
+          subdivision: '1n',
+          length: 0
+        },
+        bass: {
+          subdivision: '1n',
+          length: 0
+        },
+        perc: {
+          subdivision: '1n',
+          length: 0
+        }
       }, {
         //rain
         scale: [0, 4, 6, 9, 11],
-        gridWidth: 18,
-        gridHeight: 8,
-        subdivision: '18n'
+        gridWidth: 16,
+        gridHeight: 9,
+        melody: {
+          subdivision: '16n',
+          length: 16
+        },
+        bass: {
+          subdivision: '16n',
+          length: 16
+        },
+        perc: {
+          subdivision: '16n',
+          length: 16
+        }
       }, {
         //celeste
         scale: [0, 2, 3, 5, 7],
         gridWidth: 16,
         gridHeight: 9,
-        subdivision: '16n'
+        melody: {
+          subdivision: '16n',
+          length: 16
+        },
+        bass: {
+          subdivision: '16n',
+          length: 16
+        },
+        perc: {
+          subdivision: '16n',
+          length: 16
+        }
       }, {
         //pyre
         scale: [0, 2, 3, 7, 10],
-        gridWidth: 12,
-        gridHeight: 12,
-        subdivision: '12n'
+        gridWidth: 16,
+        gridHeight: 9,
+        melody: {
+          subdivision: '16n',
+          length: 16
+        },
+        bass: {
+          subdivision: '16n',
+          length: 16
+        },
+        perc: {
+          subdivision: '16n',
+          length: 16
+        }
       }, {
         //journey
         scale: [0, 2, 4, 7, 9],
-        gridWidth: 8,
-        gridHeight: 18,
-        subdivision: '8n'
+        gridWidth: 16,
+        gridHeight: 9,
+        melody: {
+          subdivision: '16n',
+          length: 16
+        },
+        bass: {
+          subdivision: '16n',
+          length: 16
+        },
+        perc: {
+          subdivision: '16n',
+          length: 16
+        }
       }, {
         //kirby
         scale: [0, 2, 4, 5, 7],
         gridWidth: 16,
         gridHeight: 9,
-        subdivision: '16n'
+        melody: {
+          subdivision: '16n',
+          length: 16
+        },
+        bass: {
+          subdivision: '16n',
+          length: 16
+        },
+        perc: {
+          subdivision: '16n',
+          length: 16
+        }
       }]
     }); // game variables
 
     Object.assign(_assertThisInitialized(_this), {
+      shadowIdCount: _this.options.clientIDSpace,
       rooms: [],
       playersByRoom: {},
       eggsByRoom: {},
@@ -124,8 +196,36 @@ function (_GameEngine) {
   }
 
   _createClass(InterferenceGameEngine, [{
+    key: "getNewShadowId",
+    value: function getNewShadowId() {
+      var id = this.shadowIdCount;
+      this.shadowIdCount++;
+      return id;
+    } // based on lance findLocalShadow; instead of finding the shadow of a server obj,
+    // looks for the server copy of a shadow obj, and removes the shadow if the server copy if found
+
+  }, {
+    key: "resolveShadowObject",
+    value: function resolveShadowObject(shadowObj) {
+      var _arr = Object.keys(this.world.objects);
+
+      for (var _i = 0; _i < _arr.length; _i++) {
+        var localId = _arr[_i];
+        if (Number(localId) >= this.options.clientIDSpace) continue;
+        var serverObj = this.world.objects[localId];
+
+        if (serverObj.hasOwnProperty('inputId') && serverObj.inputId === shadowObj.inputId) {
+          this.removeObjectFromWorld(shadowObj.id);
+          return serverObj;
+        }
+      }
+
+      return null;
+    }
+  }, {
     key: "registerClasses",
     value: function registerClasses(serializer) {
+      serializer.registerClass(_Note.default);
       serializer.registerClass(_Performer.default);
       serializer.registerClass(_Egg.default);
     }
@@ -353,73 +453,6 @@ function (_GameEngine) {
       }
     }
   }, {
-    key: "playerHitEgg",
-    value: function playerHitEgg(p, e, isServer) {
-      if (e.hp <= 0) return;
-      if (p.ammo <= 0) return;
-      var pal = p.palette;
-      var pos = this.playerQuantizedPosition(p, e.position.x, e.position.y, this.paletteAttributes[pal].gridWidth, this.paletteAttributes[pal].gridHeight);
-      var scale = this.paletteAttributes[pal].scale; //TODO should base this on palette of the cell?
-
-      var step = pos[0];
-      var pitch = this.paletteAttributes[pal].gridHeight - pos[1] + scale.length * 4;
-      var dur = this.paletteAttributes[pal].subdivision;
-      var seq = p.sequences[e.sound];
-
-      if (seq[step]) {
-        var _iteratorNormalCompletion6 = true;
-        var _didIteratorError6 = false;
-        var _iteratorError6 = undefined;
-
-        try {
-          for (var _iterator6 = seq[step][Symbol.iterator](), _step6; !(_iteratorNormalCompletion6 = (_step6 = _iterator6.next()).done); _iteratorNormalCompletion6 = true) {
-            var note = _step6.value;
-            if (note.pitch === pitch) note = '2n';else seq[step].push(new _Note.default({
-              pitch: pitch,
-              dur: dur,
-              vel: 1,
-              cell: {
-                x: pos[0],
-                y: pos[1]
-              },
-              step: step
-            }));
-          }
-        } catch (err) {
-          _didIteratorError6 = true;
-          _iteratorError6 = err;
-        } finally {
-          try {
-            if (!_iteratorNormalCompletion6 && _iterator6.return != null) {
-              _iterator6.return();
-            }
-          } finally {
-            if (_didIteratorError6) {
-              throw _iteratorError6;
-            }
-          }
-        }
-      } else seq[step] = [new _Note.default({
-        pitch: pitch,
-        dur: dur,
-        vel: 1,
-        cell: {
-          x: pos[0],
-          y: pos[1]
-        },
-        step: step
-      })];
-
-      p[e.sound] = JSON.stringify(seq);
-      p.ammo--;
-      this.emit('playerHitEgg', e);
-
-      if (isServer) {
-        e.hp--;
-        console.log(e.hp);
-      }
-    }
-  }, {
     key: "positionIsInPlayer",
     value: function positionIsInPlayer(x, p) {
       var leftBound = p.number * this.playerWidth;
@@ -449,6 +482,58 @@ function (_GameEngine) {
         grouped[current[property]].push(current);
         return grouped;
       }, {});
+    } // based on lance GameWorld.queryObjects
+
+  }, {
+    key: "queryNotes",
+    value: function queryNotes(query) {
+      var queriedNotes = [];
+      var _iteratorNormalCompletion6 = true;
+      var _didIteratorError6 = false;
+      var _iteratorError6 = undefined;
+
+      try {
+        for (var _iterator6 = this.world.queryObjects({
+          instanceType: _Note.default
+        })[Symbol.iterator](), _step6; !(_iteratorNormalCompletion6 = (_step6 = _iterator6.next()).done); _iteratorNormalCompletion6 = true) {
+          var note = _step6.value;
+          var conditions = [];
+
+          var _arr2 = Object.keys(query);
+
+          for (var _i2 = 0; _i2 < _arr2.length; _i2++) {
+            var k = _arr2[_i2];
+            conditions.push(!(k in query) || query[k] !== null && note[k] === query[k]);
+          } // all conditions are true, object is qualified for the query
+
+
+          if (conditions.every(function (value) {
+            return value;
+          })) {
+            queriedNotes.push(note);
+          }
+        }
+      } catch (err) {
+        _didIteratorError6 = true;
+        _iteratorError6 = err;
+      } finally {
+        try {
+          if (!_iteratorNormalCompletion6 && _iterator6.return != null) {
+            _iterator6.return();
+          }
+        } finally {
+          if (_didIteratorError6) {
+            throw _iteratorError6;
+          }
+        }
+      }
+
+      return queriedNotes;
+    }
+  }, {
+    key: "playerHitEgg",
+    value: function playerHitEgg(p, e, isServer) {
+      this.emit('playerHitEgg', e);
     }
   }, {
     key: "processInput",
@@ -470,15 +555,14 @@ function (_GameEngine) {
         //TODO need to update a bunch of stuff on a color change, 
         // also need to be careful when referencing the player palette vs a cell palette, player palette should not change after setup?
         if (inputData.input == 'c') {
-          player.palette = this.palettes[(this.palettes.indexOf(player.palette) + 1) % this.palettes.length];
-          console.log(player.palette);
-        }
-
-        if (isServer) {
+          this.emit('updatePalette');
+        } else if (isServer) {
           // stuff that should only be processed on the server, such as randomness, which would otherwise cause discrepancies
           // or actions that require more info than is available to one player
           //console.log(inputData.input);
-          if (inputData.input == '[') {
+          if (inputData.input == 'b') {
+            this.emit('beginPerformance', player);
+          } else if (inputData.input == '[') {
             var newNumber = player.number - 1;
             if (newNumber < 0) newNumber = players.length - 1;
             var _iteratorNormalCompletion7 = true;
@@ -535,95 +619,91 @@ function (_GameEngine) {
             }
 
             player.number = _newNumber;
-          } else if (inputData.input == 'b') {
-            this.emit('beginPerformance', player);
           }
         }
       } else if (player.stage === 'intro') {
-        if (isServer) {
-          if (inputData.input == 'q') {
-            var _iteratorNormalCompletion9 = true;
-            var _didIteratorError9 = false;
-            var _iteratorError9 = undefined;
+        if (inputData.input == 'q') {
+          var _iteratorNormalCompletion9 = true;
+          var _didIteratorError9 = false;
+          var _iteratorError9 = undefined;
 
-            try {
-              for (var _iterator9 = eggsByType.melody[Symbol.iterator](), _step9; !(_iteratorNormalCompletion9 = (_step9 = _iterator9.next()).done); _iteratorNormalCompletion9 = true) {
-                var e = _step9.value;
+          try {
+            for (var _iterator9 = eggsByType.melody[Symbol.iterator](), _step9; !(_iteratorNormalCompletion9 = (_step9 = _iterator9.next()).done); _iteratorNormalCompletion9 = true) {
+              var e = _step9.value;
 
-                if (this.positionIsInPlayer(e.position.x, player)) {
-                  this.playerHitEgg(player, e, isServer);
-                }
+              if (this.positionIsInPlayer(e.position.x, player)) {
+                this.playerHitEgg(player, e, isServer);
               }
-            } catch (err) {
-              _didIteratorError9 = true;
-              _iteratorError9 = err;
+            }
+          } catch (err) {
+            _didIteratorError9 = true;
+            _iteratorError9 = err;
+          } finally {
+            try {
+              if (!_iteratorNormalCompletion9 && _iterator9.return != null) {
+                _iterator9.return();
+              }
             } finally {
-              try {
-                if (!_iteratorNormalCompletion9 && _iterator9.return != null) {
-                  _iterator9.return();
-                }
-              } finally {
-                if (_didIteratorError9) {
-                  throw _iteratorError9;
-                }
+              if (_didIteratorError9) {
+                throw _iteratorError9;
               }
             }
           }
+        }
 
-          if (inputData.input == 'w') {
-            var _iteratorNormalCompletion10 = true;
-            var _didIteratorError10 = false;
-            var _iteratorError10 = undefined;
+        if (inputData.input == 'w') {
+          var _iteratorNormalCompletion10 = true;
+          var _didIteratorError10 = false;
+          var _iteratorError10 = undefined;
 
-            try {
-              for (var _iterator10 = eggsByType.perc[Symbol.iterator](), _step10; !(_iteratorNormalCompletion10 = (_step10 = _iterator10.next()).done); _iteratorNormalCompletion10 = true) {
-                var _e = _step10.value;
+          try {
+            for (var _iterator10 = eggsByType.perc[Symbol.iterator](), _step10; !(_iteratorNormalCompletion10 = (_step10 = _iterator10.next()).done); _iteratorNormalCompletion10 = true) {
+              var _e = _step10.value;
 
-                if (this.positionIsInPlayer(_e.position.x, player)) {
-                  this.playerHitEgg(player, _e, isServer);
-                }
+              if (this.positionIsInPlayer(_e.position.x, player)) {
+                this.playerHitEgg(player, _e, isServer);
               }
-            } catch (err) {
-              _didIteratorError10 = true;
-              _iteratorError10 = err;
+            }
+          } catch (err) {
+            _didIteratorError10 = true;
+            _iteratorError10 = err;
+          } finally {
+            try {
+              if (!_iteratorNormalCompletion10 && _iterator10.return != null) {
+                _iterator10.return();
+              }
             } finally {
-              try {
-                if (!_iteratorNormalCompletion10 && _iterator10.return != null) {
-                  _iterator10.return();
-                }
-              } finally {
-                if (_didIteratorError10) {
-                  throw _iteratorError10;
-                }
+              if (_didIteratorError10) {
+                throw _iteratorError10;
               }
             }
           }
+        }
 
-          if (inputData.input == 'e') {
-            var _iteratorNormalCompletion11 = true;
-            var _didIteratorError11 = false;
-            var _iteratorError11 = undefined;
+        if (inputData.input == 'e') {
+          var _iteratorNormalCompletion11 = true;
+          var _didIteratorError11 = false;
+          var _iteratorError11 = undefined;
 
-            try {
-              for (var _iterator11 = eggsByType.bass[Symbol.iterator](), _step11; !(_iteratorNormalCompletion11 = (_step11 = _iterator11.next()).done); _iteratorNormalCompletion11 = true) {
-                var _e2 = _step11.value;
+          try {
+            for (var _iterator11 = eggsByType.bass[Symbol.iterator](), _step11; !(_iteratorNormalCompletion11 = (_step11 = _iterator11.next()).done); _iteratorNormalCompletion11 = true) {
+              var _e2 = _step11.value;
 
-                if (this.positionIsInPlayer(_e2.position.x, player)) {
-                  this.playerHitEgg(player, _e2, isServer);
-                }
+              if (this.positionIsInPlayer(_e2.position.x, player)) {
+                this.playerHitEgg(player, _e2, isServer);
               }
-            } catch (err) {
-              _didIteratorError11 = true;
-              _iteratorError11 = err;
+            }
+          } catch (err) {
+            _didIteratorError11 = true;
+            _iteratorError11 = err;
+          } finally {
+            try {
+              if (!_iteratorNormalCompletion11 && _iterator11.return != null) {
+                _iterator11.return();
+              }
             } finally {
-              try {
-                if (!_iteratorNormalCompletion11 && _iterator11.return != null) {
-                  _iterator11.return();
-                }
-              } finally {
-                if (_didIteratorError11) {
-                  throw _iteratorError11;
-                }
+              if (_didIteratorError11) {
+                throw _iteratorError11;
               }
             }
           }

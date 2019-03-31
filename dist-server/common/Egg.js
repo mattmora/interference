@@ -44,9 +44,7 @@ function (_DynamicObject) {
     key: "netScheme",
     get: function get() {
       return Object.assign({
-        number: {
-          type: _lanceGg.BaseTypes.TYPES.UINT8
-        },
+        //number: { type: BaseTypes.TYPES.UINT8 },
         sound: {
           type: _lanceGg.BaseTypes.TYPES.STRING
         },

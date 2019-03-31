@@ -74,16 +74,6 @@ function (_DynamicObject) {
     _this = _possibleConstructorReturn(this, _getPrototypeOf(Performer).call(this, gameEngine, options, props));
     _this.class = Performer;
     _this.grid = [[]];
-    _this.sequences = {
-      melody: [],
-      bass: [],
-      perc: []
-    };
-    _this.animFrames = {
-      melody: [],
-      bass: [],
-      perc: []
-    };
     return _this;
   }
 

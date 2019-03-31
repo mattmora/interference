@@ -4,7 +4,7 @@ export default class Egg extends DynamicObject {
 
     static get netScheme() {
         return Object.assign({
-            number: { type: BaseTypes.TYPES.UINT8 },
+            //number: { type: BaseTypes.TYPES.UINT8 },
             sound: { type: BaseTypes.TYPES.STRING },
             hp: { type: BaseTypes.TYPES.INT16 }
         }, super.netScheme);

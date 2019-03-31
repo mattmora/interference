@@ -101,6 +101,7 @@ var time = 0;
 var players = [];
 var playerId = 0;
 var thisPlayer = null;
+var sequences = null;
 var eggs = [];
 var prevNotestack = '';
 var prevRhythmstack = '';
@@ -127,10 +128,8 @@ function (_Renderer) {
     _this.ctx = _this.canvas.getContext('2d');
     canvas[0] = document.createElement('canvas');
     ctx[0] = canvas[0].getContext('2d');
-    ctx[0].lineWidth = 1;
     canvas[1] = document.createElement('canvas');
     ctx[1] = canvas[1].getContext('2d');
-    ctx[1].lineWidth = 1;
     w = canvas[0].width = canvas[1].width = _this.canvas.width = window.innerWidth;
     h = canvas[0].height = canvas[1].height = _this.canvas.height = window.innerHeight;
     document.body.insertBefore(_this.canvas, document.getElementById('logo'));
@@ -164,6 +163,7 @@ function (_Renderer) {
         rightViewBound = players.length * game.playerWidth;
       }
 
+      sequences = client.sequences;
       eggs = game.world.queryObjects({
         instanceType: _Egg.default
       });
@@ -196,13 +196,17 @@ function (_Renderer) {
       this.drawPlayers();
       this.drawSequences();
       this.drawEggs();
-      /*()
-      ctx[1].fillStyle = c1;
-      ctx[1].font = "20px Lucida Console";
-      ctx[1].fillText(playerId, 50, 25);
-      ctx[1].fillText(time, 50, 50);
-      ctx[1].fillText(client.transport.position, 50, 75);
-      */
+
+      if (!client.performanceView) {
+        ctx[1].fillStyle = 'white';
+        ctx[1].strokeStyle = 'black';
+        this.strokeWeight(1, 1);
+        ctx[1].font = "20px Lucida Console"; //ctx[1].fillText(playerId, 50, 25);
+
+        time = Number(time).toFixed(3);
+        ctx[1].fillText(time, w * 0.05, h * 0.95);
+        ctx[1].strokeText(time, w * 0.05, h * 0.95); //ctx[1].fillText(client.transport.position, 50, 75);
+      }
 
       this.ctx.drawImage(canvas[0], 0, 0);
       this.ctx.drawImage(canvas[1], 0, 0);
@@ -225,8 +229,15 @@ function (_Renderer) {
 
           var _x = w / n * _i;
 
-          this.fillColor(p, 'bg', 0);
+          this.fillColor(p.palette, 'bg', 0);
           this.fillRect(_x, 0, w / n, h / n, false, 0);
+          this.fillColor('default', 'bg', 1);
+
+          for (var a = 0; a < p.ammo; a++) {
+            var x1 = _x + (a + 1) * (w / n / (p.ammo + 1));
+            var y1 = h / n * 0.92;
+            this.fillTriangle(x1, y1, x1 - 0.02 * w / n, y1 + 0.04 * h / n, x1 + 0.02 * w / n, y1 + 0.04 * h / n, false, 1);
+          }
         }
       } catch (err) {
         _didIteratorError = true;
@@ -251,99 +262,89 @@ function (_Renderer) {
   }, {
     key: "drawSequences",
     value: function drawSequences() {
-      var _iteratorNormalCompletion2 = true;
-      var _didIteratorError2 = false;
-      var _iteratorError2 = undefined;
+      this.strokeWeight(2, 0);
+      this.strokeWeight(2, 1);
 
-      try {
-        for (var _iterator2 = players[Symbol.iterator](), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
-          var p = _step2.value;
+      var _arr = Object.keys(sequences);
 
-          if (p.sequences != null) {
-            var _iteratorNormalCompletion3 = true;
-            var _didIteratorError3 = false;
-            var _iteratorError3 = undefined;
+      for (var _i2 = 0; _i2 < _arr.length; _i2++) {
+        var ownerId = _arr[_i2];
 
-            try {
-              for (var _iterator3 = p.sequences.perc[Symbol.iterator](), _step3; !(_iteratorNormalCompletion3 = (_step3 = _iterator3.next()).done); _iteratorNormalCompletion3 = true) {
-                var step = _step3.value;
-                if (step != null) this.drawStep(p, step, 'perc');
-              }
-            } catch (err) {
-              _didIteratorError3 = true;
-              _iteratorError3 = err;
-            } finally {
-              try {
-                if (!_iteratorNormalCompletion3 && _iterator3.return != null) {
-                  _iterator3.return();
-                }
-              } finally {
-                if (_didIteratorError3) {
-                  throw _iteratorError3;
-                }
-              }
+        if (sequences[ownerId].bass != null) {
+          var _iteratorNormalCompletion2 = true;
+          var _didIteratorError2 = false;
+          var _iteratorError2 = undefined;
+
+          try {
+            for (var _iterator2 = sequences[ownerId].bass[Symbol.iterator](), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
+              var step = _step2.value;
+              if (step != null) this.drawStep(sequences[ownerId].player, step, 'bass');
             }
-
-            var _iteratorNormalCompletion4 = true;
-            var _didIteratorError4 = false;
-            var _iteratorError4 = undefined;
-
+          } catch (err) {
+            _didIteratorError2 = true;
+            _iteratorError2 = err;
+          } finally {
             try {
-              for (var _iterator4 = p.sequences.bass[Symbol.iterator](), _step4; !(_iteratorNormalCompletion4 = (_step4 = _iterator4.next()).done); _iteratorNormalCompletion4 = true) {
-                var _step6 = _step4.value;
-                if (_step6 != null) this.drawStep(p, _step6, 'bass');
+              if (!_iteratorNormalCompletion2 && _iterator2.return != null) {
+                _iterator2.return();
               }
-            } catch (err) {
-              _didIteratorError4 = true;
-              _iteratorError4 = err;
             } finally {
-              try {
-                if (!_iteratorNormalCompletion4 && _iterator4.return != null) {
-                  _iterator4.return();
-                }
-              } finally {
-                if (_didIteratorError4) {
-                  throw _iteratorError4;
-                }
-              }
-            }
-
-            var _iteratorNormalCompletion5 = true;
-            var _didIteratorError5 = false;
-            var _iteratorError5 = undefined;
-
-            try {
-              for (var _iterator5 = p.sequences.melody[Symbol.iterator](), _step5; !(_iteratorNormalCompletion5 = (_step5 = _iterator5.next()).done); _iteratorNormalCompletion5 = true) {
-                var _step7 = _step5.value;
-                if (_step7 != null) this.drawStep(p, _step7, 'melody');
-              }
-            } catch (err) {
-              _didIteratorError5 = true;
-              _iteratorError5 = err;
-            } finally {
-              try {
-                if (!_iteratorNormalCompletion5 && _iterator5.return != null) {
-                  _iterator5.return();
-                }
-              } finally {
-                if (_didIteratorError5) {
-                  throw _iteratorError5;
-                }
+              if (_didIteratorError2) {
+                throw _iteratorError2;
               }
             }
           }
         }
-      } catch (err) {
-        _didIteratorError2 = true;
-        _iteratorError2 = err;
-      } finally {
-        try {
-          if (!_iteratorNormalCompletion2 && _iterator2.return != null) {
-            _iterator2.return();
+
+        if (sequences[ownerId].melody != null) {
+          var _iteratorNormalCompletion3 = true;
+          var _didIteratorError3 = false;
+          var _iteratorError3 = undefined;
+
+          try {
+            for (var _iterator3 = sequences[ownerId].melody[Symbol.iterator](), _step3; !(_iteratorNormalCompletion3 = (_step3 = _iterator3.next()).done); _iteratorNormalCompletion3 = true) {
+              var _step4 = _step3.value;
+              if (_step4 != null) this.drawStep(sequences[ownerId].player, _step4, 'melody');
+            }
+          } catch (err) {
+            _didIteratorError3 = true;
+            _iteratorError3 = err;
+          } finally {
+            try {
+              if (!_iteratorNormalCompletion3 && _iterator3.return != null) {
+                _iterator3.return();
+              }
+            } finally {
+              if (_didIteratorError3) {
+                throw _iteratorError3;
+              }
+            }
           }
-        } finally {
-          if (_didIteratorError2) {
-            throw _iteratorError2;
+        }
+
+        if (sequences[ownerId].perc != null) {
+          var _iteratorNormalCompletion4 = true;
+          var _didIteratorError4 = false;
+          var _iteratorError4 = undefined;
+
+          try {
+            for (var _iterator4 = sequences[ownerId].perc[Symbol.iterator](), _step5; !(_iteratorNormalCompletion4 = (_step5 = _iterator4.next()).done); _iteratorNormalCompletion4 = true) {
+              var _step6 = _step5.value;
+              if (_step6 != null) this.drawStep(sequences[ownerId].player, _step6, 'perc');
+            }
+          } catch (err) {
+            _didIteratorError4 = true;
+            _iteratorError4 = err;
+          } finally {
+            try {
+              if (!_iteratorNormalCompletion4 && _iterator4.return != null) {
+                _iterator4.return();
+              }
+            } finally {
+              if (_didIteratorError4) {
+                throw _iteratorError4;
+              }
+            }
           }
         }
       }
@@ -353,18 +354,18 @@ function (_Renderer) {
     value: function drawEggs() {
       var leftBound = leftViewBound - game.eggRadius;
       var rightBound = rightViewBound + game.eggRadius;
-      var _iteratorNormalCompletion6 = true;
-      var _didIteratorError6 = false;
-      var _iteratorError6 = undefined;
+      var _iteratorNormalCompletion5 = true;
+      var _didIteratorError5 = false;
+      var _iteratorError5 = undefined;
 
       try {
-        for (var _iterator6 = eggs[Symbol.iterator](), _step8; !(_iteratorNormalCompletion6 = (_step8 = _iterator6.next()).done); _iteratorNormalCompletion6 = true) {
-          var e = _step8.value;
+        for (var _iterator5 = eggs[Symbol.iterator](), _step7; !(_iteratorNormalCompletion5 = (_step7 = _iterator5.next()).done); _iteratorNormalCompletion5 = true) {
+          var e = _step7.value;
 
           if (leftBound < e.position.x && e.position.x < rightBound) {
             var scale = this.mapToRange(e.animFrames.spawn, 0, animLengths.eggSpawn, 0.0, 1.0);
-            ctx[1].fillStyle = 'white';
-            ctx[1].strokeStyle = 'black'; //let gamePos = game.quantizedPosition(e.position.x, e.position.y, 32, 18);
+            this.fillColor(0, 'c1', 1);
+            this.strokeColor(0, 'bg', 1); //let gamePos = game.quantizedPosition(e.position.x, e.position.y, 32, 18);
             //let pos = this.gamePositionToCanvasPosition(gamePos[0], gamePos[1]);
 
             var pos = this.gamePositionToCanvasPosition(e.position.x, e.position.y);
@@ -372,6 +373,7 @@ function (_Renderer) {
             var y = pos[1];
             var dimX = this.gameXDimToCanvasXDim(game.eggRadius) * scale;
             var dimY = this.gameYDimToCanvasYDim(game.eggRadius) * scale;
+            this.strokeWeight((dimX + dimY) * 0.125, 1);
 
             if (e.hp > 0) {
               if (e.sound === 'melody') {
@@ -387,6 +389,105 @@ function (_Renderer) {
           if (e.animFrames.spawn < animLengths.eggSpawn) e.animFrames.spawn++;
         }
       } catch (err) {
+        _didIteratorError5 = true;
+        _iteratorError5 = err;
+      } finally {
+        try {
+          if (!_iteratorNormalCompletion5 && _iterator5.return != null) {
+            _iterator5.return();
+          }
+        } finally {
+          if (_didIteratorError5) {
+            throw _iteratorError5;
+          }
+        }
+      }
+    }
+  }, {
+    key: "drawStep",
+    value: function drawStep(p, step, sound) {
+      if (p == null) return;
+      var _iteratorNormalCompletion6 = true;
+      var _didIteratorError6 = false;
+      var _iteratorError6 = undefined;
+
+      try {
+        for (var _iterator6 = step[Symbol.iterator](), _step8; !(_iteratorNormalCompletion6 = (_step8 = _iterator6.next()).done); _iteratorNormalCompletion6 = true) {
+          var n = _step8.value;
+          //console.log(p.animFrames[sound][step][n.pitch]);
+          var gridWidth = game.paletteAttributes[n.palette].gridWidth;
+          var gridHeight = game.paletteAttributes[n.palette].gridHeight;
+          var pos = this.playerCellToCanvasPosition(p, n.xCell, n.yCell, gridWidth, gridHeight);
+          var dimX = this.gameXDimToCanvasXDim(game.playerWidth / gridWidth);
+          var dimY = this.gameYDimToCanvasYDim(game.playerHeight / gridHeight);
+          var x = pos[0];
+          var y = pos[1];
+          var c = 'bg';
+          var layer = 1;
+
+          if (sound === 'melody') {
+            x += dimX * 0.5;
+            y += dimY * 0.5; //dimX *= this.mapToRange(n.animFrame, 0, animLengths.eggNote, gridWidth, 1);
+
+            dimY *= this.mapToRange(n.animFrame, 0, animLengths.eggNote, gridHeight, 1);
+            c = 'c1';
+
+            if (n.dur === '2n') {
+              c = 'c2';
+              dimX *= 2;
+              dimY *= 2;
+              layer = 0;
+            }
+
+            if (n.step === client.melodyStep) c = 'c4';
+            this.fillColor(n.palette, c, layer);
+            this.strokeColor(n.palette, 'bg', layer);
+            this.fillEllipse(x, y, dimX / 2, dimY / 2, 0, 0, 2 * Math.PI, true, layer);
+          } else if (sound === 'bass') {
+            y = this.mapToRange(n.animFrame, 0, animLengths.eggNote, 0, y);
+            dimY *= this.mapToRange(n.animFrame, 0, animLengths.eggNote, gridHeight, 1);
+            c = 'c2';
+
+            if (n.dur === '2n') {
+              c = 'c3';
+              dimX *= gridWidth / 2;
+              layer = 0;
+            }
+
+            if (n.step === client.bassStep) c = 'c4';
+            this.fillColor(n.palette, c, layer);
+            this.strokeColor(n.palette, 'bg', layer);
+            this.fillRect(x, y, dimX, dimY, false, layer);
+          } else if (sound === 'perc') {
+            x += dimX * 0.5;
+            y += dimY * 0.5;
+            dimY *= this.mapToRange(n.animFrame, 0, animLengths.eggNote, gridHeight / 2, 1);
+            var x1 = x - dimX * 0.5;
+            var y1 = y;
+            var x2 = x;
+            var y2 = y - dimY * 0.5;
+            var x3 = x + dimX * 0.5;
+            var y3 = y;
+            var x4 = x;
+            var y4 = y + dimY * 0.5;
+            c = 'c3';
+
+            if (n.dur === '2n') {
+              c = 'c1';
+              x2 += dimX;
+              x4 -= dimX;
+              layer = 0;
+            }
+
+            if (n.step === client.percStep) c = 'c4';
+            this.fillColor(n.palette, c, layer);
+            this.strokeColor(n.palette, 'bg', layer);
+            this.fillQuad(x1, y1, x2, y2, x3, y3, x4, y4, true, layer);
+          }
+
+          if (n.animFrame < animLengths.eggNote) n.animFrame++;
+        }
+      } catch (err) {
         _didIteratorError6 = true;
         _iteratorError6 = err;
       } finally {
@@ -397,89 +498,6 @@ function (_Renderer) {
         } finally {
           if (_didIteratorError6) {
             throw _iteratorError6;
-          }
-        }
-      }
-    }
-  }, {
-    key: "drawStep",
-    value: function drawStep(p, step, sound) {
-      var _iteratorNormalCompletion7 = true;
-      var _didIteratorError7 = false;
-      var _iteratorError7 = undefined;
-
-      try {
-        for (var _iterator7 = step[Symbol.iterator](), _step9; !(_iteratorNormalCompletion7 = (_step9 = _iterator7.next()).done); _iteratorNormalCompletion7 = true) {
-          var n = _step9.value;
-          if (p.animFrames[sound][step] == null) p.animFrames[sound][step] = [];
-          if (p.animFrames[sound][step][n.pitch] == null) p.animFrames[sound][step][n.pitch] = 0;
-          var animFrame = p.animFrames[sound][step][n.pitch]; //console.log(p.animFrames[sound][step][n.pitch]);
-
-          var pal = p.palette;
-          var gridWidth = game.paletteAttributes[pal].gridWidth;
-          var gridHeight = game.paletteAttributes[pal].gridHeight;
-          var pos = this.playerCellToCanvasPosition(p, n.cell.x, n.cell.y, game.paletteAttributes[pal].gridWidth, gridHeight);
-          var dimX = this.gameXDimToCanvasXDim(game.playerWidth / gridWidth);
-          var dimY = this.gameYDimToCanvasYDim(game.playerHeight / gridHeight);
-          var x = pos[0];
-          var y = pos[1];
-          var c = 'c4';
-          var layer = 1;
-
-          if (sound === 'melody') {
-            x += dimX * 0.5;
-            y += dimY * 0.5;
-            dimX *= this.mapToRange(animFrame, 0, animLengths.eggNote, gridWidth, 1);
-            dimY *= this.mapToRange(animFrame, 0, animLengths.eggNote, gridHeight, 1);
-
-            if (n.step !== client.currentStep) {
-              if (n.dur === '2n') {
-                c = 'c2';
-                layer = 0;
-              } else c = 'c1';
-            }
-
-            this.fillColor(p, c, layer);
-            this.fillEllipse(x, y, dimX / 2, dimY / 2, 0, 0, 2 * Math.PI, false, layer);
-          } else if (sound === 'bass') {
-            y = this.mapToRange(animFrame, 0, animLengths.eggNote, 0, y);
-            dimY *= this.mapToRange(animFrame, 0, animLengths.eggNote, gridHeight, 1);
-
-            if (n.step !== client.currentStep) {
-              if (n.dur === '2n') {
-                c = 'c3';
-                dimX *= gridWidth / 2;
-                layer = 0;
-              } else c = 'c2';
-            }
-
-            this.fillColor(p, c, layer);
-            this.fillRect(x, y, dimX, dimY, false, layer);
-          } else if (sound === 'perc') {
-            if (n.step !== client.currentStep) {
-              if (n.dur === '2n') {
-                c = 'c1';
-                layer = 0;
-              } else c = 'c3';
-            }
-
-            this.fillColor(p, c, layer);
-            this.fillRect(x, y, dimX, dimY, false, layer);
-          }
-
-          if (p.animFrames[sound][step][n.pitch] < animLengths.eggNote) p.animFrames[sound][step][n.pitch]++;
-        }
-      } catch (err) {
-        _didIteratorError7 = true;
-        _iteratorError7 = err;
-      } finally {
-        try {
-          if (!_iteratorNormalCompletion7 && _iterator7.return != null) {
-            _iterator7.return();
-          }
-        } finally {
-          if (_didIteratorError7) {
-            throw _iteratorError7;
           }
         }
       }
@@ -533,10 +551,22 @@ function (_Renderer) {
       if (e.animFrames.break < animLengths.eggBreak) e.animFrames.break++;
     }
   }, {
+    key: "strokeWeight",
+    value: function strokeWeight(weight, layer) {
+      ctx[layer].lineWidth = weight;
+    }
+  }, {
+    key: "strokeColor",
+    value: function strokeColor(pal, which, layer) {
+      if (paletteTable[pal]) {
+        ctx[layer].strokeStyle = paletteTable[pal][which];
+      } else ctx[layer].strokeStyle = paletteTable[0][which];
+    }
+  }, {
     key: "fillColor",
-    value: function fillColor(p, which, layer) {
-      if (paletteTable[p.palette]) {
-        ctx[layer].fillStyle = paletteTable[p.palette][which];
+    value: function fillColor(pal, which, layer) {
+      if (paletteTable[pal]) {
+        ctx[layer].fillStyle = paletteTable[pal][which];
       } else ctx[layer].fillStyle = paletteTable[0][which];
     }
   }, {

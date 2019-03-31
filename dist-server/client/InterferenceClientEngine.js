@@ -76,14 +76,24 @@ function (_ClientEngine) {
       'KeyV': 'ToggleView',
       'Slash': 'ToggleLock'
     };
-    _this.currentStep = null;
+    _this.melodyStep = 0;
+    _this.bassStep = 0;
+    _this.percStep = 0;
+    _this.sequences = {};
 
     _this.gameEngine.on('client__postStep', _this.stepLogic.bind(_assertThisInitialized(_this)));
 
+    _this.gameEngine.on('updatePalette', function () {
+      _this.onUpdatePalette();
+    });
+
     _this.gameEngine.on('eggBounce', function (e) {
       _this.onEggBounce(e);
-    }); //this.gameEngine.on('playerHitEgg', e => { this.onPlayerHitEgg(e) });
+    });
 
+    _this.gameEngine.on('playerHitEgg', function (e) {
+      _this.onPlayerHitEgg(e);
+    });
 
     _this.gameEngine.on('eggBroke', function (e) {
       _this.onEggBroke(e);
@@ -261,15 +271,17 @@ function (_ClientEngine) {
       }
     } ///////////////////////////////////////////////////////////////////////////////////////////
     /// SOUND HANDLING AND CLIENT LOGIC
+    /// STEP
 
   }, {
     key: "stepLogic",
     value: function stepLogic() {
-      if (this.room == null) return; //if we yet to be assigned a room, don't do this stuff
+      if (this.room == null) return; //if we've yet to be assigned a room, don't do this stuff
 
       this.player = this.gameEngine.world.queryObject({
         playerId: this.gameEngine.playerId
       });
+      if (this.player == null) return;
       if (this.player != null && this.reverb == null && this.player.palette != 0) this.initSound(this.player);
       this.players = this.gameEngine.world.queryObjects({
         instanceType: _Performer.default
@@ -282,13 +294,6 @@ function (_ClientEngine) {
         for (var _iterator = this.players[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
           var p = _step.value;
           if (p.gridString != null) p.grid = JSON.parse(p.gridString);
-
-          var _arr = Object.keys(p.sequences);
-
-          for (var _i = 0; _i < _arr.length; _i++) {
-            var sound = _arr[_i];
-            p.sequences[sound] = JSON.parse(p[sound]);
-          }
         }
       } catch (err) {
         _didIteratorError = true;
@@ -309,6 +314,49 @@ function (_ClientEngine) {
         instanceType: _Egg.default
       });
       var stage = this.player.stage;
+      this.sequences = {};
+      var _iteratorNormalCompletion2 = true;
+      var _didIteratorError2 = false;
+      var _iteratorError2 = undefined;
+
+      try {
+        for (var _iterator2 = this.gameEngine.world.queryObjects({
+          instanceType: _Note.default
+        })[Symbol.iterator](), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
+          var note = _step2.value;
+
+          if (note.id >= this.gameEngine.options.clientIDSpace) {
+            var serverCopy = this.gameEngine.resolveShadowObject(note);
+
+            if (serverCopy != null) {
+              serverCopy.animFrame = note.animFrame;
+              continue;
+            }
+          }
+
+          note.step = note.xCell;
+          if (this.sequences[note.ownerId] == null) this.sequences[note.ownerId] = {};
+          if (this.sequences[note.ownerId].player == null) this.sequences[note.ownerId].player = this.gameEngine.world.queryObject({
+            playerId: note.ownerId
+          });
+          if (this.sequences[note.ownerId][note.sound] == null) this.sequences[note.ownerId][note.sound] = [];
+          if (this.sequences[note.ownerId][note.sound][note.step] == null) this.sequences[note.ownerId][note.sound][note.step] = [];
+          this.sequences[note.ownerId][note.sound][note.step].push(note);
+        }
+      } catch (err) {
+        _didIteratorError2 = true;
+        _iteratorError2 = err;
+      } finally {
+        try {
+          if (!_iteratorNormalCompletion2 && _iterator2.return != null) {
+            _iterator2.return();
+          }
+        } finally {
+          if (_didIteratorError2) {
+            throw _iteratorError2;
+          }
+        }
+      }
 
       if (stage === 'setup') {} else if (stage === 'intro') {
         if (this.transport.state !== 'started') {
@@ -332,35 +380,43 @@ function (_ClientEngine) {
           this.percSequence.start(this.nextDiv('1m'));
         }
 
-        var _iteratorNormalCompletion2 = true;
-        var _didIteratorError2 = false;
-        var _iteratorError2 = undefined;
+        var _iteratorNormalCompletion3 = true;
+        var _didIteratorError3 = false;
+        var _iteratorError3 = undefined;
 
         try {
-          for (var _iterator2 = this.eggs[Symbol.iterator](), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
-            var e = _step2.value;
+          for (var _iterator3 = this.eggs[Symbol.iterator](), _step3; !(_iteratorNormalCompletion3 = (_step3 = _iterator3.next()).done); _iteratorNormalCompletion3 = true) {
+            var e = _step3.value;
             if (!Object.keys(this.eggSounds).includes(e.toString())) this.constructEggSounds(e);
             var vol = 1 - 0.5 * Math.abs(this.player.number - Math.floor(e.position.x / this.gameEngine.playerWidth));
             if (vol < 0) vol = 0;
             this.eggSounds[e.toString()].drone.volume.rampTo(vol, 0.1);
           }
         } catch (err) {
-          _didIteratorError2 = true;
-          _iteratorError2 = err;
+          _didIteratorError3 = true;
+          _iteratorError3 = err;
         } finally {
           try {
-            if (!_iteratorNormalCompletion2 && _iterator2.return != null) {
-              _iterator2.return();
+            if (!_iteratorNormalCompletion3 && _iterator3.return != null) {
+              _iterator3.return();
             }
           } finally {
-            if (_didIteratorError2) {
-              throw _iteratorError2;
+            if (_didIteratorError3) {
+              throw _iteratorError3;
             }
           }
         }
       }
 
       this.prevStage = stage;
+    } /// GAME EVENTS
+
+  }, {
+    key: "onUpdatePalette",
+    value: function onUpdatePalette() {
+      var palettes = this.gameEngine.palettes;
+      this.player.palette = palettes[(palettes.indexOf(this.player.palette) + 1) % palettes.length];
+      this.socket.emit('updatePalette', this.player.palette);
     }
   }, {
     key: "onEggBounce",
@@ -369,6 +425,47 @@ function (_ClientEngine) {
 
       if (this.gameEngine.positionIsInPlayer(e.position.x, this.player)) {
         this.eggSounds[e.toString()].bounce.triggerAttackRelease('8n');
+      }
+    }
+  }, {
+    key: "onPlayerHitEgg",
+    value: function onPlayerHitEgg(e) {
+      var p = this.player;
+      if (e.hp <= 0) return;
+      if (p.ammo <= 0) return;
+      p.ammo--;
+      e.hp--;
+      var shadowId = this.gameEngine.getNewShadowId();
+      this.socket.emit('playerHitEgg', p.ammo, e.id, e.hp, e.position.x, e.position.y, e.sound, shadowId);
+      var pal = p.palette;
+      var pos = this.gameEngine.playerQuantizedPosition(p, e.position.x, e.position.y, this.gameEngine.paletteAttributes[pal].gridWidth, this.gameEngine.paletteAttributes[pal].gridHeight);
+      var scale = this.gameEngine.paletteAttributes[pal].scale; //TODO should base this on palette of the cell?
+
+      var pitch = this.gameEngine.paletteAttributes[pal].gridHeight - pos[1] + scale.length * 4;
+      var dur = this.gameEngine.paletteAttributes[pal][e.sound].subdivision;
+      var notes = this.gameEngine.queryNotes({
+        ownerId: p.playerId,
+        palette: pal,
+        sound: e.sound,
+        pitch: pitch,
+        //vel: 1, 
+        xCell: pos[0],
+        yCell: pos[1]
+      });
+      if (notes.length) notes[0].dur = '2n';else {
+        var newNote = new _Note.default(this.gameEngine, null, {
+          id: shadowId,
+          ownerId: p.playerId,
+          palette: pal,
+          sound: e.sound,
+          pitch: pitch,
+          dur: dur,
+          vel: 1,
+          xCell: pos[0],
+          yCell: pos[1]
+        });
+        newNote.inputId = shadowId;
+        this.gameEngine.addObjectToWorld(newNote);
       }
     }
   }, {
@@ -381,18 +478,17 @@ function (_ClientEngine) {
         this.eggSounds[e.toString()].break.start(this.nextDiv('4n'));
         this.optionSelection['Digit1'] = 'tetrisChain';
       }
-    }
+    } //// SOUND
+
   }, {
     key: "initSound",
     value: function initSound(p) {
       var _this5 = this;
 
       //this.transport.timeSignature = 4;
-      this.reverb = new _tone.Reverb(1).toMaster();
+      this.reverb = new _tone.Reverb(5).toMaster();
       this.delay = new _tone.FeedbackDelay(); //this.bitcrusher = new BitCrusher(4).connect(this.reverb); 
 
-      this.autowah = new _tone.AutoWah().toMaster();
-      this.autowah.connect(this.reverb);
       this.reverb.generate(); //this.bitcrusher.start();
 
       /*
@@ -409,30 +505,37 @@ function (_ClientEngine) {
       }).toMaster();
       */
 
+      var pal = this.gameEngine.paletteAttributes[p.palette];
       var events = [];
 
       for (var i = 0; i < this.gameEngine.paletteAttributes[p.palette].gridWidth; i++) {
         events.push(i);
       }
 
-      this.melodySynth = new _tone.PolySynth(this.gameEngine.paletteAttributes[p.palette].gridHeight, _tone.Synth).toMaster();
+      this.melodySynth = new _tone.PolySynth(pal.gridHeight, _tone.Synth).toMaster();
       this.melodySequence = new _tone.Sequence(function (time, step) {
-        _this5.currentStep = step;
-        var seqStep = _this5.player.sequences.melody[step];
-        if (seqStep) _this5.playStepOnSynth(_this5.melodySynth, seqStep, 2, time, true);
-      }, events, this.gameEngine.paletteAttributes[p.palette].subdivision);
-      this.bassSynth = new _tone.PolySynth(this.gameEngine.paletteAttributes[p.palette].gridHeight, _tone.AMSynth).toMaster();
+        _this5.melodyStep = step;
+        if (_this5.sequences[_this5.player.playerId] == null) return;
+        if (_this5.sequences[_this5.player.playerId].melody == null) return;
+        var seqStep = _this5.sequences[_this5.player.playerId].melody[_this5.melodyStep];
+        if (seqStep) _this5.playNoteArrayOnSynth(_this5.melodySynth, seqStep, pal.scale, 2, time, true);
+      }, events, pal.melody.subdivision);
+      this.bassSynth = new _tone.PolySynth(pal.gridHeight, _tone.AMSynth).toMaster();
       this.bassSequence = new _tone.Sequence(function (time, step) {
-        _this5.currentStep = step;
-        var seqStep = _this5.player.sequences.bass[step];
-        if (seqStep) _this5.playStepOnSynth(_this5.bassSynth, seqStep, -2, time, true);
-      }, events, this.gameEngine.paletteAttributes[p.palette].subdivision);
-      this.percSynth = new _tone.PolySynth(this.gameEngine.paletteAttributes[p.palette].gridHeight, _tone.FMSynth).toMaster();
+        _this5.bassStep = step;
+        if (_this5.sequences[_this5.player.playerId] == null) return;
+        if (_this5.sequences[_this5.player.playerId].bass == null) return;
+        var seqStep = _this5.sequences[_this5.player.playerId].bass[_this5.bassStep];
+        if (seqStep) _this5.playNoteArrayOnSynth(_this5.bassSynth, seqStep, pal.scale, -2, time, true);
+      }, events, pal.bass.subdivision);
+      this.percSynth = new _tone.PolySynth(pal.gridHeight, _tone.FMSynth).toMaster();
       this.percSequence = new _tone.Sequence(function (time, step) {
-        _this5.currentStep = step;
-        var seqStep = _this5.player.sequences.perc[step];
-        if (seqStep) _this5.playStepOnSynth(_this5.percSynth, seqStep, 0, time, true);
-      }, events, this.gameEngine.paletteAttributes[p.palette].subdivision);
+        _this5.percStep = step;
+        if (_this5.sequences[_this5.player.playerId] == null) return;
+        if (_this5.sequences[_this5.player.playerId].perc == null) return;
+        var seqStep = _this5.sequences[_this5.player.playerId].perc[_this5.percStep];
+        if (seqStep) _this5.playNoteArrayOnSynth(_this5.percSynth, seqStep, pal.scale, 0, time, true);
+      }, events, pal.perc.subdivision);
     }
   }, {
     key: "constructEggSounds",
@@ -480,7 +583,7 @@ function (_ClientEngine) {
           break: new _tone.Sequence(function (time, note) {
             var scale = _this6.gameEngine.paletteAttributes[_this6.player.palette].scale;
 
-            _this6.playScaleNoteOnSynth(synth, note, scale, 6, '64n', time, 0.5);
+            _this6.playNoteOnSynth(synth, note, scale, 6, '64n', time, 0.5);
           }, [[0, 1, 2, 3, 1, 2, 3, 4], null, null, null], '4n')
         };
       } else if (e.sound === 'bass') {
@@ -523,7 +626,7 @@ function (_ClientEngine) {
           break: new _tone.Sequence(function (time, note) {
             var scale = _this6.gameEngine.paletteAttributes[_this6.player.palette].scale;
 
-            _this6.playScaleNoteOnSynth(_synth, note, scale, 6, '64n', time, 0.5);
+            _this6.playNoteOnSynth(_synth, note, scale, 6, '64n', time, 0.5);
           }, [[0, 1, 2, 3, 1, 2, 3, 4], null, null, null], '4n')
         };
       } else if (e.sound === 'perc') {
@@ -566,20 +669,20 @@ function (_ClientEngine) {
           break: new _tone.Sequence(function (time, note) {
             var scale = _this6.gameEngine.paletteAttributes[_this6.player.palette].scale;
 
-            _this6.playScaleNoteOnSynth(_synth2, note, scale, 6, '64n', time, 0.5);
+            _this6.playNoteOnSynth(_synth2, note, scale, 6, '64n', time, 0.5);
           }, [[0, 1, 2, 3, 1, 2, 3, 4], null, null, null], '4n')
         };
       }
 
-      this.eggSounds[e.toString()].drone.connect(this.autowah);
+      this.eggSounds[e.toString()].drone.connect(this.reverb);
       this.eggSounds[e.toString()].bounce.connect(this.reverb);
       this.eggSounds[e.toString()].breakSynth.connect(this.reverb);
       this.eggSounds[e.toString()].drone.triggerAttack('+0', 0.1);
       this.eggSounds[e.toString()].break.loop = true;
     }
   }, {
-    key: "playScaleNoteOnSynth",
-    value: function playScaleNoteOnSynth(synth, note, scale, octaveShift, dur, time, vel) {
+    key: "playNoteOnSynth",
+    value: function playNoteOnSynth(synth, note, scale, octaveShift, dur, time, vel) {
       if (!note) return; //console.log(note);
 
       var degree = note % scale.length;
@@ -589,32 +692,31 @@ function (_ClientEngine) {
       synth.triggerAttackRelease(pitch, dur, time, vel);
     }
   }, {
-    key: "playStepOnSynth",
-    value: function playStepOnSynth(synth, stepArray, octaveShift, time) {
-      if (!stepArray) return; //console.log(note);
+    key: "playNoteArrayOnSynth",
+    value: function playNoteArrayOnSynth(synth, noteArray, scale, octaveShift, time) {
+      if (!noteArray) return; //console.log(note);
 
-      var _iteratorNormalCompletion3 = true;
-      var _didIteratorError3 = false;
-      var _iteratorError3 = undefined;
+      var _iteratorNormalCompletion4 = true;
+      var _didIteratorError4 = false;
+      var _iteratorError4 = undefined;
 
       try {
-        for (var _iterator3 = stepArray[Symbol.iterator](), _step3; !(_iteratorNormalCompletion3 = (_step3 = _iterator3.next()).done); _iteratorNormalCompletion3 = true) {
-          var note = _step3.value;
+        for (var _iterator4 = noteArray[Symbol.iterator](), _step4; !(_iteratorNormalCompletion4 = (_step4 = _iterator4.next()).done); _iteratorNormalCompletion4 = true) {
+          var note = _step4.value;
           //let scale = this.gameEngine.paletteAttributes[this.player.grid[note.cell.x][note.cell.y]];
-          var scale = this.gameEngine.paletteAttributes[this.player.palette].scale;
-          this.playScaleNoteOnSynth(synth, note.pitch, scale, octaveShift, note.dur, time, note.vel);
+          this.playNoteOnSynth(synth, note.pitch, scale, octaveShift, note.dur, time, note.vel);
         }
       } catch (err) {
-        _didIteratorError3 = true;
-        _iteratorError3 = err;
+        _didIteratorError4 = true;
+        _iteratorError4 = err;
       } finally {
         try {
-          if (!_iteratorNormalCompletion3 && _iterator3.return != null) {
-            _iterator3.return();
+          if (!_iteratorNormalCompletion4 && _iterator4.return != null) {
+            _iterator4.return();
           }
         } finally {
-          if (_didIteratorError3) {
-            throw _iteratorError3;
+          if (_didIteratorError4) {
+            throw _iteratorError4;
           }
         }
       }

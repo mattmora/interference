@@ -112,12 +112,8 @@ function (_ServerEngine) {
         player.palette = _this2.gameEngine.palettes[player.number % _this2.gameEngine.palettes.length];
         player.stage = _this2.roomStages[roomName];
         player.gridString = _this2.getEmptyGridStringByPalette(player.palette);
-        player.melody = JSON.stringify([]);
-        player.bass = JSON.stringify([]);
-        player.perc = JSON.stringify([]);
 
         if (player.stage === 'intro') {
-          player.ammo = _this2.gameEngine.startingAmmo;
           var _iteratorNormalCompletion = true;
           var _didIteratorError = false;
           var _iteratorError = undefined;
@@ -125,7 +121,11 @@ function (_ServerEngine) {
           try {
             for (var _iterator = _this2.gameEngine.eggsByRoom[roomName][Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
               var e = _step.value;
-              e.hp += Math.floor(Math.random() * _this2.gameEngine.eggHPRange + _this2.gameEngine.eggHPMin);
+
+              if (!e.broken) {
+                player.ammo += _this2.gameEngine.startingAmmo;
+                e.hp += Math.floor(Math.random() * _this2.gameEngine.eggHPRange + _this2.gameEngine.eggHPMin);
+              }
             }
           } catch (err) {
             _didIteratorError = true;
@@ -154,6 +154,55 @@ function (_ServerEngine) {
         _this2.assignPlayerToSyncServer(socket, roomName);
 
         socket.emit('assignedRoom', roomName);
+      });
+      socket.on('updatePalette', function (pal) {
+        player.palette = pal;
+      });
+      socket.on('playerHitEgg', function (ammo, eggId, hp, x, y, sound, inputId) {
+        var p = player;
+        p.ammo = ammo;
+
+        var e = _this2.gameEngine.world.queryObject({
+          id: eggId
+        });
+
+        e.hp = hp;
+        var pal = p.palette;
+
+        var pos = _this2.gameEngine.playerQuantizedPosition(p, x, y, _this2.gameEngine.paletteAttributes[pal].gridWidth, _this2.gameEngine.paletteAttributes[pal].gridHeight);
+
+        var scale = _this2.gameEngine.paletteAttributes[pal].scale; //TODO should base this on palette of the cell?
+
+        var pitch = _this2.gameEngine.paletteAttributes[pal].gridHeight - pos[1] + scale.length * 4;
+        var dur = _this2.gameEngine.paletteAttributes[pal][sound].subdivision;
+
+        var notes = _this2.gameEngine.queryNotes({
+          ownerId: p.playerId,
+          palette: pal,
+          sound: sound,
+          pitch: pitch,
+          //vel: 1, 
+          xCell: pos[0],
+          yCell: pos[1]
+        });
+
+        if (notes.length) notes[0].dur = '2n';else {
+          var newNote = new _Note.default(_this2.gameEngine, null, {
+            ownerId: p.playerId,
+            palette: pal,
+            sound: sound,
+            pitch: pitch,
+            dur: dur,
+            vel: 1,
+            xCell: pos[0],
+            yCell: pos[1]
+          });
+          newNote.inputId = inputId;
+
+          _this2.assignObjectToRoom(newNote, p._roomName);
+
+          _this2.gameEngine.addObjectToWorld(newNote);
+        }
       });
     }
   }, {
@@ -198,6 +247,8 @@ function (_ServerEngine) {
   }, {
     key: "onPlayerDisconnected",
     value: function onPlayerDisconnected(socketId, playerId) {
+      var _this3 = this;
+
       _get(_getPrototypeOf(InterferenceServerEngine.prototype), "onPlayerDisconnected", this).call(this, socketId, playerId);
 
       var player = this.gameEngine.world.queryObject({
@@ -207,50 +258,48 @@ function (_ServerEngine) {
       if (player) {
         var removed = player.number;
         this.gameEngine.removeObjectFromWorld(player.id);
+        var _iteratorNormalCompletion2 = true;
+        var _didIteratorError2 = false;
+        var _iteratorError2 = undefined;
+
+        try {
+          for (var _iterator2 = this.gameEngine.queryNotes({
+            ownerId: playerId
+          })[Symbol.iterator](), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
+            var n = _step2.value;
+            this.gameEngine.removeObjectFromWorld(n);
+          }
+        } catch (err) {
+          _didIteratorError2 = true;
+          _iteratorError2 = err;
+        } finally {
+          try {
+            if (!_iteratorNormalCompletion2 && _iterator2.return != null) {
+              _iterator2.return();
+            }
+          } finally {
+            if (_didIteratorError2) {
+              throw _iteratorError2;
+            }
+          }
+        }
 
         var _arr = Object.keys(this.myRooms);
 
-        for (var _i = 0; _i < _arr.length; _i++) {
+        var _loop = function _loop() {
           var k = _arr[_i];
 
-          if (this.myRooms[k].includes(player)) {
-            this.myRooms[k].splice(this.myRooms[k].indexOf(player), 1);
-            var _iteratorNormalCompletion2 = true;
-            var _didIteratorError2 = false;
-            var _iteratorError2 = undefined;
+          if (player._roomName === k) {
+            _this3.myRooms[k].splice(_this3.myRooms[k].indexOf(player), 1);
 
-            try {
-              for (var _iterator2 = this.myRooms[k][Symbol.iterator](), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
-                var p = _step2.value;
-                if (p.number > removed) p.number--;
-              }
-            } catch (err) {
-              _didIteratorError2 = true;
-              _iteratorError2 = err;
-            } finally {
-              try {
-                if (!_iteratorNormalCompletion2 && _iterator2.return != null) {
-                  _iterator2.return();
-                }
-              } finally {
-                if (_didIteratorError2) {
-                  throw _iteratorError2;
-                }
-              }
-            }
-          }
-
-          if (this.myRooms[k].length === 0) {
             var _iteratorNormalCompletion3 = true;
             var _didIteratorError3 = false;
             var _iteratorError3 = undefined;
 
             try {
-              for (var _iterator3 = this.gameEngine.world.queryObjects({
-                instanceType: _Egg.default
-              })[Symbol.iterator](), _step3; !(_iteratorNormalCompletion3 = (_step3 = _iterator3.next()).done); _iteratorNormalCompletion3 = true) {
-                var e = _step3.value;
-                this.gameEngine.removeObjectFromWorld(e);
+              for (var _iterator3 = _this3.myRooms[k][Symbol.iterator](), _step3; !(_iteratorNormalCompletion3 = (_step3 = _iterator3.next()).done); _iteratorNormalCompletion3 = true) {
+                var p = _step3.value;
+                if (p.number > removed) p.number--;
               }
             } catch (err) {
               _didIteratorError3 = true;
@@ -266,10 +315,20 @@ function (_ServerEngine) {
                 }
               }
             }
-
-            delete this.myRooms[k];
-            delete this.syncServers[k];
           }
+
+          if (_this3.myRooms[k].length === 0) {
+            _this3.gameEngine.world.forEachObject(function (objId, obj) {
+              if (obj._roomName === k) _this3.gameEngine.removeObjectFromWorld(objId);
+            });
+
+            delete _this3.myRooms[k];
+            delete _this3.syncServers[k];
+          }
+        };
+
+        for (var _i = 0; _i < _arr.length; _i++) {
+          _loop();
         }
       }
     }
@@ -278,16 +337,29 @@ function (_ServerEngine) {
     value: function onBeginPerformance(player) {
       console.log('beginning');
       var r = player._roomName;
-      this.roomStages[r] = 'intro';
+      this.setGameStage(r, 'intro');
+      this.addEgg('melody', r);
+      this.addEgg('bass', r);
+      this.addEgg('perc', r);
+    }
+  }, {
+    key: "addEgg",
+    value: function addEgg(sound, roomName) {
+      var newEgg = new _Egg.default(this.gameEngine, null, {
+        position: this.gameEngine.randPos(roomName),
+        velocity: this.gameEngine.velRandY()
+      });
+      var numPlayers = this.myRooms[roomName].length;
       var _iteratorNormalCompletion4 = true;
       var _didIteratorError4 = false;
       var _iteratorError4 = undefined;
 
       try {
-        for (var _iterator4 = this.myRooms[r][Symbol.iterator](), _step4; !(_iteratorNormalCompletion4 = (_step4 = _iterator4.next()).done); _iteratorNormalCompletion4 = true) {
+        for (var _iterator4 = this.myRooms[roomName][Symbol.iterator](), _step4; !(_iteratorNormalCompletion4 = (_step4 = _iterator4.next()).done); _iteratorNormalCompletion4 = true) {
           var p = _step4.value;
-          p.stage = 'intro';
-        }
+          p.ammo += this.gameEngine.startingAmmo;
+        } //newEgg.number = 0;
+
       } catch (err) {
         _didIteratorError4 = true;
         _iteratorError4 = err;
@@ -303,26 +375,23 @@ function (_ServerEngine) {
         }
       }
 
-      this.addEgg('melody', r);
-      this.addEgg('bass', r);
-      this.addEgg('perc', r);
+      newEgg.sound = sound;
+      newEgg.hp = Math.floor(Math.random() * numPlayers * this.gameEngine.eggHPRange + numPlayers * this.gameEngine.eggHPMin);
+      this.assignObjectToRoom(newEgg, roomName);
+      this.gameEngine.addObjectToWorld(newEgg);
     }
   }, {
-    key: "addEgg",
-    value: function addEgg(sound, roomName) {
-      var newEgg = new _Egg.default(this.gameEngine, null, {
-        position: this.gameEngine.randPos(roomName),
-        velocity: this.gameEngine.velRandY()
-      });
-      var numPlayers = this.myRooms[roomName].length;
+    key: "setGameStage",
+    value: function setGameStage(room, stage) {
+      this.roomStages[room] = stage;
       var _iteratorNormalCompletion5 = true;
       var _didIteratorError5 = false;
       var _iteratorError5 = undefined;
 
       try {
-        for (var _iterator5 = this.myRooms[roomName][Symbol.iterator](), _step5; !(_iteratorNormalCompletion5 = (_step5 = _iterator5.next()).done); _iteratorNormalCompletion5 = true) {
+        for (var _iterator5 = this.myRooms[room][Symbol.iterator](), _step5; !(_iteratorNormalCompletion5 = (_step5 = _iterator5.next()).done); _iteratorNormalCompletion5 = true) {
           var p = _step5.value;
-          p.ammo += this.gameEngine.startingAmmo;
+          p.stage = stage;
         }
       } catch (err) {
         _didIteratorError5 = true;
@@ -338,12 +407,6 @@ function (_ServerEngine) {
           }
         }
       }
-
-      newEgg.number = 0;
-      newEgg.sound = sound;
-      newEgg.hp = Math.floor(Math.random() * numPlayers * this.gameEngine.eggHPRange + numPlayers * this.gameEngine.eggHPMin);
-      this.assignObjectToRoom(newEgg, roomName);
-      this.gameEngine.addObjectToWorld(newEgg);
     }
     /*
     // Eating Egg:
@@ -371,52 +434,55 @@ function (_ServerEngine) {
 
       for (var _i2 = 0; _i2 < _arr2.length; _i2++) {
         var k = _arr2[_i2];
-        var reload = true;
-        var _iteratorNormalCompletion6 = true;
-        var _didIteratorError6 = false;
-        var _iteratorError6 = undefined;
 
-        try {
-          for (var _iterator6 = this.myRooms[k][Symbol.iterator](), _step6; !(_iteratorNormalCompletion6 = (_step6 = _iterator6.next()).done); _iteratorNormalCompletion6 = true) {
-            var _p = _step6.value;
-            if (_p.ammo > 0) reload = false;
-          }
-        } catch (err) {
-          _didIteratorError6 = true;
-          _iteratorError6 = err;
-        } finally {
-          try {
-            if (!_iteratorNormalCompletion6 && _iterator6.return != null) {
-              _iterator6.return();
-            }
-          } finally {
-            if (_didIteratorError6) {
-              throw _iteratorError6;
-            }
-          }
-        }
-
-        if (reload) {
-          var _iteratorNormalCompletion7 = true;
-          var _didIteratorError7 = false;
-          var _iteratorError7 = undefined;
+        if (this.roomStages[k] === 'intro') {
+          var reload = true;
+          var _iteratorNormalCompletion6 = true;
+          var _didIteratorError6 = false;
+          var _iteratorError6 = undefined;
 
           try {
-            for (var _iterator7 = this.myRooms[k][Symbol.iterator](), _step7; !(_iteratorNormalCompletion7 = (_step7 = _iterator7.next()).done); _iteratorNormalCompletion7 = true) {
-              var p = _step7.value;
-              p.ammo += this.gameEngine.reloadSize;
+            for (var _iterator6 = this.myRooms[k][Symbol.iterator](), _step6; !(_iteratorNormalCompletion6 = (_step6 = _iterator6.next()).done); _iteratorNormalCompletion6 = true) {
+              var _p = _step6.value;
+              if (_p.ammo > 0) reload = false;
             }
           } catch (err) {
-            _didIteratorError7 = true;
-            _iteratorError7 = err;
+            _didIteratorError6 = true;
+            _iteratorError6 = err;
           } finally {
             try {
-              if (!_iteratorNormalCompletion7 && _iterator7.return != null) {
-                _iterator7.return();
+              if (!_iteratorNormalCompletion6 && _iterator6.return != null) {
+                _iterator6.return();
               }
             } finally {
-              if (_didIteratorError7) {
-                throw _iteratorError7;
+              if (_didIteratorError6) {
+                throw _iteratorError6;
+              }
+            }
+          }
+
+          if (reload) {
+            var _iteratorNormalCompletion7 = true;
+            var _didIteratorError7 = false;
+            var _iteratorError7 = undefined;
+
+            try {
+              for (var _iterator7 = this.myRooms[k][Symbol.iterator](), _step7; !(_iteratorNormalCompletion7 = (_step7 = _iterator7.next()).done); _iteratorNormalCompletion7 = true) {
+                var p = _step7.value;
+                p.ammo += this.gameEngine.reloadSize * this.gameEngine.eggsByRoom[k].length;
+              }
+            } catch (err) {
+              _didIteratorError7 = true;
+              _iteratorError7 = err;
+            } finally {
+              try {
+                if (!_iteratorNormalCompletion7 && _iterator7.return != null) {
+                  _iterator7.return();
+                }
+              } finally {
+                if (_didIteratorError7) {
+                  throw _iteratorError7;
+                }
               }
             }
           }

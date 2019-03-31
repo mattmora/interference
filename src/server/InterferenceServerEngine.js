@@ -58,14 +58,13 @@ export default class InterferenceServerEngine extends ServerEngine {
             player.palette = this.gameEngine.palettes[player.number%this.gameEngine.palettes.length];
             player.stage = this.roomStages[roomName];
             player.gridString = this.getEmptyGridStringByPalette(player.palette);
-            player.melody = JSON.stringify([]);
-            player.bass = JSON.stringify([]);
-            player.perc = JSON.stringify([]);
 
             if (player.stage === 'intro') {
-                player.ammo = this.gameEngine.startingAmmo;
                 for (let e of this.gameEngine.eggsByRoom[roomName]) {
-                    e.hp += Math.floor((Math.random() * this.gameEngine.eggHPRange) + this.gameEngine.eggHPMin);
+                    if (!e.broken) {
+                        player.ammo += this.gameEngine.startingAmmo;
+                        e.hp += Math.floor((Math.random() * this.gameEngine.eggHPRange) + this.gameEngine.eggHPMin);
+                    }
                 }
             }
 
@@ -75,6 +74,49 @@ export default class InterferenceServerEngine extends ServerEngine {
             this.assignObjectToRoom(player, roomName);
             this.assignPlayerToSyncServer(socket, roomName);
             socket.emit('assignedRoom', roomName);
+        });
+
+        socket.on('updatePalette', pal => {
+            player.palette = pal;
+        });
+
+        socket.on('playerHitEgg', (ammo, eggId, hp, x, y, sound, inputId) => {
+            let p = player;
+            p.ammo = ammo;
+            let e = this.gameEngine.world.queryObject({ id: eggId });
+            e.hp = hp;
+            let pal = p.palette;
+            let pos = this.gameEngine.playerQuantizedPosition(p, x, y, 
+                this.gameEngine.paletteAttributes[pal].gridWidth, this.gameEngine.paletteAttributes[pal].gridHeight);
+            let scale = this.gameEngine.paletteAttributes[pal].scale; //TODO should base this on palette of the cell?
+            let pitch = (this.gameEngine.paletteAttributes[pal].gridHeight - pos[1]) + (scale.length * 4);
+            let dur = this.gameEngine.paletteAttributes[pal][sound].subdivision;
+
+            let notes = this.gameEngine.queryNotes({            
+                ownerId: p.playerId, 
+                palette: pal,
+                sound: sound, 
+                pitch: pitch, 
+                //vel: 1, 
+                xCell: pos[0], 
+                yCell: pos[1] 
+            });
+            if (notes.length) notes[0].dur = '2n';
+            else {
+                let newNote = new Note(this.gameEngine, null, { 
+                    ownerId: p.playerId, 
+                    palette: pal,
+                    sound: sound, 
+                    pitch: pitch, 
+                    dur: dur,
+                    vel: 1, 
+                    xCell: pos[0], 
+                    yCell: pos[1] 
+                });
+                newNote.inputId = inputId;
+                this.assignObjectToRoom(newNote, p._roomName);
+                this.gameEngine.addObjectToWorld(newNote);
+            }
         });
     }
 
@@ -123,16 +165,20 @@ export default class InterferenceServerEngine extends ServerEngine {
         if (player) { 
             let removed = player.number;
             this.gameEngine.removeObjectFromWorld(player.id);
+            for (let n of this.gameEngine.queryNotes({ ownerId: playerId })) {
+                this.gameEngine.removeObjectFromWorld(n);
+            }
             for (let k of Object.keys(this.myRooms)) {
-                if (this.myRooms[k].includes(player)) {
+                if (player._roomName === k) {
                     this.myRooms[k].splice(this.myRooms[k].indexOf(player), 1);
                     for (let p of this.myRooms[k]) {
                         if (p.number > removed) p.number--; 
                     }
                 }
                 if (this.myRooms[k].length === 0) {
-                    for (let e of this.gameEngine.world.queryObjects({ instanceType: Egg })) 
-                        this.gameEngine.removeObjectFromWorld(e);
+                    this.gameEngine.world.forEachObject((objId, obj) => { 
+                        if (obj._roomName === k) this.gameEngine.removeObjectFromWorld(objId);
+                    });
                     delete this.myRooms[k];
                     delete this.syncServers[k];
                 }
@@ -143,9 +189,7 @@ export default class InterferenceServerEngine extends ServerEngine {
     onBeginPerformance(player) {
         console.log('beginning');
         let r = player._roomName;
-        this.roomStages[r] = 'intro';
-        for (let p of this.myRooms[r])
-            p.stage = 'intro';
+        this.setGameStage(r, 'intro');
         this.addEgg('melody', r);
         this.addEgg('bass', r);
         this.addEgg('perc', r);
@@ -156,11 +200,17 @@ export default class InterferenceServerEngine extends ServerEngine {
                                                         velocity: this.gameEngine.velRandY() });
         let numPlayers = this.myRooms[roomName].length;
         for (let p of this.myRooms[roomName]) p.ammo += this.gameEngine.startingAmmo;
-        newEgg.number = 0;
+        //newEgg.number = 0;
         newEgg.sound = sound;
         newEgg.hp = Math.floor((Math.random() * numPlayers * this.gameEngine.eggHPRange) + (numPlayers * this.gameEngine.eggHPMin));
-        this.assignObjectToRoom(newEgg, roomName)
+        this.assignObjectToRoom(newEgg, roomName);
         this.gameEngine.addObjectToWorld(newEgg);
+    }
+
+    setGameStage(room, stage) {
+        this.roomStages[room] = stage;
+        for (let p of this.myRooms[room])
+            p.stage = stage;
     }
 
     /*
@@ -187,13 +237,15 @@ export default class InterferenceServerEngine extends ServerEngine {
     stepLogic() {
 
         for (let k of Object.keys(this.myRooms)) {
-            let reload = true;
-            for (let p of this.myRooms[k]) {
-                if (p.ammo > 0) reload = false;
-            }
-            if (reload) {
+            if (this.roomStages[k] === 'intro') {
+                let reload = true;
                 for (let p of this.myRooms[k]) {
-                    p.ammo += this.gameEngine.reloadSize;
+                    if (p.ammo > 0) reload = false;
+                }
+                if (reload) {
+                    for (let p of this.myRooms[k]) {
+                        p.ammo += (this.gameEngine.reloadSize * this.gameEngine.eggsByRoom[k].length);
+                    }
                 }
             }
         }

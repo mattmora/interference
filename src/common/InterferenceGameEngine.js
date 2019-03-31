@@ -16,6 +16,11 @@ export default class InterferenceGameEngine extends GameEngine {
 
         // game constants
         Object.assign(this, {
+            // map: { setup: { variations: [0]['intro'], 
+            // intro: ['buildMelody', 'buildBass', 'buildPerc'],
+            // buildMelody: ['fight']
+            // fight
+            // },
             playerWidth: 16, playerHeight: 9, 
             eggHPRange: 4, eggHPMin: 3, startingAmmo: 2, reloadSize: 2,
             leftBound: 0, topBound: 0, bottomBound: 9,
@@ -26,44 +31,110 @@ export default class InterferenceGameEngine extends GameEngine {
                     scale: [0, 2, 4, 5, 7], 
                     gridWidth: 0,
                     gridHeight: 0,
-                    subdivision: '1n'
-
+                    melody: {
+                        subdivision: '1n',
+                        length: 0
+                    },
+                    bass: {
+                        subdivision: '1n',
+                        length: 0
+                    },
+                    perc: {
+                        subdivision: '1n',
+                        length: 0
+                    }
                 },
                 { //rain
                     scale: [0, 4, 6, 9, 11], 
-                    gridWidth: 18,
-                    gridHeight: 8,
-                    subdivision: '18n'
+                    gridWidth: 16,
+                    gridHeight: 9,
+                    melody: {
+                        subdivision: '16n',
+                        length: 16
+                    },
+                    bass: {
+                        subdivision: '16n',
+                        length: 16
+                    },
+                    perc: {
+                        subdivision: '16n',
+                        length: 16
+                    }
                 },
                 { //celeste
                     scale: [0, 2, 3, 5, 7], 
                     gridWidth: 16,
                     gridHeight: 9,
-                    subdivision: '16n'
+                    melody: {
+                        subdivision: '16n',
+                        length: 16
+                    },
+                    bass: {
+                        subdivision: '16n',
+                        length: 16
+                    },
+                    perc: {
+                        subdivision: '16n',
+                        length: 16
+                    }
                 },
                 { //pyre
                     scale: [0, 2, 3, 7, 10], 
-                    gridWidth: 12,
-                    gridHeight: 12,
-                    subdivision: '12n'
+                    gridWidth: 16,
+                    gridHeight: 9,
+                    melody: {
+                        subdivision: '16n',
+                        length: 16
+                    },
+                    bass: {
+                        subdivision: '16n',
+                        length: 16
+                    },
+                    perc: {
+                        subdivision: '16n',
+                        length: 16
+                    }
                 },
                 { //journey
                     scale: [0, 2, 4, 7, 9], 
-                    gridWidth: 8,
-                    gridHeight: 18,
-                    subdivision: '8n'
+                    gridWidth: 16,
+                    gridHeight: 9,
+                    melody: {
+                        subdivision: '16n',
+                        length: 16
+                    },
+                    bass: {
+                        subdivision: '16n',
+                        length: 16
+                    },
+                    perc: {
+                        subdivision: '16n',
+                        length: 16
+                    }
                 },
                 { //kirby
                     scale: [0, 2, 4, 5, 7], 
                     gridWidth: 16,
                     gridHeight: 9,
-                    subdivision: '16n'
+                    melody: {
+                        subdivision: '16n',
+                        length: 16
+                    },
+                    bass: {
+                        subdivision: '16n',
+                        length: 16
+                    },
+                    perc: {
+                        subdivision: '16n',
+                        length: 16
+                    }
                 }
             ]
         });
 
         // game variables
         Object.assign(this, {
+            shadowIdCount: this.options.clientIDSpace, 
             rooms: [], playersByRoom: {}, eggsByRoom: {}, rightBoundByRoom: {}
         });
 
@@ -71,13 +142,38 @@ export default class InterferenceGameEngine extends GameEngine {
         this.on('postStep', this.postStepLogic.bind(this));
     }
 
+    getNewShadowId() {
+        let id = this.shadowIdCount;
+        this.shadowIdCount++;
+        return id;
+    }
+
+    // based on lance findLocalShadow; instead of finding the shadow of a server obj,
+    // looks for the server copy of a shadow obj, and removes the shadow if the server copy if found
+    resolveShadowObject(shadowObj) {
+        for (let localId of Object.keys(this.world.objects)) {
+            if (Number(localId) >= this.options.clientIDSpace) continue;
+            let serverObj = this.world.objects[localId];
+            if (serverObj.hasOwnProperty('inputId') && serverObj.inputId === shadowObj.inputId) {
+                this.removeObjectFromWorld(shadowObj.id);
+                return serverObj;
+            }
+        }
+        return null;
+    }
+
     registerClasses(serializer) {
+        serializer.registerClass(Note);
         serializer.registerClass(Performer);
         serializer.registerClass(Egg);
     }
 
     start() {
         super.start();
+    }
+
+    wrap(n, mod) {
+        return (n % mod + mod) % mod;
     }
 
     randPos(roomName) {
@@ -191,49 +287,6 @@ export default class InterferenceGameEngine extends GameEngine {
         }
     }
 
-    playerHitEgg(p, e, isServer) {
-
-        if (e.hp <= 0) return;
-        if (p.ammo <= 0) return;
-
-        let pal = p.palette;
-        let pos = this.playerQuantizedPosition(p, e.position.x, e.position.y, 
-            this.paletteAttributes[pal].gridWidth, this.paletteAttributes[pal].gridHeight);
-        let scale = this.paletteAttributes[pal].scale; //TODO should base this on palette of the cell?
-        let step = pos[0];
-        let pitch = (this.paletteAttributes[pal].gridHeight - pos[1]) + (scale.length * 4);
-        let dur = this.paletteAttributes[pal].subdivision;
-
-        let seq = p.sequences[e.sound];
-        if (seq[step]) {
-            for (let note of seq[step]) {
-                if (note.pitch === pitch) note = '2n';
-                else seq[step].push(new Note({ 
-                    pitch: pitch,
-                    dur: dur,
-                    vel: 1,
-                    cell: { x: pos[0], y: pos[1] },
-                    step: step
-                }));    
-            }
-        }
-        else seq[step] = [new Note({ 
-            pitch: pitch,
-            dur: dur,
-            vel: 1,
-            cell: { x: pos[0], y: pos[1] },
-            step: step
-        })];
-        p[e.sound] = JSON.stringify(seq);
-
-        p.ammo--;
-        this.emit('playerHitEgg', e);
-        if (isServer) {
-            e.hp--;
-            console.log(e.hp)
-        }
-    }
-
     positionIsInPlayer(x, p) {
         let leftBound = p.number * this.playerWidth;
         let rightBound = (p.number + 1) * this.playerWidth;
@@ -261,6 +314,28 @@ export default class InterferenceGameEngine extends GameEngine {
         }, {});
     }
 
+    // based on lance GameWorld.queryObjects
+    queryNotes(query) {
+        let queriedNotes = [];
+        for (let note of this.world.queryObjects({ instanceType: Note })) {
+            let conditions = [];
+
+            for (let k of Object.keys(query)) {
+                conditions.push(!(k in query) || query[k] !== null && note[k] === query[k]);
+            }
+
+            // all conditions are true, object is qualified for the query
+            if (conditions.every(value => value)) {
+                queriedNotes.push(note);
+            }
+        }
+        return queriedNotes;
+    }
+
+    playerHitEgg(p, e, isServer) {
+        this.emit('playerHitEgg', e);
+    }
+
     processInput(inputData, playerId, isServer) {
 
         super.processInput(inputData, playerId);
@@ -277,14 +352,16 @@ export default class InterferenceGameEngine extends GameEngine {
             //TODO need to update a bunch of stuff on a color change, 
             // also need to be careful when referencing the player palette vs a cell palette, player palette should not change after setup?
             if (inputData.input == 'c') {
-                player.palette = this.palettes[(this.palettes.indexOf(player.palette)+1)%this.palettes.length];
-                console.log(player.palette);
+                this.emit('updatePalette');
             }
-            if (isServer) { 
+            else if (isServer) { 
             // stuff that should only be processed on the server, such as randomness, which would otherwise cause discrepancies
             // or actions that require more info than is available to one player
             //console.log(inputData.input);
-                if (inputData.input == '[') {
+                if (inputData.input == 'b') {
+                    this.emit('beginPerformance', player);
+                }
+                else if (inputData.input == '[') {
                     let newNumber = player.number - 1;
                     if (newNumber < 0) newNumber = players.length - 1;
                     for (let p of players) { 
@@ -300,32 +377,27 @@ export default class InterferenceGameEngine extends GameEngine {
                     }
                     player.number = newNumber;
                 } 
-                else if (inputData.input == 'b') {
-                    this.emit('beginPerformance', player);
-                }
             }
         }
         else if (player.stage === 'intro') {
-            if (isServer) {
-                if (inputData.input == 'q') {
-                    for (let e of eggsByType.melody) {
-                        if (this.positionIsInPlayer(e.position.x, player)) {
-                            this.playerHitEgg(player, e, isServer);
-                        }
+            if (inputData.input == 'q') {
+                for (let e of eggsByType.melody) {
+                    if (this.positionIsInPlayer(e.position.x, player)) {
+                        this.playerHitEgg(player, e, isServer);
                     }
                 }
-                if (inputData.input == 'w') {
-                    for (let e of eggsByType.perc) {
-                        if (this.positionIsInPlayer(e.position.x, player)) {
-                            this.playerHitEgg(player, e, isServer);
-                        }
+            }
+            if (inputData.input == 'w') {
+                for (let e of eggsByType.perc) {
+                    if (this.positionIsInPlayer(e.position.x, player)) {
+                        this.playerHitEgg(player, e, isServer);
                     }
                 }
-                if (inputData.input == 'e') {
-                    for (let e of eggsByType.bass) {
-                        if (this.positionIsInPlayer(e.position.x, player)) {
-                            this.playerHitEgg(player, e, isServer);
-                        }
+            }
+            if (inputData.input == 'e') {
+                for (let e of eggsByType.bass) {
+                    if (this.positionIsInPlayer(e.position.x, player)) {
+                        this.playerHitEgg(player, e, isServer);
                     }
                 }
             }

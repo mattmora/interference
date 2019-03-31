@@ -20,16 +20,6 @@ export default class Performer extends DynamicObject {
 
         this.class = Performer;
         this.grid = [[]];
-        this.sequences = {
-            melody: [],
-            bass: [],
-            perc: []
-        };
-        this.animFrames = { 
-            melody: [],
-            bass: [],
-            perc: []
-        };
     }
 
     syncTo(other) {

@@ -4,7 +4,7 @@ import InterferenceRenderer from '../client/InterferenceRenderer';
 import Note from '../common/Note';
 import Performer from '../common/Performer';
 import Egg from '../common/Egg';
-import { Transport, Frequency, Part, Sequence, Synth, MonoSynth, PolySynth, NoiseSynth, FMSynth, AMSynth, MetalSynth } from 'tone';
+import { Transport, Frequency, Sequence, Loop, Synth, MonoSynth, PolySynth, NoiseSynth, FMSynth, AMSynth, MetalSynth } from 'tone';
 import { Reverb, FeedbackDelay, BitCrusher, AutoWah } from 'tone';
 
 export default class InterferenceClientEngine extends ClientEngine {
@@ -34,11 +34,15 @@ export default class InterferenceClientEngine extends ClientEngine {
             'KeyV': 'ToggleView',
             'Slash': 'ToggleLock'
         };
-        this.currentStep = null;
+        this.melodyStep = 0;
+        this.bassStep = 0;
+        this.percStep = 0;
+        this.sequences = {};
 
         this.gameEngine.on('client__postStep', this.stepLogic.bind(this));
+        this.gameEngine.on('updatePalette', () => { this.onUpdatePalette() });
         this.gameEngine.on('eggBounce', e => { this.onEggBounce(e) });
-        //this.gameEngine.on('playerHitEgg', e => { this.onPlayerHitEgg(e) });
+        this.gameEngine.on('playerHitEgg', e => { this.onPlayerHitEgg(e) });
         this.gameEngine.on('eggBroke', e => { this.onEggBroke(e) });
     }
 
@@ -203,19 +207,42 @@ export default class InterferenceClientEngine extends ClientEngine {
     ///////////////////////////////////////////////////////////////////////////////////////////
     /// SOUND HANDLING AND CLIENT LOGIC
 
+    /// STEP
+
     stepLogic() {
-        if (this.room == null) return //if we yet to be assigned a room, don't do this stuff
+        if (this.room == null) return; //if we've yet to be assigned a room, don't do this stuff
+
         this.player = this.gameEngine.world.queryObject({ playerId: this.gameEngine.playerId });
+        if (this.player == null) return;
+
         if (this.player != null && this.reverb == null && this.player.palette != 0) this.initSound(this.player);
+
         this.players = this.gameEngine.world.queryObjects({ instanceType: Performer });
         for (let p of this.players) {
             if (p.gridString != null) p.grid = JSON.parse(p.gridString);
-            for (let sound of Object.keys(p.sequences)) {
-                p.sequences[sound] = JSON.parse(p[sound]);
-            }
         }
+
         this.eggs = this.gameEngine.world.queryObjects({ instanceType: Egg });
+
         let stage = this.player.stage;
+
+        this.sequences = {};
+        for (let note of this.gameEngine.world.queryObjects({ instanceType: Note })) {
+            if (note.id >= this.gameEngine.options.clientIDSpace) {
+                let serverCopy = this.gameEngine.resolveShadowObject(note);
+                if (serverCopy != null) {
+                    serverCopy.animFrame = note.animFrame;
+                    continue;
+                }
+            }
+            note.step = note.xCell;
+            if (this.sequences[note.ownerId] == null) this.sequences[note.ownerId] = {};
+            if (this.sequences[note.ownerId].player == null) this.sequences[note.ownerId].player = this.gameEngine.world.queryObject({ playerId: note.ownerId });
+            if (this.sequences[note.ownerId][note.sound] == null) this.sequences[note.ownerId][note.sound] = [];
+            if (this.sequences[note.ownerId][note.sound][note.step] == null) this.sequences[note.ownerId][note.sound][note.step] = [];
+            this.sequences[note.ownerId][note.sound][note.step].push(note);
+        }
+
         if (stage === 'setup') {
 
         }
@@ -246,10 +273,61 @@ export default class InterferenceClientEngine extends ClientEngine {
         this.prevStage = stage;
     }
 
+    /// GAME EVENTS
+
+    onUpdatePalette() {
+        let palettes = this.gameEngine.palettes;
+        this.player.palette = palettes[(palettes.indexOf(this.player.palette) + 1) % palettes.length];
+        this.socket.emit('updatePalette', this.player.palette);
+    }
+
     onEggBounce(e) {
         if (!Object.keys(this.eggSounds).includes(e.toString())) this.constructEggSounds(e);
         if (this.gameEngine.positionIsInPlayer(e.position.x, this.player)) {
             this.eggSounds[e.toString()].bounce.triggerAttackRelease('8n');
+        }
+    }
+
+    onPlayerHitEgg(e) {
+        let p = this.player;
+        if (e.hp <= 0) return;
+        if (p.ammo <= 0) return;
+        p.ammo--;
+        e.hp--;
+
+        let shadowId = this.gameEngine.getNewShadowId();
+        this.socket.emit('playerHitEgg', p.ammo, e.id, e.hp, e.position.x, e.position.y, e.sound, shadowId);
+        let pal = p.palette;
+        let pos = this.gameEngine.playerQuantizedPosition(p, e.position.x, e.position.y, 
+            this.gameEngine.paletteAttributes[pal].gridWidth, this.gameEngine.paletteAttributes[pal].gridHeight);
+        let scale = this.gameEngine.paletteAttributes[pal].scale; //TODO should base this on palette of the cell?
+        let pitch = (this.gameEngine.paletteAttributes[pal].gridHeight - pos[1]) + (scale.length * 4);
+        let dur = this.gameEngine.paletteAttributes[pal][e.sound].subdivision;
+
+        let notes = this.gameEngine.queryNotes({            
+            ownerId: p.playerId, 
+            palette: pal,
+            sound: e.sound, 
+            pitch: pitch, 
+            //vel: 1, 
+            xCell: pos[0], 
+            yCell: pos[1] 
+        });
+        if (notes.length) notes[0].dur = '2n';
+        else {
+            let newNote = new Note(this.gameEngine, null, { 
+                id: shadowId,
+                ownerId: p.playerId, 
+                palette: pal,
+                sound: e.sound, 
+                pitch: pitch, 
+                dur: dur,
+                vel: 1, 
+                xCell: pos[0], 
+                yCell: pos[1] 
+            });
+            newNote.inputId = shadowId;
+            this.gameEngine.addObjectToWorld(newNote);
         }
     }
 
@@ -262,15 +340,15 @@ export default class InterferenceClientEngine extends ClientEngine {
         }
     }
 
+    //// SOUND
+
     initSound(p) {
 
         //this.transport.timeSignature = 4;
 
-        this.reverb = new Reverb(1).toMaster();
-        this.delay = new FeedbackDelay()
+        this.reverb = new Reverb(5).toMaster();
+        this.delay = new FeedbackDelay();
         //this.bitcrusher = new BitCrusher(4).connect(this.reverb); 
-        this.autowah = new AutoWah().toMaster()
-        this.autowah.connect(this.reverb);  
         this.reverb.generate();
         //this.bitcrusher.start();
         /*
@@ -286,31 +364,44 @@ export default class InterferenceClientEngine extends ClientEngine {
             }
         }).toMaster();
         */
+        let pal = this.gameEngine.paletteAttributes[p.palette];
+
         let events = []
         for (let i = 0; i < this.gameEngine.paletteAttributes[p.palette].gridWidth; i++) {
            events.push(i);
         }
 
-        this.melodySynth = new PolySynth(this.gameEngine.paletteAttributes[p.palette].gridHeight, Synth).toMaster();
+        this.melodySynth = new PolySynth(pal.gridHeight, Synth).toMaster();
+
         this.melodySequence = new Sequence((time, step) => {
-            this.currentStep = step;
-            let seqStep = this.player.sequences.melody[step];
-            if (seqStep) this.playStepOnSynth(this.melodySynth, seqStep, 2, time, true);
-        }, events, this.gameEngine.paletteAttributes[p.palette].subdivision);
+            this.melodyStep = step;
+            if (this.sequences[this.player.playerId] == null) return;
+            if (this.sequences[this.player.playerId].melody == null) return;
+            let seqStep = this.sequences[this.player.playerId].melody[this.melodyStep];
+            if (seqStep) this.playNoteArrayOnSynth(this.melodySynth, seqStep, pal.scale, 2, time, true);
+        }, events, pal.melody.subdivision);
 
-        this.bassSynth = new PolySynth(this.gameEngine.paletteAttributes[p.palette].gridHeight, AMSynth).toMaster();
+
+        this.bassSynth = new PolySynth(pal.gridHeight, AMSynth).toMaster();
+
         this.bassSequence = new Sequence((time, step) => {
-            this.currentStep = step;
-            let seqStep = this.player.sequences.bass[step];
-            if (seqStep) this.playStepOnSynth(this.bassSynth, seqStep, -2, time, true);
-        }, events, this.gameEngine.paletteAttributes[p.palette].subdivision);
+            this.bassStep = step; 
+            if (this.sequences[this.player.playerId] == null) return;
+            if (this.sequences[this.player.playerId].bass == null) return;
+            let seqStep = this.sequences[this.player.playerId].bass[this.bassStep];
+            if (seqStep) this.playNoteArrayOnSynth(this.bassSynth, seqStep, pal.scale, -2, time, true);       
+        }, events, pal.bass.subdivision);
 
-        this.percSynth = new PolySynth(this.gameEngine.paletteAttributes[p.palette].gridHeight, FMSynth).toMaster();
+
+        this.percSynth = new PolySynth(pal.gridHeight, FMSynth).toMaster();
+
         this.percSequence = new Sequence((time, step) => {
-            this.currentStep = step;
-            let seqStep = this.player.sequences.perc[step];
-            if (seqStep) this.playStepOnSynth(this.percSynth, seqStep, 0, time, true);
-        }, events, this.gameEngine.paletteAttributes[p.palette].subdivision);
+            this.percStep = step;
+            if (this.sequences[this.player.playerId] == null) return;
+            if (this.sequences[this.player.playerId].perc == null) return;
+            let seqStep = this.sequences[this.player.playerId].perc[this.percStep];
+            if (seqStep) this.playNoteArrayOnSynth(this.percSynth, seqStep, pal.scale, 0, time, true);
+        }, events, pal.perc.subdivision);
     }
 
     constructEggSounds(e) {
@@ -354,7 +445,7 @@ export default class InterferenceClientEngine extends ClientEngine {
                 breakSynth: synth.toMaster(), 
                 break: new Sequence((time, note) => {
                     let scale = this.gameEngine.paletteAttributes[this.player.palette].scale;
-                    this.playScaleNoteOnSynth(synth, note, scale, 6, '64n', time, 0.5);
+                    this.playNoteOnSynth(synth, note, scale, 6, '64n', time, 0.5);
                 }, [[0, 1, 2, 3, 1, 2, 3, 4], null, null, null], '4n')
             };
         }
@@ -396,7 +487,7 @@ export default class InterferenceClientEngine extends ClientEngine {
                 breakSynth: synth.toMaster(), 
                 break: new Sequence((time, note) => {
                     let scale = this.gameEngine.paletteAttributes[this.player.palette].scale;
-                    this.playScaleNoteOnSynth(synth, note, scale, 6, '64n', time, 0.5);
+                    this.playNoteOnSynth(synth, note, scale, 6, '64n', time, 0.5);
                 }, [[0, 1, 2, 3, 1, 2, 3, 4], null, null, null], '4n')
             };
         }
@@ -438,19 +529,19 @@ export default class InterferenceClientEngine extends ClientEngine {
                 breakSynth: synth.toMaster(), 
                 break: new Sequence((time, note) => {
                     let scale = this.gameEngine.paletteAttributes[this.player.palette].scale;
-                    this.playScaleNoteOnSynth(synth, note, scale, 6, '64n', time, 0.5);
+                    this.playNoteOnSynth(synth, note, scale, 6, '64n', time, 0.5);
                 }, [[0, 1, 2, 3, 1, 2, 3, 4], null, null, null], '4n')
             };
         }
 
-        this.eggSounds[e.toString()].drone.connect(this.autowah);
+        this.eggSounds[e.toString()].drone.connect(this.reverb);
         this.eggSounds[e.toString()].bounce.connect(this.reverb);
         this.eggSounds[e.toString()].breakSynth.connect(this.reverb);
         this.eggSounds[e.toString()].drone.triggerAttack('+0', 0.1);
         this.eggSounds[e.toString()].break.loop = true;
     }
 
-    playScaleNoteOnSynth(synth, note, scale, octaveShift, dur, time, vel) {
+    playNoteOnSynth(synth, note, scale, octaveShift, dur, time, vel) {
         if (!note) return;
         //console.log(note);
         let degree = note % scale.length;
@@ -460,14 +551,13 @@ export default class InterferenceClientEngine extends ClientEngine {
         synth.triggerAttackRelease(pitch, dur, time, vel);
     }
 
-    playStepOnSynth(synth, stepArray, octaveShift, time) {
-        if (!stepArray) return;
+    playNoteArrayOnSynth(synth, noteArray, scale, octaveShift, time) {
+        if (!noteArray) return;
 
         //console.log(note);
-        for (let note of stepArray) {
+        for (let note of noteArray) {
             //let scale = this.gameEngine.paletteAttributes[this.player.grid[note.cell.x][note.cell.y]];
-            let scale = this.gameEngine.paletteAttributes[this.player.palette].scale;
-            this.playScaleNoteOnSynth(synth, note.pitch, scale, octaveShift, note.dur, time, note.vel);
+            this.playNoteOnSynth(synth, note.pitch, scale, octaveShift, note.dur, time, note.vel);
         }
     }
 
