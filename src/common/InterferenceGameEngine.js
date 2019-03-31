@@ -400,7 +400,37 @@ export default class InterferenceGameEngine extends GameEngine {
                         this.playerHitEgg(player, e, isServer);
                     }
                 }
-            //}
+            }
+        }
+        else if (player.stage === 'fight') {
+            if (inputData.input == 'w') {
+                for (let e of eggsByType.melody) {
+                    if (this.positionIsInPlayer(e.position.x, player)) {
+                        this.playerHitEgg(player, e, isServer);
+                    }
+                }
+            }
+            if (inputData.input == 'a') {
+                for (let e of eggsByType.perc) {
+                    if (this.positionIsInPlayer(e.position.x, player)) {
+                        this.playerHitEgg(player, e, isServer);
+                    }
+                }
+            }
+            if (inputData.input == 's') {
+                for (let e of eggsByType.bass) {
+                    if (this.positionIsInPlayer(e.position.x, player)) {
+                        this.playerHitEgg(player, e, isServer);
+                    }
+                }
+            }
+            if (inputData.input == 'd') {
+                for (let e of eggsByType.bass) {
+                    if (this.positionIsInPlayer(e.position.x, player)) {
+                        this.playerHitEgg(player, e, isServer);
+                    }
+                }
+            }
         }
         /*
         else if (inputData.input == 'n') {

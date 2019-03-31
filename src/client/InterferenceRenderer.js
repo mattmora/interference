@@ -2,7 +2,6 @@ import { Renderer, TwoVector } from 'lance-gg';
 import Note from '../common/Note';
 import Performer from '../common/Performer';
 import Egg from '../common/Egg';
-import { Frequency } from 'tone';
 
 const paletteTable = [
     //'default': 
@@ -115,15 +114,14 @@ export default class InterferenceRenderer extends Renderer {
     draw(t, dt) {
         super.draw(t, dt);
 
-        if (client.room == null) return
 
         time = client.syncClient.getSyncTime();
         playerId = game.playerId;
         thisPlayer = game.world.queryObject({ playerId });
         if (client.performanceView) {
             players = [thisPlayer];
-            leftViewBound = thisPlayer.number * game.playerWidth;
-            rightViewBound = (thisPlayer.number + 1) * game.playerWidth;
+            leftViewBound = thisPlayer.position.x;
+            rightViewBound = thisPlayer.position.x + game.playerWidth;
         }
         else {
             players = game.world.queryObjects({ instanceType: Performer });
@@ -257,7 +255,7 @@ export default class InterferenceRenderer extends Renderer {
             //console.log(p.animFrames[sound][step][n.pitch]);
             let gridWidth = game.paletteAttributes[n.palette].gridWidth;
             let gridHeight = game.paletteAttributes[n.palette].gridHeight;
-            let pos = this.playerCellToCanvasPosition(p, n.xCell, n.yCell, gridWidth, gridHeight);
+            let pos = this.cellToCanvasPosition(p, n.xCell, n.yCell, gridWidth, gridHeight);
             let dimX = this.gameXDimToCanvasXDim(game.playerWidth / gridWidth); 
             let dimY = this.gameYDimToCanvasYDim(game.playerHeight / gridHeight);
             let x = pos[0];
@@ -343,9 +341,13 @@ export default class InterferenceRenderer extends Renderer {
         return Math.floor(this.mapToRange(gameY, 0, game.playerHeight, 0, h / players.length));
     }
 
+    cellToCanvasPosition(cellX, cellY, cellsXPerPlayer, cellsYPerPlayer) {
+        let gameX = (game.playerWidth / cellsXPerPlayer) * cellX;
+        let gameY = (game.playerHeight / cellsYPerPlayer) * cellY;
+        return this.gamePositionToCanvasPosition(gameX, gameY);
+    }
+
     playerCellToCanvasPosition(p, cellX, cellY, cellsXPerPlayer, cellsYPerPlayer) {
-        //let gameX = game.cellWidth * (cellX + (p.number * game.playerCellWidth));
-        //let gameY = game.cellHeight * cellY;
         let gameX = (game.playerWidth / cellsXPerPlayer) * (cellX + (p.number * cellsXPerPlayer));
         let gameY = (game.playerHeight / cellsYPerPlayer) * cellY;
         return this.gamePositionToCanvasPosition(gameX, gameY);

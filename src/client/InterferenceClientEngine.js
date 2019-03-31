@@ -201,6 +201,9 @@ export default class InterferenceClientEngine extends ClientEngine {
             this.controls.bindKey('q', 'q');
             this.controls.bindKey('w', 'w');
             this.controls.bindKey('e', 'e');
+            this.controls.bindKey('a', 'a');
+            this.controls.bindKey('s', 's');
+            this.controls.bindKey('d', 'd');
         }
     } 
 
@@ -298,7 +301,7 @@ export default class InterferenceClientEngine extends ClientEngine {
         let shadowId = this.gameEngine.getNewShadowId();
         this.socket.emit('playerHitEgg', p.ammo, e.id, e.hp, e.position.x, e.position.y, e.sound, shadowId);
         let pal = p.palette;
-        let pos = this.gameEngine.playerQuantizedPosition(p, e.position.x, e.position.y, 
+        let pos = this.gameEngine.quantizedPosition(e.position.x, e.position.y, 
             this.gameEngine.paletteAttributes[pal].gridWidth, this.gameEngine.paletteAttributes[pal].gridHeight);
         let scale = this.gameEngine.paletteAttributes[pal].scale; //TODO should base this on palette of the cell?
         let pitch = (this.gameEngine.paletteAttributes[pal].gridHeight - pos[1]) + (scale.length * 4);

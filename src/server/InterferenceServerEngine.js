@@ -39,9 +39,6 @@ export default class InterferenceServerEngine extends ServerEngine {
         player.ammo = 0;
         player.stage = 'setup';
         player.gridString = this.getEmptyGridStringByPalette(0);
-        player.melody = JSON.stringify([]);
-        player.bass = JSON.stringify([]);
-        player.perc = JSON.stringify([]);
 
         console.log(player.number);
         player.playerId = socket.playerId;
@@ -55,6 +52,8 @@ export default class InterferenceServerEngine extends ServerEngine {
                 this.roomStages[roomName] = 'setup';
             }
             player.number = this.myRooms[roomName].length;
+            player.position.x = player.number * this.gameEngine.playerWidth;
+            player.position.y = 0;
             player.palette = this.gameEngine.palettes[player.number%this.gameEngine.palettes.length];
             player.stage = this.roomStages[roomName];
             player.gridString = this.getEmptyGridStringByPalette(player.palette);
@@ -78,6 +77,7 @@ export default class InterferenceServerEngine extends ServerEngine {
 
         socket.on('updatePalette', pal => {
             player.palette = pal;
+            player.gridString = this.getEmptyGridStringByPalette(player.palette);
         });
 
         socket.on('playerHitEgg', (ammo, eggId, hp, x, y, sound, inputId) => {
@@ -86,7 +86,7 @@ export default class InterferenceServerEngine extends ServerEngine {
             let e = this.gameEngine.world.queryObject({ id: eggId });
             e.hp = hp;
             let pal = p.palette;
-            let pos = this.gameEngine.playerQuantizedPosition(p, x, y, 
+            let pos = this.gameEngine.quantizedPosition(p, x, y, 
                 this.gameEngine.paletteAttributes[pal].gridWidth, this.gameEngine.paletteAttributes[pal].gridHeight);
             let scale = this.gameEngine.paletteAttributes[pal].scale; //TODO should base this on palette of the cell?
             let pitch = (this.gameEngine.paletteAttributes[pal].gridHeight - pos[1]) + (scale.length * 4);
