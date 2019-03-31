@@ -400,7 +400,7 @@ export default class InterferenceGameEngine extends GameEngine {
                         this.playerHitEgg(player, e, isServer);
                     }
                 }
-            }
+            //}
         }
         /*
         else if (inputData.input == 'n') {
