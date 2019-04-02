@@ -305,7 +305,7 @@ export default class InterferenceClientEngine extends ClientEngine {
     onEggBounce(e) {
         if (!Object.keys(this.eggSynths).includes(e.toString())) this.constructEggSynths(e);
         if (this.gameEngine.positionIsInPlayer(e.position.x, this.player)) {
-            this.eggSynths[e.toString()].bounce.triggerAttackRelease('8n');
+            this.eggSynths[e.toString()].bounce.triggerAttackRelease('8n', '+0', 0.1);
         }
     }
 
@@ -411,7 +411,7 @@ export default class InterferenceClientEngine extends ClientEngine {
             if (this.sequences[this.player.playerId] == null) return;
             if (this.sequences[this.player.playerId].bass == null) return;
             let seqStep = this.sequences[this.player.playerId].bass[this.bassStep];
-            if (seqStep) this.playNoteArrayOnSynth(this.bassSynth, seqStep, pal.scale, -2, time, true);       
+            if (seqStep) this.playNoteArrayOnSynth(this.bassSynth, seqStep, pal.scale, -1, time, true);       
         }, events, pal.bass.subdivision);
 
 
@@ -468,8 +468,8 @@ export default class InterferenceClientEngine extends ClientEngine {
                 breakSynth: synth.toMaster(), 
                 break: new Sequence((time, note) => {
                     let scale = this.gameEngine.paletteAttributes[this.player.palette].scale;
-                    this.playNoteOnSynth(synth, note, scale, 6, '64n', time, 0.5);
-                }, [[0, 1, 2, 3, 1, 2, 3, 4], null, null, null], '4n')
+                    this.playNoteOnSynth(synth, note, scale, 6, '64n', time, 0.1);
+                }, [[4, 2, 3, 1, 3, 1, 2, 0], null, null, null], '4n')
             };
         }
         else if (e.sound === 'bass') {
@@ -552,8 +552,8 @@ export default class InterferenceClientEngine extends ClientEngine {
                 breakSynth: synth.toMaster(), 
                 break: new Sequence((time, note) => {
                     let scale = this.gameEngine.paletteAttributes[this.player.palette].scale;
-                    this.playNoteOnSynth(synth, note, scale, 6, '64n', time, 0.5);
-                }, [[0, 1, 2, 3, 1, 2, 3, 4], null, null, null], '4n')
+                    this.playNoteOnSynth(synth, note, scale, 6, '64n', time, 0.1);
+                }, [[0, 4, null, null, null, null, 1, 5], null, null, null], '4n')
             };
         }
 

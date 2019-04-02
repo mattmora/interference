@@ -410,10 +410,10 @@ function (_ClientEngine) {
         try {
           for (var _iterator3 = this.eggs[Symbol.iterator](), _step3; !(_iteratorNormalCompletion3 = (_step3 = _iterator3.next()).done); _iteratorNormalCompletion3 = true) {
             var e = _step3.value;
-            if (!Object.keys(this.eggSynths).includes(e.id)) this.constructEggSynths(e);
+            if (!Object.keys(this.eggSynths).includes(e.toString())) this.constructEggSynths(e);
             var vol = 1 - 0.5 * Math.abs(this.player.number - Math.floor(e.position.x / this.gameEngine.playerWidth));
             if (vol < 0) vol = 0;
-            this.eggSynths[e.id].drone.volume.rampTo(vol, 0.1);
+            this.eggSynths[e.toString()].drone.volume.rampTo(vol, 0.1);
           }
         } catch (err) {
           _didIteratorError3 = true;
@@ -444,10 +444,10 @@ function (_ClientEngine) {
   }, {
     key: "onEggBounce",
     value: function onEggBounce(e) {
-      if (!Object.keys(this.eggSynths).includes(e.id)) this.constructEggSynths(e);
+      if (!Object.keys(this.eggSynths).includes(e.toString())) this.constructEggSynths(e);
 
       if (this.gameEngine.positionIsInPlayer(e.position.x, this.player)) {
-        this.eggSynths[e.id].bounce.triggerAttackRelease('8n');
+        this.eggSynths[e.toString()].bounce.triggerAttackRelease('8n', '+0', 0.1);
       }
     }
   }, {
@@ -495,12 +495,12 @@ function (_ClientEngine) {
     key: "onEggBroke",
     value: function onEggBroke(e) {
       if (this.eggSynths == null) return;
-      if (this.eggSynths[e.id] == null) return;
+      if (this.eggSynths[e.toString()] == null) return;
       console.log('egg broke');
-      this.eggSynths[e.id].drone.triggerRelease();
+      this.eggSynths[e.toString()].drone.triggerRelease();
 
       if (this.gameEngine.positionIsInPlayer(e.position.x, this.player)) {
-        this.eggSynths[e.id].break.start(this.nextDiv('4n'));
+        this.eggSynths[e.toString()].break.start(this.nextDiv('4n'));
         this.optionSelection['Digit1'] = 'tetrisChain';
       }
     } //// SOUND
@@ -551,7 +551,7 @@ function (_ClientEngine) {
         if (_this5.sequences[_this5.player.playerId] == null) return;
         if (_this5.sequences[_this5.player.playerId].bass == null) return;
         var seqStep = _this5.sequences[_this5.player.playerId].bass[_this5.bassStep];
-        if (seqStep) _this5.playNoteArrayOnSynth(_this5.bassSynth, seqStep, pal.scale, -2, time, true);
+        if (seqStep) _this5.playNoteArrayOnSynth(_this5.bassSynth, seqStep, pal.scale, -1, time, true);
       }, events, pal.bass.subdivision);
       this.percSynth = new _tone.PolySynth(pal.gridHeight, _tone.FMSynth).toMaster();
       this.percSequence = new _tone.Sequence(function (time, step) {
@@ -582,7 +582,7 @@ function (_ClientEngine) {
             release: 0.1
           }
         });
-        this.eggSynths[e.id] = {
+        this.eggSynths[e.toString()] = {
           drone: new _tone.NoiseSynth({
             noise: {
               type: 'pink'
@@ -609,8 +609,8 @@ function (_ClientEngine) {
           break: new _tone.Sequence(function (time, note) {
             var scale = _this6.gameEngine.paletteAttributes[_this6.player.palette].scale;
 
-            _this6.playNoteOnSynth(synth, note, scale, 6, '64n', time, 0.5);
-          }, [[0, 1, 2, 3, 1, 2, 3, 4], null, null, null], '4n')
+            _this6.playNoteOnSynth(synth, note, scale, 6, '64n', time, 0.1);
+          }, [[4, 2, 3, 1, 3, 1, 2, 0], null, null, null], '4n')
         };
       } else if (e.sound === 'bass') {
         var _synth = new _tone.Synth({
@@ -625,7 +625,7 @@ function (_ClientEngine) {
           }
         });
 
-        this.eggSynths[e.id] = {
+        this.eggSynths[e.toString()] = {
           drone: new _tone.NoiseSynth({
             noise: {
               type: 'pink'
@@ -668,7 +668,7 @@ function (_ClientEngine) {
           }
         });
 
-        this.eggSynths[e.id] = {
+        this.eggSynths[e.toString()] = {
           drone: new _tone.NoiseSynth({
             noise: {
               type: 'pink'
@@ -695,16 +695,16 @@ function (_ClientEngine) {
           break: new _tone.Sequence(function (time, note) {
             var scale = _this6.gameEngine.paletteAttributes[_this6.player.palette].scale;
 
-            _this6.playNoteOnSynth(_synth2, note, scale, 6, '64n', time, 0.5);
-          }, [[0, 1, 2, 3, 1, 2, 3, 4], null, null, null], '4n')
+            _this6.playNoteOnSynth(_synth2, note, scale, 6, '64n', time, 0.1);
+          }, [[0, 4, null, null, null, null, 1, 5], null, null, null], '4n')
         };
       }
 
-      this.eggSynths[e.id].drone.connect(this.reverb);
-      this.eggSynths[e.id].bounce.connect(this.reverb);
-      this.eggSynths[e.id].breakSynth.connect(this.reverb);
-      this.eggSynths[e.id].drone.triggerAttack('+0', 0.01);
-      this.eggSynths[e.id].break.loop = true;
+      this.eggSynths[e.toString()].drone.connect(this.reverb);
+      this.eggSynths[e.toString()].bounce.connect(this.reverb);
+      this.eggSynths[e.toString()].breakSynth.connect(this.reverb);
+      this.eggSynths[e.toString()].drone.triggerAttack('+0', 0.01);
+      this.eggSynths[e.toString()].break.loop = true;
     }
   }, {
     key: "playNoteOnSynth",
