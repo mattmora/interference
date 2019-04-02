@@ -47,20 +47,20 @@ function (_DynamicObject) {
         ammo: {
           type: _lanceGg.BaseTypes.TYPES.INT16
         },
+        direction: {
+          type: _lanceGg.BaseTypes.TYPES.UINT8
+        },
         stage: {
           type: _lanceGg.BaseTypes.TYPES.STRING
         },
         gridString: {
           type: _lanceGg.BaseTypes.TYPES.STRING
         },
-        melody: {
-          type: _lanceGg.BaseTypes.TYPES.STRING
+        xPos: {
+          type: _lanceGg.BaseTypes.TYPES.INT16
         },
-        bass: {
-          type: _lanceGg.BaseTypes.TYPES.STRING
-        },
-        perc: {
-          type: _lanceGg.BaseTypes.TYPES.STRING
+        yPos: {
+          type: _lanceGg.BaseTypes.TYPES.INT16
         }
       }, _get(_getPrototypeOf(Performer), "netScheme", this));
     }
@@ -78,6 +78,140 @@ function (_DynamicObject) {
   }
 
   _createClass(Performer, [{
+    key: "move",
+    value: function move(xStep, yStep) {
+      this.xPos += xStep;
+      this.yPos += yStep;
+      var rightBound = this.gameEngine.playersByRoom[this._roomName].length * this.gameEngine.playerWidth;
+      var leftBound = this.gameEngine.playerHeight;
+
+      if (this.xPos >= rightBound) {
+        this.xPos -= rightBound;
+      }
+
+      if (this.yPos >= leftBound) {
+        this.yPos -= leftBound;
+      }
+
+      if (this.xPos < 0) {
+        this.xPos += rightBound;
+      }
+
+      if (this.yPos < 0) {
+        this.yPos += leftBound;
+      }
+
+      var _iteratorNormalCompletion = true;
+      var _didIteratorError = false;
+      var _iteratorError = undefined;
+
+      try {
+        for (var _iterator = this.gameEngine.queryNotes({
+          ownerId: this.playerId
+        })[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
+          var n = _step.value;
+          //console.log(n);
+          n.move(xStep, yStep);
+        }
+      } catch (err) {
+        _didIteratorError = true;
+        _iteratorError = err;
+      } finally {
+        try {
+          if (!_iteratorNormalCompletion && _iterator.return != null) {
+            _iterator.return();
+          }
+        } finally {
+          if (_didIteratorError) {
+            throw _iteratorError;
+          }
+        }
+      }
+    }
+  }, {
+    key: "moveTo",
+    value: function moveTo(xPos, yPos) {
+      var xStep = xPos - this.xPos;
+      var yStep = yPos - this.yPos;
+      this.xPos = xPos;
+      this.yPos = yPos;
+      var rightBound = this.gameEngine.playersByRoom[this._roomName].length * this.gameEngine.playerWidth;
+      var leftBound = this.gameEngine.playerHeight;
+
+      if (this.xPos >= rightBound) {
+        this.xPos -= rightBound;
+      }
+
+      if (this.yPos >= leftBound) {
+        this.yPos -= leftBound;
+      }
+
+      if (this.xPos < 0) {
+        this.xPos += rightBound;
+      }
+
+      if (this.yPos < 0) {
+        this.yPos += leftBound;
+      }
+
+      var _iteratorNormalCompletion2 = true;
+      var _didIteratorError2 = false;
+      var _iteratorError2 = undefined;
+
+      try {
+        for (var _iterator2 = this.gameEngine.queryNotes({
+          ownerId: this.playerId
+        })[Symbol.iterator](), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
+          var n = _step2.value;
+          //console.log(n);
+          n.move(xStep, yStep);
+        }
+      } catch (err) {
+        _didIteratorError2 = true;
+        _iteratorError2 = err;
+      } finally {
+        try {
+          if (!_iteratorNormalCompletion2 && _iterator2.return != null) {
+            _iterator2.return();
+          }
+        } finally {
+          if (_didIteratorError2) {
+            throw _iteratorError2;
+          }
+        }
+      }
+    }
+  }, {
+    key: "paint",
+    value: function paint() {
+      var _iteratorNormalCompletion3 = true;
+      var _didIteratorError3 = false;
+      var _iteratorError3 = undefined;
+
+      try {
+        for (var _iterator3 = this.gameEngine.queryNotes({
+          ownerId: this.playerId
+        })[Symbol.iterator](), _step3; !(_iteratorNormalCompletion3 = (_step3 = _iterator3.next()).done); _iteratorNormalCompletion3 = true) {
+          var n = _step3.value;
+          //console.log(n);
+          n.paint();
+        }
+      } catch (err) {
+        _didIteratorError3 = true;
+        _iteratorError3 = err;
+      } finally {
+        try {
+          if (!_iteratorNormalCompletion3 && _iterator3.return != null) {
+            _iterator3.return();
+          }
+        } finally {
+          if (_didIteratorError3) {
+            throw _iteratorError3;
+          }
+        }
+      }
+    }
+  }, {
     key: "syncTo",
     value: function syncTo(other) {
       _get(_getPrototypeOf(Performer.prototype), "syncTo", this).call(this, other);

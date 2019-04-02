@@ -22,15 +22,15 @@ export default class InterferenceGameEngine extends GameEngine {
             // fight
             // },
             playerWidth: 16, playerHeight: 9, 
-            eggHPRange: 4, eggHPMin: 3, startingAmmo: 2, reloadSize: 2,
+            eggSounds: ['melody', 'bass', 'perc'], eggHPRange: 4, eggHPMin: 3, startingAmmo: 2, reloadSize: 2,
             leftBound: 0, topBound: 0, bottomBound: 9,
             transportSyncInterval: 200, eggRadius: 1, eggBaseXVelocity: 0.15,
             palettes: [1, 2, 3, 4, 5],
             paletteAttributes: [
                 { //default
                     scale: [0, 2, 4, 5, 7], 
-                    gridWidth: 0,
-                    gridHeight: 0,
+                    gridWidth: 1,
+                    gridHeight: 1,
                     melody: {
                         subdivision: '1n',
                         length: 0
@@ -135,7 +135,8 @@ export default class InterferenceGameEngine extends GameEngine {
         // game variables
         Object.assign(this, {
             shadowIdCount: this.options.clientIDSpace, 
-            rooms: [], playersByRoom: {}, eggsByRoom: {}, rightBoundByRoom: {}
+            rooms: [], playersByRoom: {}, eggsByRoom: {}, rightBoundByRoom: {},
+            eggSoundsToUse: this.eggSounds
         });
 
         this.on('preStep', this.preStepLogic.bind(this));
@@ -188,9 +189,9 @@ export default class InterferenceGameEngine extends GameEngine {
     }
 
     preStepLogic(stepInfo) {
-        this.playersByRoom = this.groupBy(this.world.queryObjects({ instanceType: Performer }), "_roomName");
+        this.playersByRoom = this.groupBy(this.world.queryObjects({ instanceType: Performer }), '_roomName');
         this.rooms = Object.keys(this.playersByRoom);
-        this.eggsByRoom = this.groupBy(this.world.queryObjects({ instanceType: Egg }), "_roomName");
+        this.eggsByRoom = this.groupBy(this.world.queryObjects({ instanceType: Egg }), '_roomName');
         this.rightBoundByRoom = {};
         for (let r of this.rooms) {
             this.rightBoundByRoom[r] = this.playersByRoom[r].length * this.playerWidth;
@@ -199,19 +200,9 @@ export default class InterferenceGameEngine extends GameEngine {
 
     postStepLogic(stepInfo) {
         for (let r of this.rooms) {
-            this.quantizedMovement(r);
             this.resolveCollisions(r);
             this.gameLogic(r);
         }
-    }
-
-    quantizedMovement(r) {
-        if (this.eggsByRoom[r]) {
-            for (let e of this.eggsByRoom[r]) {
-
-            }
-        }
-
     }
 
     resolveCollisions(r) {
@@ -315,6 +306,28 @@ export default class InterferenceGameEngine extends GameEngine {
     }
 
     // based on lance GameWorld.queryObjects
+    queryPlayers(query) {
+        let queriedPlayers = [];
+        for (let p of this.world.queryObjects({ instanceType: Performer })) {
+            let conditions = [];
+
+            for (let k of Object.keys(query)) {
+                conditions.push(!(k in query) || query[k] !== null && p[k] === query[k]);
+            }
+
+            // all conditions are true, object is qualified for the query
+            if (conditions.every(value => value)) {
+                queriedPlayers.push(p);
+            }
+        }
+        return queriedPlayers;
+    }
+
+    playerHitEgg(p, e, isServer) {
+        this.emit('playerHitEgg', e);
+    }
+
+    // based on lance GameWorld.queryObjects
     queryNotes(query) {
         let queriedNotes = [];
         for (let note of this.world.queryObjects({ instanceType: Note })) {
@@ -365,80 +378,78 @@ export default class InterferenceGameEngine extends GameEngine {
                     let newNumber = player.number - 1;
                     if (newNumber < 0) newNumber = players.length - 1;
                     for (let p of players) { 
-                        if (p.number === newNumber) p.number = player.number; 
+                        if (p.number === newNumber) {
+                            p.number = player.number; 
+                            p.move((p.number - newNumber) * this.playerWidth, 0);
+                        }
                     }
+                    player.move((newNumber - player.number) * this.playerWidth, 0);
                     player.number = newNumber;
                 }
                 else if (inputData.input == ']') {
                     let newNumber = player.number + 1;
                     if (newNumber >= players.length) newNumber = 0;
                     for (let p of players) { 
-                        if (p.number === newNumber) p.number = player.number; 
+                        if (p.number === newNumber) {
+                            p.number = player.number; 
+                            p.move((p.number - newNumber) * this.playerWidth, 0);
+                        }
                     }
+                    player.move((newNumber - player.number) * this.playerWidth, 0);
                     player.number = newNumber;
                 } 
             }
         }
         else if (player.stage === 'intro') {
-            if (inputData.input == 'q') {
-                for (let e of eggsByType.melody) {
+
+        }
+        else if (player.stage === 'build') {
+            if (inputData.input == 'space') {
+                for (let e of eggs) {
                     if (this.positionIsInPlayer(e.position.x, player)) {
+                        //player.direction = 1;
                         this.playerHitEgg(player, e, isServer);
                     }
                 }
             }
-            if (inputData.input == 'w') {
+            /*
+            else if (inputData.input == 'w') {
                 for (let e of eggsByType.perc) {
                     if (this.positionIsInPlayer(e.position.x, player)) {
                         this.playerHitEgg(player, e, isServer);
                     }
                 }
             }
-            if (inputData.input == 'e') {
+            else if (inputData.input == 'e') {
                 for (let e of eggsByType.bass) {
                     if (this.positionIsInPlayer(e.position.x, player)) {
                         this.playerHitEgg(player, e, isServer);
                     }
                 }
-            }
+            } */
         }
         else if (player.stage === 'fight') {
-            if (inputData.input == 'w') {
-                for (let e of eggsByType.melody) {
-                    if (this.positionIsInPlayer(e.position.x, player)) {
-                        this.playerHitEgg(player, e, isServer);
-                    }
+            if (isServer) {
+                if (inputData.input == 'w') {
+                    player.move(0, -1);
+                    player.paint();
                 }
-            }
-            if (inputData.input == 'a') {
-                for (let e of eggsByType.perc) {
-                    if (this.positionIsInPlayer(e.position.x, player)) {
-                        this.playerHitEgg(player, e, isServer);
-                    }
+                else if (inputData.input == 'a') {
+                    player.move(-1, 0);
+                    player.paint();
                 }
-            }
-            if (inputData.input == 's') {
-                for (let e of eggsByType.bass) {
-                    if (this.positionIsInPlayer(e.position.x, player)) {
-                        this.playerHitEgg(player, e, isServer);
-                    }
+                else if (inputData.input == 's') {
+                    player.move(0, 1);
+                    player.paint();
                 }
-            }
-            if (inputData.input == 'd') {
-                for (let e of eggsByType.bass) {
-                    if (this.positionIsInPlayer(e.position.x, player)) {
-                        this.playerHitEgg(player, e, isServer);
-                    }
+                else if (inputData.input == 'd') {
+                    player.move(1, 0);
+                    player.paint();
+                }
+                if (inputData.input == 'b') {
+                    this.emit('beginPerformance', player);
                 }
             }
         }
-        /*
-        else if (inputData.input == 'n') {
-            let scale = paletteAttributes.scale[player.palette];
-            player.notestack = player.notestack.concat(
-                String.fromCharCode(scale[Math.floor(Math.random() * scale.length)])
-            );
-            console.log(player.notestack);
-        } */
     }
 }

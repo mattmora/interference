@@ -13,8 +13,6 @@ var _Performer = _interopRequireDefault(require("../common/Performer"));
 
 var _Egg = _interopRequireDefault(require("../common/Egg"));
 
-var _tone = require("tone");
-
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof = function _typeof(obj) { return typeof obj; }; } else { _typeof = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof(obj); }
@@ -87,7 +85,6 @@ var animLengths = {
   eggBreak: 30,
   eggNote: 10
 };
-var transportSyncCount = 0;
 var game = null;
 var client = null;
 var canvas = [];
@@ -103,8 +100,6 @@ var playerId = 0;
 var thisPlayer = null;
 var sequences = null;
 var eggs = [];
-var prevNotestack = '';
-var prevRhythmstack = '';
 var bg = paletteTable[0].bg;
 var c1 = paletteTable[0].c1;
 var c2 = paletteTable[0].c2;
@@ -150,15 +145,14 @@ function (_Renderer) {
       thisPlayer = game.world.queryObject({
         playerId: playerId
       });
+      players = game.world.queryObjects({
+        instanceType: _Performer.default
+      });
 
       if (client.performanceView) {
-        players = [thisPlayer];
-        leftViewBound = thisPlayer.number * game.playerWidth;
-        rightViewBound = (thisPlayer.number + 1) * game.playerWidth;
+        leftViewBound = thisPlayer.xPos;
+        rightViewBound = leftViewBound + game.playerWidth;
       } else {
-        players = game.world.queryObjects({
-          instanceType: _Performer.default
-        });
         leftViewBound = 0;
         rightViewBound = players.length * game.playerWidth;
       }
@@ -171,17 +165,7 @@ function (_Renderer) {
       c1 = paletteTable[thisPlayer.palette].c1;
       c2 = paletteTable[thisPlayer.palette].c2;
       c3 = paletteTable[thisPlayer.palette].c3;
-      c4 = paletteTable[thisPlayer.palette].c4;
-
-      if (client.transport.state === 'started') {
-        if (transportSyncCount >= game.transportSyncInterval) {
-          client.transport.seconds = time;
-          transportSyncCount = 0; //console.log(client.transport.state);
-        }
-
-        transportSyncCount++;
-      } // Clear the canvas
-
+      c4 = paletteTable[thisPlayer.palette].c4; // Clear the canvas
 
       this.ctx.clearRect(0, 0, w, h);
       ctx[0].clearRect(0, 0, w, h);
@@ -205,7 +189,9 @@ function (_Renderer) {
 
         time = Number(time).toFixed(3);
         ctx[1].fillText(time, w * 0.05, h * 0.95);
-        ctx[1].strokeText(time, w * 0.05, h * 0.95); //ctx[1].fillText(client.transport.position, 50, 75);
+        ctx[1].strokeText(time, w * 0.05, h * 0.95);
+        ctx[1].fillText(thisPlayer.number, w * 0.05, h * 0.85);
+        ctx[1].strokeText(thisPlayer.number, w * 0.05, h * 0.85); //ctx[1].fillText(client.transport.position, 50, 75);
       }
 
       this.ctx.drawImage(canvas[0], 0, 0);
@@ -217,6 +203,7 @@ function (_Renderer) {
     key: "drawPlayers",
     value: function drawPlayers() {
       var n = players.length;
+      if (client.performanceView) n = 1;
       var _iteratorNormalCompletion = true;
       var _didIteratorError = false;
       var _iteratorError = undefined;
@@ -224,19 +211,55 @@ function (_Renderer) {
       try {
         for (var _iterator = players[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
           var p = _step.value;
+          var i = p.number - leftViewBound / game.playerWidth;
+          var xDim = this.gameXDimToCanvasXDim(game.playerWidth / game.paletteAttributes[p.palette].gridWidth);
+          var yDim = this.gameYDimToCanvasYDim(game.playerHeight / game.paletteAttributes[p.palette].gridHeight);
 
-          var _i = p.number - leftViewBound / game.playerWidth;
+          for (var xIdx = 0; xIdx < p.grid.length; xIdx++) {
+            var _x = w / n * i + xIdx * xDim;
 
-          var _x = w / n * _i;
+            for (var yIdx = 0; yIdx < p.grid[xIdx].length; yIdx++) {
+              var y = yIdx * yDim;
+              this.fillColor(p.grid[xIdx][yIdx], 'bg', 0);
+              this.fillRect(_x, y, xDim, yDim, false, 0);
+            }
+          }
 
-          this.fillColor(p.palette, 'bg', 0);
-          this.fillRect(_x, 0, w / n, h / n, false, 0);
           this.fillColor('default', 'bg', 1);
 
           for (var a = 0; a < p.ammo; a++) {
-            var x1 = _x + (a + 1) * (w / n / (p.ammo + 1));
+            var _x2 = w / n * i;
+
+            var x1 = _x2 + (a + 1) * (w / n / (p.ammo + 1));
             var y1 = h / n * 0.92;
             this.fillTriangle(x1, y1, x1 - 0.02 * w / n, y1 + 0.04 * h / n, x1 + 0.02 * w / n, y1 + 0.04 * h / n, false, 1);
+          }
+
+          if (p.number === 0) {
+            i = players.length - leftViewBound / game.playerWidth;
+
+            for (var _xIdx = 0; _xIdx < p.grid.length; _xIdx++) {
+              var _x3 = w / n * i + _xIdx * xDim;
+
+              for (var _yIdx = 0; _yIdx < p.grid[_xIdx].length; _yIdx++) {
+                var _y = _yIdx * yDim;
+
+                this.fillColor(p.grid[_xIdx][_yIdx], 'bg', 0);
+                this.fillRect(_x3, _y, xDim, yDim, false, 0);
+              }
+            }
+
+            this.fillColor('default', 'bg', 1);
+
+            for (var _a = 0; _a < p.ammo; _a++) {
+              var _x4 = w / n * i;
+
+              var _x5 = _x4 + (_a + 1) * (w / n / (p.ammo + 1));
+
+              var _y2 = h / n * 0.92;
+
+              this.fillTriangle(_x5, _y2, _x5 - 0.02 * w / n, _y2 + 0.04 * h / n, _x5 + 0.02 * w / n, _y2 + 0.04 * h / n, false, 1);
+            }
           }
         }
       } catch (err) {
@@ -254,8 +277,7 @@ function (_Renderer) {
         }
       }
 
-      var i = thisPlayer.number;
-      var x = w / n * (i + 0.5);
+      var x = w / n * (thisPlayer.number + 0.5);
       ctx[0].fillStyle = 'white';
       this.fillTriangle(x, 1.05 * h / n, x - 0.25 * w / n, 1.15 * h / n, x + 0.25 * w / n, 1.15 * h / n, false, 0);
     }
@@ -267,8 +289,8 @@ function (_Renderer) {
 
       var _arr = Object.keys(sequences);
 
-      for (var _i2 = 0; _i2 < _arr.length; _i2++) {
-        var ownerId = _arr[_i2];
+      for (var _i = 0; _i < _arr.length; _i++) {
+        var ownerId = _arr[_i];
 
         if (sequences[ownerId].bass != null) {
           var _iteratorNormalCompletion2 = true;
@@ -278,7 +300,7 @@ function (_Renderer) {
           try {
             for (var _iterator2 = sequences[ownerId].bass[Symbol.iterator](), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
               var step = _step2.value;
-              if (step != null) this.drawStep(sequences[ownerId].player, step, 'bass');
+              if (step != null) this.drawStep(step, 'bass');
             }
           } catch (err) {
             _didIteratorError2 = true;
@@ -304,7 +326,7 @@ function (_Renderer) {
           try {
             for (var _iterator3 = sequences[ownerId].melody[Symbol.iterator](), _step3; !(_iteratorNormalCompletion3 = (_step3 = _iterator3.next()).done); _iteratorNormalCompletion3 = true) {
               var _step4 = _step3.value;
-              if (_step4 != null) this.drawStep(sequences[ownerId].player, _step4, 'melody');
+              if (_step4 != null) this.drawStep(_step4, 'melody');
             }
           } catch (err) {
             _didIteratorError3 = true;
@@ -330,7 +352,7 @@ function (_Renderer) {
           try {
             for (var _iterator4 = sequences[ownerId].perc[Symbol.iterator](), _step5; !(_iteratorNormalCompletion4 = (_step5 = _iterator4.next()).done); _iteratorNormalCompletion4 = true) {
               var _step6 = _step5.value;
-              if (_step6 != null) this.drawStep(sequences[ownerId].player, _step6, 'perc');
+              if (_step6 != null) this.drawStep(_step6, 'perc');
             }
           } catch (err) {
             _didIteratorError4 = true;
@@ -352,8 +374,6 @@ function (_Renderer) {
   }, {
     key: "drawEggs",
     value: function drawEggs() {
-      var leftBound = leftViewBound - game.eggRadius;
-      var rightBound = rightViewBound + game.eggRadius;
       var _iteratorNormalCompletion5 = true;
       var _didIteratorError5 = false;
       var _iteratorError5 = undefined;
@@ -361,19 +381,31 @@ function (_Renderer) {
       try {
         for (var _iterator5 = eggs[Symbol.iterator](), _step7; !(_iteratorNormalCompletion5 = (_step7 = _iterator5.next()).done); _iteratorNormalCompletion5 = true) {
           var e = _step7.value;
+          var scale = this.mapToRange(e.animFrames.spawn, 0, animLengths.eggSpawn, 0.0, 1.0);
+          this.fillColor(0, 'c1', 1);
+          this.strokeColor(0, 'bg', 1);
+          var dimX = this.gameXDimToCanvasXDim(game.eggRadius) * scale;
+          var dimY = this.gameYDimToCanvasYDim(game.eggRadius) * scale;
+          var pos = this.gamePositionToCanvasPosition(e.position.x, e.position.y);
+          var x = pos[0];
+          var y = pos[1];
+          this.strokeWeight((dimX + dimY) * 0.0625, 1);
 
-          if (leftBound < e.position.x && e.position.x < rightBound) {
-            var scale = this.mapToRange(e.animFrames.spawn, 0, animLengths.eggSpawn, 0.0, 1.0);
-            this.fillColor(0, 'c1', 1);
-            this.strokeColor(0, 'bg', 1); //let gamePos = game.quantizedPosition(e.position.x, e.position.y, 32, 18);
-            //let pos = this.gamePositionToCanvasPosition(gamePos[0], gamePos[1]);
+          if (e.hp > 0) {
+            if (e.sound === 'melody') {
+              this.fillEllipse(x, y, dimX, dimY, 0, 0, 2 * Math.PI, true, 1);
+            } else if (e.sound === 'bass') {
+              this.fillRect(x - dimX, y - dimY, dimX * 2, dimY * 2, true, 1);
+            } else if (e.sound === 'perc') {
+              this.fillQuad(x - dimX, y, x, y - dimY, x + dimX, y, x, y + dimY, true, 1);
+            }
+          } else this.drawBrokenEgg(e, x, y, dimX, dimY, true, 1);
 
-            var pos = this.gamePositionToCanvasPosition(e.position.x, e.position.y);
-            var x = pos[0];
-            var y = pos[1];
-            var dimX = this.gameXDimToCanvasXDim(game.eggRadius) * scale;
-            var dimY = this.gameYDimToCanvasYDim(game.eggRadius) * scale;
-            this.strokeWeight((dimX + dimY) * 0.125, 1);
+          if (e.position.x < game.playerWidth) {
+            pos = this.gamePositionToCanvasPosition(e.position.x + players.length * game.playerWidth, e.position.y);
+            x = pos[0];
+            y = pos[1];
+            this.strokeWeight((dimX + dimY) * 0.0625, 1);
 
             if (e.hp > 0) {
               if (e.sound === 'melody') {
@@ -405,8 +437,7 @@ function (_Renderer) {
     }
   }, {
     key: "drawStep",
-    value: function drawStep(p, step, sound) {
-      if (p == null) return;
+    value: function drawStep(step, sound) {
       var _iteratorNormalCompletion6 = true;
       var _didIteratorError6 = false;
       var _iteratorError6 = undefined;
@@ -417,7 +448,7 @@ function (_Renderer) {
           //console.log(p.animFrames[sound][step][n.pitch]);
           var gridWidth = game.paletteAttributes[n.palette].gridWidth;
           var gridHeight = game.paletteAttributes[n.palette].gridHeight;
-          var pos = this.playerCellToCanvasPosition(p, n.xCell, n.yCell, gridWidth, gridHeight);
+          var pos = this.cellToCanvasPosition(n.xPos, n.yPos, gridWidth, gridHeight);
           var dimX = this.gameXDimToCanvasXDim(game.playerWidth / gridWidth);
           var dimY = this.gameYDimToCanvasYDim(game.playerHeight / gridHeight);
           var x = pos[0];
@@ -457,7 +488,7 @@ function (_Renderer) {
             if (n.step === client.bassStep) c = 'c4';
             this.fillColor(n.palette, c, layer);
             this.strokeColor(n.palette, 'bg', layer);
-            this.fillRect(x, y, dimX, dimY, false, layer);
+            this.fillRect(x, y, dimX, dimY, true, layer);
           } else if (sound === 'perc') {
             x += dimX * 0.5;
             y += dimY * 0.5;
@@ -483,6 +514,82 @@ function (_Renderer) {
             this.fillColor(n.palette, c, layer);
             this.strokeColor(n.palette, 'bg', layer);
             this.fillQuad(x1, y1, x2, y2, x3, y3, x4, y4, true, layer);
+          }
+
+          if (n.xPos < gridWidth) {
+            var _pos = this.cellToCanvasPosition(n.xPos + gridWidth * players.length, n.yPos, gridWidth, gridHeight);
+
+            var _x6 = _pos[0];
+            var _y3 = _pos[1];
+            var _c = 'bg';
+            var _layer = 1;
+
+            if (sound === 'melody') {
+              _x6 += dimX * 0.5;
+              _y3 += dimY * 0.5; //dimX *= this.mapToRange(n.animFrame, 0, animLengths.eggNote, gridWidth, 1);
+
+              dimY *= this.mapToRange(n.animFrame, 0, animLengths.eggNote, gridHeight, 1);
+              _c = 'c1';
+
+              if (n.dur === '2n') {
+                _c = 'c2';
+                dimX *= 2;
+                dimY *= 2;
+                _layer = 0;
+              }
+
+              if (n.step === client.melodyStep) _c = 'c4';
+              this.fillColor(n.palette, _c, _layer);
+              this.strokeColor(n.palette, 'bg', _layer);
+              this.fillEllipse(_x6, _y3, dimX / 2, dimY / 2, 0, 0, 2 * Math.PI, true, _layer);
+            } else if (sound === 'bass') {
+              _y3 = this.mapToRange(n.animFrame, 0, animLengths.eggNote, 0, _y3);
+              dimY *= this.mapToRange(n.animFrame, 0, animLengths.eggNote, gridHeight, 1);
+              _c = 'c2';
+
+              if (n.dur === '2n') {
+                _c = 'c3';
+                dimX *= gridWidth / 2;
+                _layer = 0;
+              }
+
+              if (n.step === client.bassStep) _c = 'c4';
+              this.fillColor(n.palette, _c, _layer);
+              this.strokeColor(n.palette, 'bg', _layer);
+              this.fillRect(_x6, _y3, dimX, dimY, true, _layer);
+            } else if (sound === 'perc') {
+              _x6 += dimX * 0.5;
+              _y3 += dimY * 0.5;
+              dimY *= this.mapToRange(n.animFrame, 0, animLengths.eggNote, gridHeight / 2, 1);
+
+              var _x7 = _x6 - dimX * 0.5;
+
+              var _y4 = _y3;
+              var _x8 = _x6;
+
+              var _y5 = _y3 - dimY * 0.5;
+
+              var _x9 = _x6 + dimX * 0.5;
+
+              var _y6 = _y3;
+              var _x10 = _x6;
+
+              var _y7 = _y3 + dimY * 0.5;
+
+              _c = 'c3';
+
+              if (n.dur === '2n') {
+                _c = 'c1';
+                _x8 += dimX;
+                _x10 -= dimX;
+                _layer = 0;
+              }
+
+              if (n.step === client.percStep) _c = 'c4';
+              this.fillColor(n.palette, _c, _layer);
+              this.strokeColor(n.palette, 'bg', _layer);
+              this.fillQuad(_x7, _y4, _x8, _y5, _x9, _y6, _x10, _y7, true, _layer);
+            }
           }
 
           if (n.animFrame < animLengths.eggNote) n.animFrame++;
@@ -511,25 +618,36 @@ function (_Renderer) {
   }, {
     key: "gamePositionToCanvasPosition",
     value: function gamePositionToCanvasPosition(gameX, gameY) {
+      var div = players.length;
+      if (client.performanceView) div = 1;
       var canvasX = Math.floor(this.mapToRange(gameX, leftViewBound, rightViewBound, 0, w));
-      var canvasY = Math.floor(this.mapToRange(gameY, 0, game.playerHeight, 0, h / players.length));
+      var canvasY = Math.floor(this.mapToRange(gameY, 0, game.playerHeight, 0, h / div));
       return [canvasX, canvasY];
     }
   }, {
     key: "gameXDimToCanvasXDim",
     value: function gameXDimToCanvasXDim(gameX) {
-      return Math.floor(this.mapToRange(gameX, 0, game.playerWidth, 0, w / players.length));
+      var div = players.length;
+      if (client.performanceView) div = 1;
+      return this.mapToRange(gameX, 0, game.playerWidth, 0, w / div);
     }
   }, {
     key: "gameYDimToCanvasYDim",
     value: function gameYDimToCanvasYDim(gameY) {
-      return Math.floor(this.mapToRange(gameY, 0, game.playerHeight, 0, h / players.length));
+      var div = players.length;
+      if (client.performanceView) div = 1;
+      return this.mapToRange(gameY, 0, game.playerHeight, 0, h / div);
+    }
+  }, {
+    key: "cellToCanvasPosition",
+    value: function cellToCanvasPosition(cellX, cellY, cellsXPerPlayer, cellsYPerPlayer) {
+      var gameX = game.playerWidth / cellsXPerPlayer * cellX;
+      var gameY = game.playerHeight / cellsYPerPlayer * cellY;
+      return this.gamePositionToCanvasPosition(gameX, gameY);
     }
   }, {
     key: "playerCellToCanvasPosition",
     value: function playerCellToCanvasPosition(p, cellX, cellY, cellsXPerPlayer, cellsYPerPlayer) {
-      //let gameX = game.cellWidth * (cellX + (p.number * game.playerCellWidth));
-      //let gameY = game.cellHeight * cellY;
       var gameX = game.playerWidth / cellsXPerPlayer * (cellX + p.number * cellsXPerPlayer);
       var gameY = game.playerHeight / cellsYPerPlayer * cellY;
       return this.gamePositionToCanvasPosition(gameX, gameY);

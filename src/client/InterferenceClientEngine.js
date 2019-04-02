@@ -1,4 +1,4 @@
-import { ClientEngine, KeyboardControls } from 'lance-gg';
+import { ClientEngine, KeyboardControls, TwoVector } from 'lance-gg';
 import SyncClient from '@ircam/sync/client';
 import InterferenceRenderer from '../client/InterferenceRenderer';
 import Note from '../common/Note';
@@ -15,12 +15,13 @@ export default class InterferenceClientEngine extends ClientEngine {
         super(gameEngine, options, InterferenceRenderer);
 
         this.syncClient = null;
+        this.transportSyncCount = 0;
         this.transport = Transport;
-        this.player = null;
         this.room = null;
+        this.player = null;
         this.players = [];
         this.eggs = [];
-        this.eggSounds = {};
+        this.eggSynths = {};
         this.performanceView = false;
         this.viewLock = false;
         this.controls = new KeyboardControls(this);
@@ -39,7 +40,8 @@ export default class InterferenceClientEngine extends ClientEngine {
         this.percStep = 0;
         this.sequences = {};
 
-        this.gameEngine.on('client__postStep', this.stepLogic.bind(this));
+        this.gameEngine.on('client__preStep', this.preStepLogic.bind(this));
+        this.gameEngine.on('client__postStep', this.postStepLogic.bind(this));
         this.gameEngine.on('updatePalette', () => { this.onUpdatePalette() });
         this.gameEngine.on('eggBounce', e => { this.onEggBounce(e) });
         this.gameEngine.on('playerHitEgg', e => { this.onPlayerHitEgg(e) });
@@ -49,7 +51,7 @@ export default class InterferenceClientEngine extends ClientEngine {
     executeLocalControl(controlString) {
         if (controlString === 'ToggleTransport') {
             if (this.transport.state !== 'started') {
-                this.transport.start();
+                this.transport.start('+0.1');
                 this.transport.seconds = this.syncClient.getSyncTime();
                 //this.sequencerLoop(0);
             }   
@@ -139,9 +141,9 @@ export default class InterferenceClientEngine extends ClientEngine {
     connect(options = {}) {
         return super.connect().then(() => {
             this.socket.on('assignedRoom', roomName => { 
-                this.room = roomName;
-                this.transport.start();
                 this.startSyncClient(this.socket);
+                this.room = roomName;
+                this.transport.start('+0.1');
             });
         });
     }
@@ -198,6 +200,7 @@ export default class InterferenceClientEngine extends ClientEngine {
             this.controls.bindKey('n', 'n');
             this.controls.bindKey('b', 'b'); // begin
             this.controls.bindKey('c', 'c'); // change color
+            this.controls.bindKey('space', 'space');
             this.controls.bindKey('q', 'q');
             this.controls.bindKey('w', 'w');
             this.controls.bindKey('e', 'e');
@@ -211,16 +214,28 @@ export default class InterferenceClientEngine extends ClientEngine {
     /// SOUND HANDLING AND CLIENT LOGIC
 
     /// STEP
+    preStepLogic() {
+        if (this.room == null) return; //if we've yet to be assigned a room, don't do this stuff
 
-    stepLogic() {
+        if (this.transport.state === 'started') {
+            if (this.transportSyncCount >= this.gameEngine.transportSyncInterval) {
+                this.transport.seconds = this.syncClient.getSyncTime();
+                this.transportSyncCount = 0;
+                //console.log(client.transport.state);
+            }
+            this.transportSyncCount++;
+        }
+    }
+
+
+    postStepLogic() {
         if (this.room == null) return; //if we've yet to be assigned a room, don't do this stuff
 
         this.player = this.gameEngine.world.queryObject({ playerId: this.gameEngine.playerId });
         if (this.player == null) return;
+        if (this.reverb == null && this.player.palette != 0) this.initSound(this.player);
 
-        if (this.player != null && this.reverb == null && this.player.palette != 0) this.initSound(this.player);
-
-        this.players = this.gameEngine.world.queryObjects({ instanceType: Performer });
+        this.players = this.gameEngine.playersByRoom[this.player._roomName];//this.gameEngine.world.queryObjects({ instanceType: Performer });
         for (let p of this.players) {
             if (p.gridString != null) p.grid = JSON.parse(p.gridString);
         }
@@ -238,7 +253,10 @@ export default class InterferenceClientEngine extends ClientEngine {
                     continue;
                 }
             }
-            note.step = note.xCell;
+            //console.log(note);
+            let pal = this.gameEngine.paletteAttributes[note.palette];
+            note.step = note.xPos % pal.gridWidth;
+            note.pitch = (pal.gridHeight - note.yPos) + (pal.scale.length * 4);
             if (this.sequences[note.ownerId] == null) this.sequences[note.ownerId] = {};
             if (this.sequences[note.ownerId].player == null) this.sequences[note.ownerId].player = this.gameEngine.world.queryObject({ playerId: note.ownerId });
             if (this.sequences[note.ownerId][note.sound] == null) this.sequences[note.ownerId][note.sound] = [];
@@ -249,9 +267,9 @@ export default class InterferenceClientEngine extends ClientEngine {
         if (stage === 'setup') {
 
         }
-        else if (stage === 'intro') {
+        else if (stage !== 'setup') {
             if (this.transport.state !== 'started') {// && this.prevStage !== stage) {
-                this.transport.start();
+                this.transport.start('+1');
                 this.transport.seconds = this.syncClient.getSyncTime();
             }
             if (this.melodySequence.state !== 'started') {
@@ -267,10 +285,10 @@ export default class InterferenceClientEngine extends ClientEngine {
                 this.percSequence.start(this.nextDiv('1m'));
             }
             for (let e of this.eggs) {
-                if (!Object.keys(this.eggSounds).includes(e.toString())) this.constructEggSounds(e);
+                if (!Object.keys(this.eggSynths).includes(e.toString())) this.constructEggSynths(e);
                 let vol = 1 - (0.5 * Math.abs(this.player.number - Math.floor(e.position.x / this.gameEngine.playerWidth)));
                 if (vol < 0) vol = 0;
-                this.eggSounds[e.toString()].drone.volume.rampTo(vol, 0.1);
+                this.eggSynths[e.toString()].drone.volume.rampTo(vol, 0.1);
             }
         }
         this.prevStage = stage;
@@ -285,9 +303,9 @@ export default class InterferenceClientEngine extends ClientEngine {
     }
 
     onEggBounce(e) {
-        if (!Object.keys(this.eggSounds).includes(e.toString())) this.constructEggSounds(e);
+        if (!Object.keys(this.eggSynths).includes(e.toString())) this.constructEggSynths(e);
         if (this.gameEngine.positionIsInPlayer(e.position.x, this.player)) {
-            this.eggSounds[e.toString()].bounce.triggerAttackRelease('8n');
+            this.eggSynths[e.toString()].bounce.triggerAttackRelease('8n');
         }
     }
 
@@ -298,36 +316,35 @@ export default class InterferenceClientEngine extends ClientEngine {
         p.ammo--;
         e.hp--;
 
+        let pal = this.gameEngine.paletteAttributes[p.palette];
         let shadowId = this.gameEngine.getNewShadowId();
         this.socket.emit('playerHitEgg', p.ammo, e.id, e.hp, e.position.x, e.position.y, e.sound, shadowId);
-        let pal = p.palette;
-        let pos = this.gameEngine.quantizedPosition(e.position.x, e.position.y, 
-            this.gameEngine.paletteAttributes[pal].gridWidth, this.gameEngine.paletteAttributes[pal].gridHeight);
-        let scale = this.gameEngine.paletteAttributes[pal].scale; //TODO should base this on palette of the cell?
-        let pitch = (this.gameEngine.paletteAttributes[pal].gridHeight - pos[1]) + (scale.length * 4);
-        let dur = this.gameEngine.paletteAttributes[pal][e.sound].subdivision;
+        let pos = this.gameEngine.quantizedPosition(e.position.x, e.position.y, pal.gridWidth, pal.gridHeight);
+        let scale = pal.scale; //TODO should base this on palette of the cell?
+        let pitch = (pal.gridHeight - pos[1]) + (scale.length * 4);
+        let dur = pal[e.sound].subdivision;
 
         let notes = this.gameEngine.queryNotes({            
             ownerId: p.playerId, 
-            palette: pal,
+            palette: p.grid[pos[0]%pal.gridWidth][pos[1]%pal.gridHeight],
             sound: e.sound, 
             pitch: pitch, 
             //vel: 1, 
-            xCell: pos[0], 
-            yCell: pos[1] 
+            xPos: pos[0],
+            yPos: pos[1]
         });
         if (notes.length) notes[0].dur = '2n';
         else {
             let newNote = new Note(this.gameEngine, null, { 
                 id: shadowId,
                 ownerId: p.playerId, 
-                palette: pal,
+                palette: p.grid[pos[0]%pal.gridWidth][pos[1]%pal.gridHeight],
                 sound: e.sound, 
                 pitch: pitch, 
                 dur: dur,
                 vel: 1, 
-                xCell: pos[0], 
-                yCell: pos[1] 
+                xPos: pos[0],
+                yPos: pos[1]
             });
             newNote.inputId = shadowId;
             this.gameEngine.addObjectToWorld(newNote);
@@ -335,13 +352,15 @@ export default class InterferenceClientEngine extends ClientEngine {
     }
 
     onEggBroke(e) {
+        if (this.eggSynths == null) return;
+        if (this.eggSynths[e.toString()] == null) return;
         console.log('egg broke');
-        this.eggSounds[e.toString()].drone.triggerRelease();
+        this.eggSynths[e.toString()].drone.triggerRelease();
         if (this.gameEngine.positionIsInPlayer(e.position.x, this.player)) {
-            this.eggSounds[e.toString()].break.start(this.nextDiv('4n'));
+            this.eggSynths[e.toString()].break.start(this.nextDiv('4n'));
             this.optionSelection['Digit1'] = 'tetrisChain';
+            }
         }
-    }
 
     //// SOUND
 
@@ -407,7 +426,8 @@ export default class InterferenceClientEngine extends ClientEngine {
         }, events, pal.perc.subdivision);
     }
 
-    constructEggSounds(e) {
+    constructEggSynths(e) {
+        if (this.player == null) return;
         let scale = this.gameEngine.paletteAttributes[this.player.palette].scale;
 
         if (e.sound === 'melody') {
@@ -422,7 +442,7 @@ export default class InterferenceClientEngine extends ClientEngine {
                     release: 0.1,
                 }
             });
-            this.eggSounds[e.toString()] = {
+            this.eggSynths[e.toString()] = {
                 drone: new NoiseSynth({
                     noise: {
                         type: 'pink',
@@ -464,7 +484,7 @@ export default class InterferenceClientEngine extends ClientEngine {
                     release: 0.1,
                 }
             });
-            this.eggSounds[e.toString()] = {
+            this.eggSynths[e.toString()] = {
                 drone: new NoiseSynth({
                     noise: {
                         type: 'pink',
@@ -490,7 +510,7 @@ export default class InterferenceClientEngine extends ClientEngine {
                 breakSynth: synth.toMaster(), 
                 break: new Sequence((time, note) => {
                     let scale = this.gameEngine.paletteAttributes[this.player.palette].scale;
-                    this.playNoteOnSynth(synth, note, scale, 6, '64n', time, 0.5);
+                    this.playNoteOnSynth(synth, note, scale, 6, '64n', time, 0.1);
                 }, [[0, 1, 2, 3, 1, 2, 3, 4], null, null, null], '4n')
             };
         }
@@ -506,7 +526,7 @@ export default class InterferenceClientEngine extends ClientEngine {
                     release: 0.1,
                 }
             });
-            this.eggSounds[e.toString()] = {
+            this.eggSynths[e.toString()] = {
                 drone: new NoiseSynth({
                     noise: {
                         type: 'pink',
@@ -537,11 +557,11 @@ export default class InterferenceClientEngine extends ClientEngine {
             };
         }
 
-        this.eggSounds[e.toString()].drone.connect(this.reverb);
-        this.eggSounds[e.toString()].bounce.connect(this.reverb);
-        this.eggSounds[e.toString()].breakSynth.connect(this.reverb);
-        this.eggSounds[e.toString()].drone.triggerAttack('+0', 0.1);
-        this.eggSounds[e.toString()].break.loop = true;
+        this.eggSynths[e.toString()].drone.connect(this.reverb);
+        this.eggSynths[e.toString()].bounce.connect(this.reverb);
+        this.eggSynths[e.toString()].breakSynth.connect(this.reverb);
+        this.eggSynths[e.toString()].drone.triggerAttack('+0', 0.01);
+        this.eggSynths[e.toString()].break.loop = true;
     }
 
     playNoteOnSynth(synth, note, scale, octaveShift, dur, time, vel) {

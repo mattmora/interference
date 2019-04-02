@@ -60,7 +60,6 @@ const animLengths = {
     eggNote: 10
 }
 
-let transportSyncCount = 0;
 let game = null;
 let client = null;
 let canvas = []
@@ -75,9 +74,6 @@ let playerId = 0;
 let thisPlayer = null;
 let sequences = null;
 let eggs = [];
-
-let prevNotestack = '';
-let prevRhythmstack = '';
 
 let bg = paletteTable[0].bg;
 let c1 = paletteTable[0].c1;
@@ -114,17 +110,17 @@ export default class InterferenceRenderer extends Renderer {
     draw(t, dt) {
         super.draw(t, dt);
 
+        if (client.room == null) return;
 
         time = client.syncClient.getSyncTime();
         playerId = game.playerId;
         thisPlayer = game.world.queryObject({ playerId });
+        players = game.world.queryObjects({ instanceType: Performer });
         if (client.performanceView) {
-            players = [thisPlayer];
-            leftViewBound = thisPlayer.position.x;
-            rightViewBound = thisPlayer.position.x + game.playerWidth;
+            leftViewBound = thisPlayer.xPos;
+            rightViewBound = leftViewBound + game.playerWidth;
         }
         else {
-            players = game.world.queryObjects({ instanceType: Performer });
             leftViewBound = 0;
             rightViewBound = players.length * game.playerWidth;
         }
@@ -136,15 +132,6 @@ export default class InterferenceRenderer extends Renderer {
         c2 = paletteTable[thisPlayer.palette].c2;
         c3 = paletteTable[thisPlayer.palette].c3;
         c4 = paletteTable[thisPlayer.palette].c4;
-
-        if (client.transport.state === 'started') {
-            if (transportSyncCount >= game.transportSyncInterval) {
-                client.transport.seconds = time;
-                transportSyncCount = 0;
-                //console.log(client.transport.state);
-            }
-            transportSyncCount++
-        }
         
         // Clear the canvas
         this.ctx.clearRect(0, 0, w, h);
@@ -171,6 +158,8 @@ export default class InterferenceRenderer extends Renderer {
             time = Number(time).toFixed(3);
             ctx[1].fillText(time, w * 0.05, h * 0.95);
             ctx[1].strokeText(time, w * 0.05, h * 0.95);
+            ctx[1].fillText(thisPlayer.number, w * 0.05, h * 0.85);
+            ctx[1].strokeText(thisPlayer.number, w * 0.05, h * 0.85);
             //ctx[1].fillText(client.transport.position, 50, 75);
         }
 
@@ -183,22 +172,50 @@ export default class InterferenceRenderer extends Renderer {
 
     drawPlayers() {
         let n = players.length;
+        if (client.performanceView) n = 1;
         for (let p of players) {
             let i = p.number - (leftViewBound / game.playerWidth);
-            let x = ((w / n) * i);
-            this.fillColor(p.palette, 'bg', 0);
-            this.fillRect(x, 0, w / n, h / n, false, 0)
+            let xDim = this.gameXDimToCanvasXDim(game.playerWidth / game.paletteAttributes[p.palette].gridWidth);
+            let yDim = this.gameYDimToCanvasYDim(game.playerHeight / game.paletteAttributes[p.palette].gridHeight);
+            for (let xIdx = 0; xIdx < p.grid.length; xIdx++) {
+                let x = ((w / n) * i) + (xIdx * xDim);
+                for (let yIdx = 0; yIdx < p.grid[xIdx].length; yIdx++) {
+                    let y = yIdx * yDim;
+                    this.fillColor(p.grid[xIdx][yIdx], 'bg', 0);
+                    this.fillRect(x, y, xDim, yDim, false, 0)
+                }
+            }
             this.fillColor('default', 'bg', 1);
             for (let a = 0; a < p.ammo; a++) {
+                let x = ((w / n) * i);
                 let x1 = x + ((a + 1) * ((w / n) / (p.ammo + 1)));
                 let y1 = (h / n) * 0.92;
                 this.fillTriangle(  x1, y1, 
                                     x1 - ((0.02 * w) / n), y1 + ((0.04 * h) / n),
                                     x1 + ((0.02 * w) / n), y1 + ((0.04 * h) / n), false, 1);
             }
+            if (p.number === 0) {
+                i = players.length - (leftViewBound / game.playerWidth);
+                for (let xIdx = 0; xIdx < p.grid.length; xIdx++) {
+                    let x = ((w / n) * i) + (xIdx * xDim);
+                    for (let yIdx = 0; yIdx < p.grid[xIdx].length; yIdx++) {
+                        let y = yIdx * yDim;
+                        this.fillColor(p.grid[xIdx][yIdx], 'bg', 0);
+                        this.fillRect(x, y, xDim, yDim, false, 0)
+                    }
+                }
+                this.fillColor('default', 'bg', 1);
+                for (let a = 0; a < p.ammo; a++) {
+                    let x = ((w / n) * i);
+                    let x1 = x + ((a + 1) * ((w / n) / (p.ammo + 1)));
+                    let y1 = (h / n) * 0.92;
+                    this.fillTriangle(  x1, y1, 
+                                        x1 - ((0.02 * w) / n), y1 + ((0.04 * h) / n),
+                                        x1 + ((0.02 * w) / n), y1 + ((0.04 * h) / n), false, 1);
+                }
+            }
         }
-        let i = thisPlayer.number;
-        let x = (w / n) * (i + 0.5);
+        let x = (w / n) * (thisPlayer.number + 0.5);
         ctx[0].fillStyle = 'white';
         this.fillTriangle(  x,                      (1.05 * h) / n, 
                             x - ((0.25 * w) / n),   (1.15 * h) / n,
@@ -209,28 +226,41 @@ export default class InterferenceRenderer extends Renderer {
         this.strokeWeight(2, 0);
         this.strokeWeight(2, 1);
         for (let ownerId of Object.keys(sequences)) {
-            if (sequences[ownerId].bass != null) for (let step of sequences[ownerId].bass) if (step != null) this.drawStep(sequences[ownerId].player, step, 'bass');
-            if (sequences[ownerId].melody != null) for (let step of sequences[ownerId].melody) if (step != null) this.drawStep(sequences[ownerId].player, step, 'melody'); 
-            if (sequences[ownerId].perc != null) for (let step of sequences[ownerId].perc) if (step != null) this.drawStep(sequences[ownerId].player, step, 'perc');                     
+            if (sequences[ownerId].bass != null) for (let step of sequences[ownerId].bass) if (step != null) this.drawStep(step, 'bass');
+            if (sequences[ownerId].melody != null) for (let step of sequences[ownerId].melody) if (step != null) this.drawStep(step, 'melody'); 
+            if (sequences[ownerId].perc != null) for (let step of sequences[ownerId].perc) if (step != null) this.drawStep(step, 'perc');                     
         }
     }
 
     drawEggs() {
-        let leftBound = leftViewBound - game.eggRadius;
-        let rightBound = rightViewBound + game.eggRadius;
         for (let e of eggs) {
-            if (leftBound < e.position.x && e.position.x < rightBound) {
-                let scale = this.mapToRange(e.animFrames.spawn, 0, animLengths.eggSpawn, 0.0, 1.0);
-                this.fillColor(0, 'c1', 1);
-                this.strokeColor(0, 'bg', 1);
-                //let gamePos = game.quantizedPosition(e.position.x, e.position.y, 32, 18);
-                //let pos = this.gamePositionToCanvasPosition(gamePos[0], gamePos[1]);
-                let pos = this.gamePositionToCanvasPosition(e.position.x, e.position.y);
-                let x = pos[0];
-                let y = pos[1];
-                let dimX = this.gameXDimToCanvasXDim(game.eggRadius) * scale;
-                let dimY = this.gameYDimToCanvasYDim(game.eggRadius) * scale;
-                this.strokeWeight((dimX + dimY) * 0.125, 1);
+            let scale = this.mapToRange(e.animFrames.spawn, 0, animLengths.eggSpawn, 0.0, 1.0);
+            this.fillColor(0, 'c1', 1);
+            this.strokeColor(0, 'bg', 1);
+            let dimX = this.gameXDimToCanvasXDim(game.eggRadius) * scale;
+            let dimY = this.gameYDimToCanvasYDim(game.eggRadius) * scale;
+            let pos = this.gamePositionToCanvasPosition(e.position.x, e.position.y);
+            let x = pos[0];
+            let y = pos[1];
+            this.strokeWeight((dimX + dimY) * 0.0625, 1);
+            if (e.hp > 0) {
+                if (e.sound === 'melody') {
+                    this.fillEllipse(x, y, dimX, dimY, 0, 0, 2*Math.PI, true, 1);
+                }
+                else if (e.sound === 'bass') {
+                    this.fillRect(x - dimX, y - dimY, dimX * 2, dimY * 2, true, 1);
+                }
+                else if (e.sound === 'perc') {
+                    this.fillQuad(  x - dimX, y, x, y - dimY, 
+                                    x + dimX, y, x, y + dimY, true, 1);
+                }
+            }
+            else this.drawBrokenEgg(e, x, y, dimX, dimY, true, 1);
+            if (e.position.x < game.playerWidth) {
+                pos = this.gamePositionToCanvasPosition(e.position.x + (players.length * game.playerWidth), e.position.y);
+                x = pos[0];
+                y = pos[1];
+                this.strokeWeight((dimX + dimY) * 0.0625, 1);
                 if (e.hp > 0) {
                     if (e.sound === 'melody') {
                         this.fillEllipse(x, y, dimX, dimY, 0, 0, 2*Math.PI, true, 1);
@@ -249,13 +279,12 @@ export default class InterferenceRenderer extends Renderer {
         }
     }
 
-    drawStep(p, step, sound) {
-        if (p == null) return;
+    drawStep(step, sound) {
         for (let n of step) {
             //console.log(p.animFrames[sound][step][n.pitch]);
             let gridWidth = game.paletteAttributes[n.palette].gridWidth;
             let gridHeight = game.paletteAttributes[n.palette].gridHeight;
-            let pos = this.cellToCanvasPosition(p, n.xCell, n.yCell, gridWidth, gridHeight);
+            let pos = this.cellToCanvasPosition(n.xPos, n.yPos, gridWidth, gridHeight);
             let dimX = this.gameXDimToCanvasXDim(game.playerWidth / gridWidth); 
             let dimY = this.gameYDimToCanvasYDim(game.playerHeight / gridHeight);
             let x = pos[0];
@@ -291,7 +320,7 @@ export default class InterferenceRenderer extends Renderer {
                 if (n.step === client.bassStep) c = 'c4';
                 this.fillColor(n.palette, c, layer);
                 this.strokeColor(n.palette, 'bg', layer);
-                this.fillRect(x, y, dimX, dimY, false, layer);
+                this.fillRect(x, y, dimX, dimY, true, layer);
             }
             else if (sound === 'perc') {
                 x += dimX * 0.5;
@@ -317,6 +346,68 @@ export default class InterferenceRenderer extends Renderer {
                 this.strokeColor(n.palette, 'bg', layer);
                 this.fillQuad(x1, y1, x2, y2, x3, y3, x4, y4, true, layer);
             }
+            if (n.xPos < gridWidth) {
+                let pos = this.cellToCanvasPosition(n.xPos + (gridWidth * players.length), n.yPos, gridWidth, gridHeight);
+                let x = pos[0];
+                let y = pos[1];
+                let c = 'bg';
+                let layer = 1;
+                if (sound === 'melody') {
+                    x += dimX * 0.5;
+                    y += dimY * 0.5;
+                    //dimX *= this.mapToRange(n.animFrame, 0, animLengths.eggNote, gridWidth, 1);
+                    dimY *= this.mapToRange(n.animFrame, 0, animLengths.eggNote, gridHeight, 1);
+                    c = 'c1';
+                    if (n.dur === '2n') { 
+                        c = 'c2'; 
+                        dimX *= 2;
+                        dimY *= 2;
+                        layer = 0; 
+                    }
+                    if (n.step === client.melodyStep) c = 'c4';
+                    this.fillColor(n.palette, c, layer);
+                    this.strokeColor(n.palette, 'bg', layer);
+                    this.fillEllipse(x, y, dimX / 2, dimY / 2, 0, 0, 2*Math.PI, true, layer);
+                }
+                else if (sound === 'bass') {
+                    y = this.mapToRange(n.animFrame, 0, animLengths.eggNote, 0, y);
+                    dimY *= this.mapToRange(n.animFrame, 0, animLengths.eggNote, gridHeight, 1);
+                    c = 'c2';
+                    if (n.dur === '2n') { 
+                        c = 'c3'; 
+                        dimX *= (gridWidth / 2); 
+                        layer = 0; 
+                    }
+                    if (n.step === client.bassStep) c = 'c4';
+                    this.fillColor(n.palette, c, layer);
+                    this.strokeColor(n.palette, 'bg', layer);
+                    this.fillRect(x, y, dimX, dimY, true, layer);
+                }
+                else if (sound === 'perc') {
+                    x += dimX * 0.5;
+                    y += dimY * 0.5;
+                    dimY *= this.mapToRange(n.animFrame, 0, animLengths.eggNote, gridHeight / 2, 1);
+                    let x1 = x - (dimX * 0.5);
+                    let y1 = y;
+                    let x2 = x;
+                    let y2 = y - (dimY * 0.5);
+                    let x3 = x + (dimX * 0.5);
+                    let y3 = y;
+                    let x4 = x;
+                    let y4 = y + (dimY * 0.5);
+                    c = 'c3'
+                    if (n.dur === '2n') { 
+                        c = 'c1'; 
+                        x2 += dimX;
+                        x4 -= dimX
+                        layer = 0;             
+                    }
+                    if (n.step === client.percStep) c = 'c4';
+                    this.fillColor(n.palette, c, layer);
+                    this.strokeColor(n.palette, 'bg', layer);
+                    this.fillQuad(x1, y1, x2, y2, x3, y3, x4, y4, true, layer);
+                }
+            }
 
             if (n.animFrame < animLengths.eggNote) n.animFrame++;
         }
@@ -328,17 +419,23 @@ export default class InterferenceRenderer extends Renderer {
     }
 
     gamePositionToCanvasPosition(gameX, gameY) {
+        let div = players.length;
+        if (client.performanceView) div = 1;
         let canvasX = Math.floor(this.mapToRange(gameX, leftViewBound, rightViewBound, 0, w));
-        let canvasY = Math.floor(this.mapToRange(gameY, 0, game.playerHeight, 0, h / players.length)); 
+        let canvasY = Math.floor(this.mapToRange(gameY, 0, game.playerHeight, 0, h / div)); 
         return [canvasX, canvasY];
     }
 
     gameXDimToCanvasXDim(gameX) {
-        return Math.floor(this.mapToRange(gameX, 0, game.playerWidth, 0, w / players.length));
+        let div = players.length;
+        if (client.performanceView) div = 1;
+        return this.mapToRange(gameX, 0, game.playerWidth, 0, w / div);
     }
 
     gameYDimToCanvasYDim(gameY) {
-        return Math.floor(this.mapToRange(gameY, 0, game.playerHeight, 0, h / players.length));
+        let div = players.length;
+        if (client.performanceView) div = 1;
+        return this.mapToRange(gameY, 0, game.playerHeight, 0, h / div);
     }
 
     cellToCanvasPosition(cellX, cellY, cellsXPerPlayer, cellsYPerPlayer) {

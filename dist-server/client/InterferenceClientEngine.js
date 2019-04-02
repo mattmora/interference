@@ -57,12 +57,13 @@ function (_ClientEngine) {
 
     _this = _possibleConstructorReturn(this, _getPrototypeOf(InterferenceClientEngine).call(this, gameEngine, options, _InterferenceRenderer.default));
     _this.syncClient = null;
+    _this.transportSyncCount = 0;
     _this.transport = _tone.Transport;
-    _this.player = null;
     _this.room = null;
+    _this.player = null;
     _this.players = [];
     _this.eggs = [];
-    _this.eggSounds = {};
+    _this.eggSynths = {};
     _this.performanceView = false;
     _this.viewLock = false;
     _this.controls = new _lanceGg.KeyboardControls(_assertThisInitialized(_this));
@@ -81,7 +82,9 @@ function (_ClientEngine) {
     _this.percStep = 0;
     _this.sequences = {};
 
-    _this.gameEngine.on('client__postStep', _this.stepLogic.bind(_assertThisInitialized(_this)));
+    _this.gameEngine.on('client__preStep', _this.preStepLogic.bind(_assertThisInitialized(_this)));
+
+    _this.gameEngine.on('client__postStep', _this.postStepLogic.bind(_assertThisInitialized(_this)));
 
     _this.gameEngine.on('updatePalette', function () {
       _this.onUpdatePalette();
@@ -107,7 +110,7 @@ function (_ClientEngine) {
     value: function executeLocalControl(controlString) {
       if (controlString === 'ToggleTransport') {
         if (this.transport.state !== 'started') {
-          this.transport.start();
+          this.transport.start('+0.1');
           this.transport.seconds = this.syncClient.getSyncTime(); //this.sequencerLoop(0);
         } else {
           this.transport.pause();
@@ -201,11 +204,11 @@ function (_ClientEngine) {
       var options = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
       return _get(_getPrototypeOf(InterferenceClientEngine.prototype), "connect", this).call(this).then(function () {
         _this3.socket.on('assignedRoom', function (roomName) {
+          _this3.startSyncClient(_this3.socket);
+
           _this3.room = roomName;
 
-          _this3.transport.start();
-
-          _this3.startSyncClient(_this3.socket);
+          _this3.transport.start('+0.1');
         });
       });
     }
@@ -265,27 +268,44 @@ function (_ClientEngine) {
 
         this.controls.bindKey('c', 'c'); // change color
 
+        this.controls.bindKey('space', 'space');
         this.controls.bindKey('q', 'q');
         this.controls.bindKey('w', 'w');
         this.controls.bindKey('e', 'e');
+        this.controls.bindKey('a', 'a');
+        this.controls.bindKey('s', 's');
+        this.controls.bindKey('d', 'd');
       }
     } ///////////////////////////////////////////////////////////////////////////////////////////
     /// SOUND HANDLING AND CLIENT LOGIC
     /// STEP
 
   }, {
-    key: "stepLogic",
-    value: function stepLogic() {
+    key: "preStepLogic",
+    value: function preStepLogic() {
+      if (this.room == null) return; //if we've yet to be assigned a room, don't do this stuff
+
+      if (this.transport.state === 'started') {
+        if (this.transportSyncCount >= this.gameEngine.transportSyncInterval) {
+          this.transport.seconds = this.syncClient.getSyncTime();
+          this.transportSyncCount = 0; //console.log(client.transport.state);
+        }
+
+        this.transportSyncCount++;
+      }
+    }
+  }, {
+    key: "postStepLogic",
+    value: function postStepLogic() {
       if (this.room == null) return; //if we've yet to be assigned a room, don't do this stuff
 
       this.player = this.gameEngine.world.queryObject({
         playerId: this.gameEngine.playerId
       });
       if (this.player == null) return;
-      if (this.player != null && this.reverb == null && this.player.palette != 0) this.initSound(this.player);
-      this.players = this.gameEngine.world.queryObjects({
-        instanceType: _Performer.default
-      });
+      if (this.reverb == null && this.player.palette != 0) this.initSound(this.player);
+      this.players = this.gameEngine.playersByRoom[this.player._roomName]; //this.gameEngine.world.queryObjects({ instanceType: Performer });
+
       var _iteratorNormalCompletion = true;
       var _didIteratorError = false;
       var _iteratorError = undefined;
@@ -332,9 +352,12 @@ function (_ClientEngine) {
               serverCopy.animFrame = note.animFrame;
               continue;
             }
-          }
+          } //console.log(note);
 
-          note.step = note.xCell;
+
+          var pal = this.gameEngine.paletteAttributes[note.palette];
+          note.step = note.xPos % pal.gridWidth;
+          note.pitch = pal.gridHeight - note.yPos + pal.scale.length * 4;
           if (this.sequences[note.ownerId] == null) this.sequences[note.ownerId] = {};
           if (this.sequences[note.ownerId].player == null) this.sequences[note.ownerId].player = this.gameEngine.world.queryObject({
             playerId: note.ownerId
@@ -358,10 +381,10 @@ function (_ClientEngine) {
         }
       }
 
-      if (stage === 'setup') {} else if (stage === 'intro') {
+      if (stage === 'setup') {} else if (stage !== 'setup') {
         if (this.transport.state !== 'started') {
           // && this.prevStage !== stage) {
-          this.transport.start();
+          this.transport.start('+1');
           this.transport.seconds = this.syncClient.getSyncTime();
         }
 
@@ -387,10 +410,10 @@ function (_ClientEngine) {
         try {
           for (var _iterator3 = this.eggs[Symbol.iterator](), _step3; !(_iteratorNormalCompletion3 = (_step3 = _iterator3.next()).done); _iteratorNormalCompletion3 = true) {
             var e = _step3.value;
-            if (!Object.keys(this.eggSounds).includes(e.toString())) this.constructEggSounds(e);
+            if (!Object.keys(this.eggSynths).includes(e.id)) this.constructEggSynths(e);
             var vol = 1 - 0.5 * Math.abs(this.player.number - Math.floor(e.position.x / this.gameEngine.playerWidth));
             if (vol < 0) vol = 0;
-            this.eggSounds[e.toString()].drone.volume.rampTo(vol, 0.1);
+            this.eggSynths[e.id].drone.volume.rampTo(vol, 0.1);
           }
         } catch (err) {
           _didIteratorError3 = true;
@@ -421,10 +444,10 @@ function (_ClientEngine) {
   }, {
     key: "onEggBounce",
     value: function onEggBounce(e) {
-      if (!Object.keys(this.eggSounds).includes(e.toString())) this.constructEggSounds(e);
+      if (!Object.keys(this.eggSynths).includes(e.id)) this.constructEggSynths(e);
 
       if (this.gameEngine.positionIsInPlayer(e.position.x, this.player)) {
-        this.eggSounds[e.toString()].bounce.triggerAttackRelease('8n');
+        this.eggSynths[e.id].bounce.triggerAttackRelease('8n');
       }
     }
   }, {
@@ -435,34 +458,34 @@ function (_ClientEngine) {
       if (p.ammo <= 0) return;
       p.ammo--;
       e.hp--;
+      var pal = this.gameEngine.paletteAttributes[p.palette];
       var shadowId = this.gameEngine.getNewShadowId();
       this.socket.emit('playerHitEgg', p.ammo, e.id, e.hp, e.position.x, e.position.y, e.sound, shadowId);
-      var pal = p.palette;
-      var pos = this.gameEngine.playerQuantizedPosition(p, e.position.x, e.position.y, this.gameEngine.paletteAttributes[pal].gridWidth, this.gameEngine.paletteAttributes[pal].gridHeight);
-      var scale = this.gameEngine.paletteAttributes[pal].scale; //TODO should base this on palette of the cell?
+      var pos = this.gameEngine.quantizedPosition(e.position.x, e.position.y, pal.gridWidth, pal.gridHeight);
+      var scale = pal.scale; //TODO should base this on palette of the cell?
 
-      var pitch = this.gameEngine.paletteAttributes[pal].gridHeight - pos[1] + scale.length * 4;
-      var dur = this.gameEngine.paletteAttributes[pal][e.sound].subdivision;
+      var pitch = pal.gridHeight - pos[1] + scale.length * 4;
+      var dur = pal[e.sound].subdivision;
       var notes = this.gameEngine.queryNotes({
         ownerId: p.playerId,
-        palette: pal,
+        palette: p.grid[pos[0] % pal.gridWidth][pos[1] % pal.gridHeight],
         sound: e.sound,
         pitch: pitch,
         //vel: 1, 
-        xCell: pos[0],
-        yCell: pos[1]
+        xPos: pos[0],
+        yPos: pos[1]
       });
       if (notes.length) notes[0].dur = '2n';else {
         var newNote = new _Note.default(this.gameEngine, null, {
           id: shadowId,
           ownerId: p.playerId,
-          palette: pal,
+          palette: p.grid[pos[0] % pal.gridWidth][pos[1] % pal.gridHeight],
           sound: e.sound,
           pitch: pitch,
           dur: dur,
           vel: 1,
-          xCell: pos[0],
-          yCell: pos[1]
+          xPos: pos[0],
+          yPos: pos[1]
         });
         newNote.inputId = shadowId;
         this.gameEngine.addObjectToWorld(newNote);
@@ -471,11 +494,13 @@ function (_ClientEngine) {
   }, {
     key: "onEggBroke",
     value: function onEggBroke(e) {
+      if (this.eggSynths == null) return;
+      if (this.eggSynths[e.id] == null) return;
       console.log('egg broke');
-      this.eggSounds[e.toString()].drone.triggerRelease();
+      this.eggSynths[e.id].drone.triggerRelease();
 
       if (this.gameEngine.positionIsInPlayer(e.position.x, this.player)) {
-        this.eggSounds[e.toString()].break.start(this.nextDiv('4n'));
+        this.eggSynths[e.id].break.start(this.nextDiv('4n'));
         this.optionSelection['Digit1'] = 'tetrisChain';
       }
     } //// SOUND
@@ -538,10 +563,11 @@ function (_ClientEngine) {
       }, events, pal.perc.subdivision);
     }
   }, {
-    key: "constructEggSounds",
-    value: function constructEggSounds(e) {
+    key: "constructEggSynths",
+    value: function constructEggSynths(e) {
       var _this6 = this;
 
+      if (this.player == null) return;
       var scale = this.gameEngine.paletteAttributes[this.player.palette].scale;
 
       if (e.sound === 'melody') {
@@ -556,7 +582,7 @@ function (_ClientEngine) {
             release: 0.1
           }
         });
-        this.eggSounds[e.toString()] = {
+        this.eggSynths[e.id] = {
           drone: new _tone.NoiseSynth({
             noise: {
               type: 'pink'
@@ -599,7 +625,7 @@ function (_ClientEngine) {
           }
         });
 
-        this.eggSounds[e.toString()] = {
+        this.eggSynths[e.id] = {
           drone: new _tone.NoiseSynth({
             noise: {
               type: 'pink'
@@ -626,7 +652,7 @@ function (_ClientEngine) {
           break: new _tone.Sequence(function (time, note) {
             var scale = _this6.gameEngine.paletteAttributes[_this6.player.palette].scale;
 
-            _this6.playNoteOnSynth(_synth, note, scale, 6, '64n', time, 0.5);
+            _this6.playNoteOnSynth(_synth, note, scale, 6, '64n', time, 0.1);
           }, [[0, 1, 2, 3, 1, 2, 3, 4], null, null, null], '4n')
         };
       } else if (e.sound === 'perc') {
@@ -642,7 +668,7 @@ function (_ClientEngine) {
           }
         });
 
-        this.eggSounds[e.toString()] = {
+        this.eggSynths[e.id] = {
           drone: new _tone.NoiseSynth({
             noise: {
               type: 'pink'
@@ -674,11 +700,11 @@ function (_ClientEngine) {
         };
       }
 
-      this.eggSounds[e.toString()].drone.connect(this.reverb);
-      this.eggSounds[e.toString()].bounce.connect(this.reverb);
-      this.eggSounds[e.toString()].breakSynth.connect(this.reverb);
-      this.eggSounds[e.toString()].drone.triggerAttack('+0', 0.1);
-      this.eggSounds[e.toString()].break.loop = true;
+      this.eggSynths[e.id].drone.connect(this.reverb);
+      this.eggSynths[e.id].bounce.connect(this.reverb);
+      this.eggSynths[e.id].breakSynth.connect(this.reverb);
+      this.eggSynths[e.id].drone.triggerAttack('+0', 0.01);
+      this.eggSynths[e.id].break.loop = true;
     }
   }, {
     key: "playNoteOnSynth",

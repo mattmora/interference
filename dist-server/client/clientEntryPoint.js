@@ -21,7 +21,7 @@ var defaults = {
   syncOptions: {
     sync: qsOptions.sync || 'extrapolate',
     localObjBending: 0.0,
-    remoteObjBending: 0.6,
+    remoteObjBending: 0.0,
     bendingIncrements: 6
   }
 };

@@ -11,8 +11,8 @@ export default class Note extends DynamicObject {
             pitch: { type: BaseTypes.TYPES.INT16 },
             dur: { type: BaseTypes.TYPES.STRING },
             vel: { type: BaseTypes.TYPES.INT16 },
-            xCell: { type: BaseTypes.TYPES.INT16 },
-            yCell: { type: BaseTypes.TYPES.INT16 }
+            xPos: { type: BaseTypes.TYPES.INT16 },
+            yPos: { type: BaseTypes.TYPES.INT16 }
         }, super.netScheme);
     }
 
@@ -25,9 +25,30 @@ export default class Note extends DynamicObject {
         this.pitch = (props && props.pitch) ? props.pitch : 0;
         this.dur = (props && props.dur) ? props.dur : '1n';
         this.vel = (props && props.dur) ? props.vel : 1;
-        this.xCell = (props && props.xCell) ? props.xCell : -1;
-        this.yCell = (props && props.yCell) ? props.yCell : -1;
+        this.xPos = (props && props.xPos) ? props.xPos : -1;
+        this.yPos = (props && props.yPos) ? props.yPos : -1;
         this.animFrame = (props && props.animFrame) ? props.animFrame : 0;
+    }
+
+    move(xStep, yStep) {
+        this.xPos += xStep;
+        this.yPos += yStep;
+        let rightBound = this.gameEngine.playersByRoom[this._roomName].length * this.gameEngine.playerWidth; //TODO should be width in cells
+        let leftBound = this.gameEngine.playerHeight;
+        if (this.xPos >= rightBound) { this.xPos -= rightBound; }
+        if (this.yPos >= leftBound) { this.yPos -= leftBound; }
+        if (this.xPos < 0) { this.xPos += rightBound; }
+        if (this.yPos < 0) { this.yPos += leftBound; }
+    }
+
+    paint() {
+        let pal = this.gameEngine.paletteAttributes[this.palette];
+        let n = Math.floor(this.xPos / pal.gridWidth);
+        for (let p of this.gameEngine.queryPlayers({ number: n })) {
+            p.grid = JSON.parse(p.gridString);
+            p.grid[this.xPos % pal.gridWidth][this.yPos % pal.gridHeight] = this.palette;
+            p.gridString = JSON.stringify(p.grid);
+        }
     }
 
     syncTo(other) {
