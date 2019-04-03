@@ -103,7 +103,7 @@ function (_GameEngine) {
           length: 16
         },
         bass: {
-          subdivision: '16n',
+          subdivision: '8n',
           length: 16
         },
         perc: {
@@ -120,7 +120,7 @@ function (_GameEngine) {
           length: 16
         },
         bass: {
-          subdivision: '16n',
+          subdivision: '8n',
           length: 16
         },
         perc: {
@@ -137,7 +137,7 @@ function (_GameEngine) {
           length: 16
         },
         bass: {
-          subdivision: '16n',
+          subdivision: '8n',
           length: 16
         },
         perc: {
@@ -154,7 +154,7 @@ function (_GameEngine) {
           length: 16
         },
         bass: {
-          subdivision: '16n',
+          subdivision: '8n',
           length: 16
         },
         perc: {
@@ -171,7 +171,7 @@ function (_GameEngine) {
           length: 16
         },
         bass: {
-          subdivision: '16n',
+          subdivision: '8n',
           length: 16
         },
         perc: {
@@ -187,7 +187,7 @@ function (_GameEngine) {
       playersByRoom: {},
       eggsByRoom: {},
       rightBoundByRoom: {},
-      eggSoundsToUse: _this.eggSounds
+      eggSoundsToUse: _this.eggSounds.slice()
     });
 
     _this.on('preStep', _this.preStepLogic.bind(_assertThisInitialized(_this)));

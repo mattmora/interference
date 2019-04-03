@@ -382,7 +382,7 @@ function (_ServerEngine) {
       var rand = Math.floor(Math.random() * this.gameEngine.eggSoundsToUse.length);
       var sound = this.gameEngine.eggSoundsToUse[rand];
       this.gameEngine.eggSoundsToUse.splice(rand, 1);
-      if (this.gameEngine.eggSoundsToUse.length === 0) this.gameEngine.eggSoundsToUse = this.gameEngine.eggSounds;
+      if (this.gameEngine.eggSoundsToUse.length === 0) this.gameEngine.eggSoundsToUse = this.gameEngine.eggSounds.slice();
       this.addEgg(sound, r);
     }
   }, {

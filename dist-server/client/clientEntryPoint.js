@@ -20,9 +20,9 @@ var defaults = {
   scheduler: 'render-schedule',
   syncOptions: {
     sync: qsOptions.sync || 'extrapolate',
-    localObjBending: 0.0,
-    remoteObjBending: 0.0,
-    bendingIncrements: 6
+    localObjBending: 1.0,
+    remoteObjBending: 1.0,
+    bendingIncrements: 1
   }
 };
 var options = Object.assign(defaults, qsOptions); // create a client engine and a game engine

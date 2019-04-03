@@ -53,7 +53,7 @@ export default class InterferenceGameEngine extends GameEngine {
                         length: 16
                     },
                     bass: {
-                        subdivision: '16n',
+                        subdivision: '8n',
                         length: 16
                     },
                     perc: {
@@ -70,7 +70,7 @@ export default class InterferenceGameEngine extends GameEngine {
                         length: 16
                     },
                     bass: {
-                        subdivision: '16n',
+                        subdivision: '8n',
                         length: 16
                     },
                     perc: {
@@ -87,7 +87,7 @@ export default class InterferenceGameEngine extends GameEngine {
                         length: 16
                     },
                     bass: {
-                        subdivision: '16n',
+                        subdivision: '8n',
                         length: 16
                     },
                     perc: {
@@ -104,7 +104,7 @@ export default class InterferenceGameEngine extends GameEngine {
                         length: 16
                     },
                     bass: {
-                        subdivision: '16n',
+                        subdivision: '8n',
                         length: 16
                     },
                     perc: {
@@ -121,7 +121,7 @@ export default class InterferenceGameEngine extends GameEngine {
                         length: 16
                     },
                     bass: {
-                        subdivision: '16n',
+                        subdivision: '8n',
                         length: 16
                     },
                     perc: {
@@ -136,7 +136,7 @@ export default class InterferenceGameEngine extends GameEngine {
         Object.assign(this, {
             shadowIdCount: this.options.clientIDSpace, 
             rooms: [], playersByRoom: {}, eggsByRoom: {}, rightBoundByRoom: {},
-            eggSoundsToUse: this.eggSounds
+            eggSoundsToUse: this.eggSounds.slice()
         });
 
         this.on('preStep', this.preStepLogic.bind(this));
