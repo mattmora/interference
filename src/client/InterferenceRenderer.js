@@ -118,7 +118,7 @@ export default class InterferenceRenderer extends Renderer {
         players = game.world.queryObjects({ instanceType: Performer });
         if (client.performanceView) {
             leftViewBound = thisPlayer.xPos;
-            rightViewBound = leftViewBound + game.playerWidth;
+            rightViewBound = (leftViewBound + game.playerWidth) % (players.length * game.playerWidth);
         }
         else {
             leftViewBound = 0;
@@ -174,44 +174,21 @@ export default class InterferenceRenderer extends Renderer {
         let n = players.length;
         if (client.performanceView) n = 1;
         for (let p of players) {
-            let i = p.number - (leftViewBound / game.playerWidth);
-            let xDim = this.gameXDimToCanvasXDim(game.playerWidth / game.paletteAttributes[p.palette].gridWidth);
-            let yDim = this.gameYDimToCanvasYDim(game.playerHeight / game.paletteAttributes[p.palette].gridHeight);
-            for (let xIdx = 0; xIdx < p.grid.length; xIdx++) {
-                let x = ((w / n) * i) + (xIdx * xDim);
-                for (let yIdx = 0; yIdx < p.grid[xIdx].length; yIdx++) {
-                    let y = yIdx * yDim;
-                    this.fillColor(p.grid[xIdx][yIdx], 'bg', 0);
-                    this.fillRect(x, y, xDim, yDim, false, 0)
-                }
+            if (players.length === 1) {
+                this.drawPlayer(p, false);
+                this.drawPlayer(p, true);
             }
-            this.fillColor('default', 'bg', 1);
-            for (let a = 0; a < p.ammo; a++) {
-                let x = ((w / n) * i);
-                let x1 = x + ((a + 1) * ((w / n) / (p.ammo + 1)));
-                let y1 = (h / n) * 0.92;
-                this.fillTriangle(  x1, y1, 
-                                    x1 - ((0.02 * w) / n), y1 + ((0.04 * h) / n),
-                                    x1 + ((0.02 * w) / n), y1 + ((0.04 * h) / n), false, 1);
-            }
-            if (p.number === 0) {
-                i = players.length - (leftViewBound / game.playerWidth);
-                for (let xIdx = 0; xIdx < p.grid.length; xIdx++) {
-                    let x = ((w / n) * i) + (xIdx * xDim);
-                    for (let yIdx = 0; yIdx < p.grid[xIdx].length; yIdx++) {
-                        let y = yIdx * yDim;
-                        this.fillColor(p.grid[xIdx][yIdx], 'bg', 0);
-                        this.fillRect(x, y, xDim, yDim, false, 0)
-                    }
+            else {
+                let inView = true;
+                let wrap = false;
+                if (leftViewBound < rightViewBound) inView = (leftViewBound - game.playerWidth < p.number * game.playerWidth) && 
+                                                             (p.number * game.playerWidth < rightViewBound + game.playerWidth);
+                else {
+                    inView = (leftViewBound - game.playerWidth < p.number * game.playerWidth) || (p.number * game.playerWidth < rightViewBound + game.playerWidth);
+                    wrap = (p.number * game.playerWidth < rightViewBound);
                 }
-                this.fillColor('default', 'bg', 1);
-                for (let a = 0; a < p.ammo; a++) {
-                    let x = ((w / n) * i);
-                    let x1 = x + ((a + 1) * ((w / n) / (p.ammo + 1)));
-                    let y1 = (h / n) * 0.92;
-                    this.fillTriangle(  x1, y1, 
-                                        x1 - ((0.02 * w) / n), y1 + ((0.04 * h) / n),
-                                        x1 + ((0.02 * w) / n), y1 + ((0.04 * h) / n), false, 1);
+                if (inView) {
+                    this.drawPlayer(p, wrap)
                 }
             }
         }
@@ -222,13 +199,39 @@ export default class InterferenceRenderer extends Renderer {
                             x + ((0.25 * w) / n),   (1.15 * h) / n, false, 0 );   
     }
 
+    drawPlayer(p, wrap) {
+        let n = players.length;
+        if (client.performanceView) n = 1;
+        let i = p.number - (leftViewBound / game.playerWidth);
+        if (wrap) i += players.length;
+        let xDim = this.gameXDimToCanvasXDim(game.playerWidth / game.paletteAttributes[p.palette].gridWidth);
+        let yDim = this.gameYDimToCanvasYDim(game.playerHeight / game.paletteAttributes[p.palette].gridHeight);
+        for (let xIdx = 0; xIdx < p.grid.length; xIdx++) {
+            let x = ((w / n) * i) + (xIdx * xDim);
+            for (let yIdx = 0; yIdx < p.grid[xIdx].length; yIdx++) {
+                let y = yIdx * yDim;
+                this.fillColor(p.grid[xIdx][yIdx], 'bg', 0);
+                this.fillRect(x, y, xDim, yDim, false, 0)
+            }
+        }
+        this.fillColor('default', 'bg', 1);
+        for (let a = 0; a < p.ammo; a++) {
+            let x = ((w / n) * i);
+            let x1 = x + ((a + 1) * ((w / n) / (p.ammo + 1)));
+            let y1 = (h / n) * 0.92;
+            this.fillTriangle(  x1, y1, 
+                                x1 - ((0.02 * w) / n), y1 + ((0.04 * h) / n),
+                                x1 + ((0.02 * w) / n), y1 + ((0.04 * h) / n), false, 1);
+        }
+    }
+
     drawSequences() {
         this.strokeWeight(2, 0);
         this.strokeWeight(2, 1);
         for (let ownerId of Object.keys(sequences)) {
-            if (sequences[ownerId].bass != null) for (let step of sequences[ownerId].bass) if (step != null) this.drawStep(step, 'bass');
-            if (sequences[ownerId].melody != null) for (let step of sequences[ownerId].melody) if (step != null) this.drawStep(step, 'melody'); 
-            if (sequences[ownerId].perc != null) for (let step of sequences[ownerId].perc) if (step != null) this.drawStep(step, 'perc');                     
+            if (sequences[ownerId].bass != null) for (let step of sequences[ownerId].bass) if (step != null) this.drawStep(step);
+            if (sequences[ownerId].melody != null) for (let step of sequences[ownerId].melody) if (step != null) this.drawStep(step); 
+            if (sequences[ownerId].perc != null) for (let step of sequences[ownerId].perc) if (step != null) this.drawStep(step);                     
         }
     }
 
@@ -279,138 +282,93 @@ export default class InterferenceRenderer extends Renderer {
         }
     }
 
-    drawStep(step, sound) {
+    drawStep(step) {
         for (let n of step) {
-            //console.log(p.animFrames[sound][step][n.pitch]);
-            let gridWidth = game.paletteAttributes[n.palette].gridWidth;
-            let gridHeight = game.paletteAttributes[n.palette].gridHeight;
-            let pos = this.cellToCanvasPosition(n.xPos, n.yPos, gridWidth, gridHeight);
-            let dimX = this.gameXDimToCanvasXDim(game.playerWidth / gridWidth); 
-            let dimY = this.gameYDimToCanvasYDim(game.playerHeight / gridHeight);
-            let x = pos[0];
-            let y = pos[1];
-            let c = 'bg';
-            let layer = 1;
-            if (sound === 'melody') {
-                x += dimX * 0.5;
-                y += dimY * 0.5;
-                //dimX *= this.mapToRange(n.animFrame, 0, animLengths.eggNote, gridWidth, 1);
-                dimY *= this.mapToRange(n.animFrame, 0, animLengths.eggNote, gridHeight, 1);
-                c = 'c1';
-                if (n.dur === '2n') { 
-                    c = 'c2'; 
-                    dimX *= 2;
-                    dimY *= 2;
-                    layer = 0; 
-                }
-                if (n.step === client.melodyStep) c = 'c4';
-                this.fillColor(n.palette, c, layer);
-                this.strokeColor(n.palette, 'bg', layer);
-                this.fillEllipse(x, y, dimX / 2, dimY / 2, 0, 0, 2*Math.PI, true, layer);
+            if (players.length === 1) {
+                this.drawNote(n, false);
+                this.drawNote(n, true);
             }
-            else if (sound === 'bass') {
-                y = this.mapToRange(n.animFrame, 0, animLengths.eggNote, 0, y);
-                dimY *= this.mapToRange(n.animFrame, 0, animLengths.eggNote, gridHeight, 1);
-                c = 'c2';
-                if (n.dur === '2n') { 
-                    c = 'c3'; 
-                    dimX *= (gridWidth / 2); 
-                    layer = 0; 
+            else {
+                let inView = true;
+                let wrap = false;
+                if (leftViewBound < rightViewBound) inView = (leftViewBound - game.playerWidth < n.xPos) && (n.xPos < rightViewBound + game.playerWidth);
+                else {
+                    inView = (leftViewBound - game.playerWidth < n.xPos) || (n.xPos < rightViewBound + game.playerWidth);
+                    wrap = (n.xPos < rightViewBound);
                 }
-                if (n.step === client.bassStep) c = 'c4';
-                this.fillColor(n.palette, c, layer);
-                this.strokeColor(n.palette, 'bg', layer);
-                this.fillRect(x, y, dimX, dimY, true, layer);
+                if (inView) this.drawNote(n, wrap);
             }
-            else if (sound === 'perc') {
-                x += dimX * 0.5;
-                y += dimY * 0.5;
-                dimY *= this.mapToRange(n.animFrame, 0, animLengths.eggNote, gridHeight / 2, 1);
-                let x1 = x - (dimX * 0.5);
-                let y1 = y;
-                let x2 = x;
-                let y2 = y - (dimY * 0.5);
-                let x3 = x + (dimX * 0.5);
-                let y3 = y;
-                let x4 = x;
-                let y4 = y + (dimY * 0.5);
-                c = 'c3'
-                if (n.dur === '2n') { 
-                    c = 'c1'; 
-                    x2 += dimX;
-                    x4 -= dimX
-                    layer = 0;             
-                }
-                if (n.step === client.percStep) c = 'c4';
-                this.fillColor(n.palette, c, layer);
-                this.strokeColor(n.palette, 'bg', layer);
-                this.fillQuad(x1, y1, x2, y2, x3, y3, x4, y4, true, layer);
-            }
-            if (n.xPos < gridWidth) {
-                let pos = this.cellToCanvasPosition(n.xPos + (gridWidth * players.length), n.yPos, gridWidth, gridHeight);
-                let x = pos[0];
-                let y = pos[1];
-                let c = 'bg';
-                let layer = 1;
-                if (sound === 'melody') {
-                    x += dimX * 0.5;
-                    y += dimY * 0.5;
-                    //dimX *= this.mapToRange(n.animFrame, 0, animLengths.eggNote, gridWidth, 1);
-                    dimY *= this.mapToRange(n.animFrame, 0, animLengths.eggNote, gridHeight, 1);
-                    c = 'c1';
-                    if (n.dur === '2n') { 
-                        c = 'c2'; 
-                        dimX *= 2;
-                        dimY *= 2;
-                        layer = 0; 
-                    }
-                    if (n.step === client.melodyStep) c = 'c4';
-                    this.fillColor(n.palette, c, layer);
-                    this.strokeColor(n.palette, 'bg', layer);
-                    this.fillEllipse(x, y, dimX / 2, dimY / 2, 0, 0, 2*Math.PI, true, layer);
-                }
-                else if (sound === 'bass') {
-                    y = this.mapToRange(n.animFrame, 0, animLengths.eggNote, 0, y);
-                    dimY *= this.mapToRange(n.animFrame, 0, animLengths.eggNote, gridHeight, 1);
-                    c = 'c2';
-                    if (n.dur === '2n') { 
-                        c = 'c3'; 
-                        dimX *= (gridWidth / 2); 
-                        layer = 0; 
-                    }
-                    if (n.step === client.bassStep) c = 'c4';
-                    this.fillColor(n.palette, c, layer);
-                    this.strokeColor(n.palette, 'bg', layer);
-                    this.fillRect(x, y, dimX, dimY, true, layer);
-                }
-                else if (sound === 'perc') {
-                    x += dimX * 0.5;
-                    y += dimY * 0.5;
-                    dimY *= this.mapToRange(n.animFrame, 0, animLengths.eggNote, gridHeight / 2, 1);
-                    let x1 = x - (dimX * 0.5);
-                    let y1 = y;
-                    let x2 = x;
-                    let y2 = y - (dimY * 0.5);
-                    let x3 = x + (dimX * 0.5);
-                    let y3 = y;
-                    let x4 = x;
-                    let y4 = y + (dimY * 0.5);
-                    c = 'c3'
-                    if (n.dur === '2n') { 
-                        c = 'c1'; 
-                        x2 += dimX;
-                        x4 -= dimX
-                        layer = 0;             
-                    }
-                    if (n.step === client.percStep) c = 'c4';
-                    this.fillColor(n.palette, c, layer);
-                    this.strokeColor(n.palette, 'bg', layer);
-                    this.fillQuad(x1, y1, x2, y2, x3, y3, x4, y4, true, layer);
-                }
-            }
-
-            if (n.animFrame < animLengths.eggNote) n.animFrame++;
         }
+    }
+
+    drawNote(n, wrap) {
+        let gridWidth = game.paletteAttributes[n.palette].gridWidth;
+        let gridHeight = game.paletteAttributes[n.palette].gridHeight;
+        let shift = 0;
+        if (wrap) shift = (gridWidth * players.length);
+        let pos = this.cellToCanvasPosition(n.xPos + shift, n.yPos, gridWidth, gridHeight);
+        let dimX = this.gameXDimToCanvasXDim(game.playerWidth / gridWidth); 
+        let dimY = this.gameYDimToCanvasYDim(game.playerHeight / gridHeight);
+        let x = pos[0];
+        let y = pos[1];
+        let c = 'bg';
+        let layer = 1;
+        if (n.sound === 'melody') {
+            x += dimX * 0.5;
+            y += dimY * 0.5;
+            //dimX *= this.mapToRange(n.animFrame, 0, animLengths.eggNote, gridWidth, 1);
+            dimY *= this.mapToRange(n.animFrame, 0, animLengths.eggNote, gridHeight, 1);
+            c = 'c1';
+            if (n.dur === '2n') { 
+                c = 'c2'; 
+                dimX *= 2;
+                dimY *= 2;
+                layer = 0; 
+            }
+            if (n.step === client.melodyStep) c = 'c4';
+            this.fillColor(n.palette, c, layer);
+            this.strokeColor(n.palette, 'bg', layer);
+            this.fillEllipse(x, y, dimX / 2, dimY / 2, 0, 0, 2*Math.PI, true, layer);
+        }
+        else if (n.sound === 'bass') {
+            y = this.mapToRange(n.animFrame, 0, animLengths.eggNote, 0, y);
+            dimY *= this.mapToRange(n.animFrame, 0, animLengths.eggNote, gridHeight, 1);
+            c = 'c2';
+            if (n.dur === '2n') { 
+                c = 'c3'; 
+                dimX *= (gridWidth / 2); 
+                layer = 0; 
+            }
+            if (n.step === client.bassStep) c = 'c4';
+            this.fillColor(n.palette, c, layer);
+            this.strokeColor(n.palette, 'bg', layer);
+            this.fillRect(x, y, dimX, dimY, true, layer);
+        }
+        else if (n.sound === 'perc') {
+            x += dimX * 0.5;
+            y += dimY * 0.5;
+            dimY *= this.mapToRange(n.animFrame, 0, animLengths.eggNote, gridHeight / 2, 1);
+            let x1 = x - (dimX * 0.5);
+            let y1 = y;
+            let x2 = x;
+            let y2 = y - (dimY * 0.5);
+            let x3 = x + (dimX * 0.5);
+            let y3 = y;
+            let x4 = x;
+            let y4 = y + (dimY * 0.5);
+            c = 'c3'
+            if (n.dur === '2n') { 
+                c = 'c1'; 
+                x2 += dimX;
+                x4 -= dimX
+                layer = 0;             
+            }
+            if (n.step === client.percStep) c = 'c4';
+            this.fillColor(n.palette, c, layer);
+            this.strokeColor(n.palette, 'bg', layer);
+            this.fillQuad(x1, y1, x2, y2, x3, y3, x4, y4, true, layer);
+        }   
+        if (n.animFrame < animLengths.eggNote) n.animFrame++;
     }
 
     setRendererSize() {
@@ -421,7 +379,9 @@ export default class InterferenceRenderer extends Renderer {
     gamePositionToCanvasPosition(gameX, gameY) {
         let div = players.length;
         if (client.performanceView) div = 1;
-        let canvasX = Math.floor(this.mapToRange(gameX, leftViewBound, rightViewBound, 0, w));
+        let hi = rightViewBound;
+        if (leftViewBound >= rightViewBound) hi += players.length * game.playerWidth;
+        let canvasX = Math.floor(this.mapToRange(gameX, leftViewBound, hi, 0, w));
         let canvasY = Math.floor(this.mapToRange(gameY, 0, game.playerHeight, 0, h / div)); 
         return [canvasX, canvasY];
     }
