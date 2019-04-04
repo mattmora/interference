@@ -233,7 +233,7 @@ export default class InterferenceClientEngine extends ClientEngine {
 
         this.player = this.gameEngine.world.queryObject({ playerId: this.gameEngine.playerId });
         if (this.player == null) return;
-        if (this.reverb == null && this.player.palette != 0) this.initSound(this.player);
+        if (this.reverb == null && this.player.palette != 0) this.initSound();
 
         this.players = this.gameEngine.playersByRoom[this.player._roomName];//this.gameEngine.world.queryObjects({ instanceType: Performer });
         for (let p of this.players) {
@@ -255,7 +255,8 @@ export default class InterferenceClientEngine extends ClientEngine {
             }
             //console.log(note);
             let pal = this.gameEngine.paletteAttributes[note.palette];
-            note.step = note.xPos % pal.gridWidth;
+            //note.step = note.xPos % pal.gridWidth;
+            note.step = note.position.x % pal.gridWidth;
             note.pitch = (pal.gridHeight - note.yPos) + (pal.scale.length * 4);
             if (this.sequences[note.ownerId] == null) this.sequences[note.ownerId] = {};
             if (this.sequences[note.ownerId].player == null) this.sequences[note.ownerId].player = this.gameEngine.world.queryObject({ playerId: note.ownerId });
@@ -278,11 +279,11 @@ export default class InterferenceClientEngine extends ClientEngine {
             }
             if (this.bassSequence.state !== 'started') {
                 //console.log('start seq');
-                this.bassSequence.start(this.nextDiv('1m'));
+                this.bassSequence.start(this.nextDiv('4m'));
             }
             if (this.percSequence.state !== 'started') {
                 //console.log('start seq');
-                this.percSequence.start(this.nextDiv('1m'));
+                this.percSequence.start(this.nextDiv('2m'));
             }
             for (let e of this.eggs) {
                 if (!Object.keys(this.eggSynths).includes(e.toString())) this.constructEggSynths(e);
@@ -300,6 +301,13 @@ export default class InterferenceClientEngine extends ClientEngine {
         let palettes = this.gameEngine.palettes;
         this.player.palette = palettes[(palettes.indexOf(this.player.palette) + 1) % palettes.length];
         this.socket.emit('updatePalette', this.player.palette);
+        for (let i = 0; i < this.player.grid.length; i++) {
+            for (let j = 0; j < this.player.grid[i].length; j++) {
+                this.player.grid[i][j] = this.player.palette;
+            }
+        }
+        this.player.gridString = JSON.stringify(this.player.grid);
+        this.initSound();
     }
 
     onEggBounce(e) {
@@ -344,7 +352,8 @@ export default class InterferenceClientEngine extends ClientEngine {
                 dur: dur,
                 vel: 1, 
                 xPos: pos[0],
-                yPos: pos[1]
+                yPos: pos[1],
+                position: new TwoVector(pos[0], pos[1])
             });
             newNote.inputId = shadowId;
             this.gameEngine.addObjectToWorld(newNote);
@@ -364,7 +373,7 @@ export default class InterferenceClientEngine extends ClientEngine {
 
     //// SOUND
 
-    initSound(p) {
+    initSound() {
 
         //this.transport.timeSignature = 4;
 
@@ -386,10 +395,10 @@ export default class InterferenceClientEngine extends ClientEngine {
             }
         }).toMaster();
         */
-        let pal = this.gameEngine.paletteAttributes[p.palette];
+        let pal = this.gameEngine.paletteAttributes[this.player.palette];
 
-        let events = []
-        for (let i = 0; i < this.gameEngine.paletteAttributes[p.palette].gridWidth; i++) {
+        let events = [];
+        for (let i = 0; i < pal.gridWidth; i++) {
            events.push(i);
         }
 

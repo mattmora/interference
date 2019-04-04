@@ -83,6 +83,11 @@ export default class InterferenceServerEngine extends ServerEngine {
 
         socket.on('updatePalette', pal => {
             player.palette = pal;
+            for (let i = 0; i < player.grid.length; i++) {
+                for (let j = 0; j < player.grid[i].length; j++) {
+                    player.grid[i][j] = player.palette;
+                }
+            }
             player.gridString = this.getEmptyGridStringByPalette(player.palette);
         });
 
@@ -116,7 +121,8 @@ export default class InterferenceServerEngine extends ServerEngine {
                     dur: dur,
                     vel: 1, 
                     xPos: pos[0],
-                    yPos: pos[1]
+                    yPos: pos[1],
+                    position: new TwoVector(pos[0], pos[1])
                 });
                 newNote.inputId = inputId;
                 this.assignObjectToRoom(newNote, p._roomName);

@@ -9,7 +9,7 @@ const qsOptions = querystring.parse(location.search);
 const defaults = {
     traceLevel: Lib.Trace.TRACE_NONE,
     delayInputCount: 5,
-    scheduler: 'fixed',
+    scheduler: 'render-schedule',
     syncOptions: {
         sync: qsOptions.sync || 'extrapolate',
         localObjBending: 1.0,

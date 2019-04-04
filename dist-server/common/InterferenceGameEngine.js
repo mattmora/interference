@@ -62,8 +62,8 @@ function (_GameEngine) {
       // buildMelody: ['fight']
       // fight
       // },
-      playerWidth: 16,
-      playerHeight: 9,
+      playerWidth: 32,
+      playerHeight: 18,
       eggSounds: ['melody', 'bass', 'perc'],
       eggHPRange: 4,
       eggHPMin: 3,
@@ -71,10 +71,10 @@ function (_GameEngine) {
       reloadSize: 2,
       leftBound: 0,
       topBound: 0,
-      bottomBound: 9,
+      bottomBound: 18,
       transportSyncInterval: 200,
       eggRadius: 1,
-      eggBaseXVelocity: 0.15,
+      eggBaseXVelocity: 0.5,
       palettes: [1, 2, 3, 4, 5],
       paletteAttributes: [{
         //default
@@ -95,88 +95,88 @@ function (_GameEngine) {
         }
       }, {
         //rain
-        scale: [0, 4, 6, 9, 11],
-        gridWidth: 16,
-        gridHeight: 9,
+        scale: [2, 3, 5, 9, 10],
+        gridWidth: 32,
+        gridHeight: 18,
         melody: {
-          subdivision: '16n',
-          length: 16
+          subdivision: '32n',
+          length: 32
         },
         bass: {
           subdivision: '8n',
-          length: 16
+          length: 32
         },
         perc: {
           subdivision: '16n',
-          length: 16
+          length: 32
         }
       }, {
         //celeste
-        scale: [0, 2, 3, 5, 7],
-        gridWidth: 16,
-        gridHeight: 9,
+        scale: [0, 4, 5, 9, 10],
+        gridWidth: 32,
+        gridHeight: 18,
         melody: {
-          subdivision: '16n',
-          length: 16
+          subdivision: '32n',
+          length: 32
         },
         bass: {
           subdivision: '8n',
-          length: 16
+          length: 32
         },
         perc: {
           subdivision: '16n',
-          length: 16
+          length: 32
         }
       }, {
         //pyre
-        scale: [0, 2, 3, 7, 10],
-        gridWidth: 16,
-        gridHeight: 9,
+        scale: [0, 2, 6, 7, 11],
+        gridWidth: 32,
+        gridHeight: 18,
         melody: {
-          subdivision: '16n',
-          length: 16
+          subdivision: '32n',
+          length: 32
         },
         bass: {
           subdivision: '8n',
-          length: 16
+          length: 32
         },
         perc: {
           subdivision: '16n',
-          length: 16
+          length: 32
         }
       }, {
         //journey
-        scale: [0, 2, 4, 7, 9],
-        gridWidth: 16,
-        gridHeight: 9,
+        scale: [1, 2, 6, 7, 9],
+        gridWidth: 32,
+        gridHeight: 18,
         melody: {
-          subdivision: '16n',
-          length: 16
+          subdivision: '32n',
+          length: 32
         },
         bass: {
           subdivision: '8n',
-          length: 16
+          length: 32
         },
         perc: {
           subdivision: '16n',
-          length: 16
+          length: 32
         }
       }, {
         //kirby
-        scale: [0, 2, 4, 5, 7],
-        gridWidth: 16,
-        gridHeight: 9,
+        scale: [0, 4, 5, 7, 11],
+        gridWidth: 32,
+        gridHeight: 18,
         melody: {
-          subdivision: '16n',
-          length: 16
+          subdivision: '32n',
+          length: 32
         },
         bass: {
           subdivision: '8n',
-          length: 16
+          length: 32
         },
         perc: {
           subdivision: '16n',
-          length: 16
+          length: 32
         }
       }]
     }); // game variables

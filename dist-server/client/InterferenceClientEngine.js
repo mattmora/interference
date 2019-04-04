@@ -303,7 +303,7 @@ function (_ClientEngine) {
         playerId: this.gameEngine.playerId
       });
       if (this.player == null) return;
-      if (this.reverb == null && this.player.palette != 0) this.initSound(this.player);
+      if (this.reverb == null && this.player.palette != 0) this.initSound();
       this.players = this.gameEngine.playersByRoom[this.player._roomName]; //this.gameEngine.world.queryObjects({ instanceType: Performer });
 
       var _iteratorNormalCompletion = true;
@@ -355,8 +355,9 @@ function (_ClientEngine) {
           } //console.log(note);
 
 
-          var pal = this.gameEngine.paletteAttributes[note.palette];
-          note.step = note.xPos % pal.gridWidth;
+          var pal = this.gameEngine.paletteAttributes[note.palette]; //note.step = note.xPos % pal.gridWidth;
+
+          note.step = note.position.x % pal.gridWidth;
           note.pitch = pal.gridHeight - note.yPos + pal.scale.length * 4;
           if (this.sequences[note.ownerId] == null) this.sequences[note.ownerId] = {};
           if (this.sequences[note.ownerId].player == null) this.sequences[note.ownerId].player = this.gameEngine.world.queryObject({
@@ -395,12 +396,12 @@ function (_ClientEngine) {
 
         if (this.bassSequence.state !== 'started') {
           //console.log('start seq');
-          this.bassSequence.start(this.nextDiv('1m'));
+          this.bassSequence.start(this.nextDiv('4m'));
         }
 
         if (this.percSequence.state !== 'started') {
           //console.log('start seq');
-          this.percSequence.start(this.nextDiv('1m'));
+          this.percSequence.start(this.nextDiv('2m'));
         }
 
         var _iteratorNormalCompletion3 = true;
@@ -440,6 +441,15 @@ function (_ClientEngine) {
       var palettes = this.gameEngine.palettes;
       this.player.palette = palettes[(palettes.indexOf(this.player.palette) + 1) % palettes.length];
       this.socket.emit('updatePalette', this.player.palette);
+
+      for (var i = 0; i < this.player.grid.length; i++) {
+        for (var j = 0; j < this.player.grid[i].length; j++) {
+          this.player.grid[i][j] = this.player.palette;
+        }
+      }
+
+      this.player.gridString = JSON.stringify(this.player.grid);
+      this.initSound();
     }
   }, {
     key: "onEggBounce",
@@ -485,7 +495,8 @@ function (_ClientEngine) {
           dur: dur,
           vel: 1,
           xPos: pos[0],
-          yPos: pos[1]
+          yPos: pos[1],
+          position: new _lanceGg.TwoVector(pos[0], pos[1])
         });
         newNote.inputId = shadowId;
         this.gameEngine.addObjectToWorld(newNote);
@@ -507,7 +518,7 @@ function (_ClientEngine) {
 
   }, {
     key: "initSound",
-    value: function initSound(p) {
+    value: function initSound() {
       var _this5 = this;
 
       //this.transport.timeSignature = 4;
@@ -530,10 +541,10 @@ function (_ClientEngine) {
       }).toMaster();
       */
 
-      var pal = this.gameEngine.paletteAttributes[p.palette];
+      var pal = this.gameEngine.paletteAttributes[this.player.palette];
       var events = [];
 
-      for (var i = 0; i < this.gameEngine.paletteAttributes[p.palette].gridWidth; i++) {
+      for (var i = 0; i < pal.gridWidth; i++) {
         events.push(i);
       }
 

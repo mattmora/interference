@@ -168,6 +168,13 @@ function (_ServerEngine) {
       });
       socket.on('updatePalette', function (pal) {
         player.palette = pal;
+
+        for (var i = 0; i < player.grid.length; i++) {
+          for (var j = 0; j < player.grid[i].length; j++) {
+            player.grid[i][j] = player.palette;
+          }
+        }
+
         player.gridString = _this2.getEmptyGridStringByPalette(player.palette);
       });
       socket.on('playerHitEgg', function (ammo, eggId, hp, x, y, sound, inputId) {
@@ -207,7 +214,8 @@ function (_ServerEngine) {
             dur: dur,
             vel: 1,
             xPos: pos[0],
-            yPos: pos[1]
+            yPos: pos[1],
+            position: new _lanceGg.TwoVector(pos[0], pos[1])
           });
           newNote.inputId = inputId;
 

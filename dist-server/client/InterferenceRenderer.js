@@ -218,8 +218,8 @@ function (_Renderer) {
           } else {
             var inView = true;
             var wrap = false;
-            if (leftViewBound < rightViewBound) inView = leftViewBound - game.playerWidth < p.number * game.playerWidth && p.number * game.playerWidth < rightViewBound + game.playerWidth;else {
-              inView = leftViewBound - game.playerWidth < p.number * game.playerWidth || p.number * game.playerWidth < rightViewBound + game.playerWidth;
+            if (leftViewBound < rightViewBound) inView = leftViewBound - game.playerWidth < p.number * game.playerWidth && p.number * game.playerWidth < rightViewBound;else {
+              inView = leftViewBound - game.playerWidth < p.number * game.playerWidth || p.number * game.playerWidth < rightViewBound;
               wrap = p.number * game.playerWidth < rightViewBound;
             }
 
@@ -448,8 +448,8 @@ function (_Renderer) {
           } else {
             var inView = true;
             var wrap = false;
-            if (leftViewBound < rightViewBound) inView = leftViewBound - game.playerWidth < n.xPos && n.xPos < rightViewBound + game.playerWidth;else {
-              inView = leftViewBound - game.playerWidth < n.xPos || n.xPos < rightViewBound + game.playerWidth;
+            if (leftViewBound < rightViewBound) inView = leftViewBound - game.playerWidth < n.xPos && n.xPos < rightViewBound;else {
+              inView = leftViewBound - game.playerWidth < n.xPos || n.xPos < rightViewBound;
               wrap = n.xPos < rightViewBound;
             }
             if (inView) this.drawNote(n, wrap);

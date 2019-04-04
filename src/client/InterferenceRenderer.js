@@ -182,9 +182,9 @@ export default class InterferenceRenderer extends Renderer {
                 let inView = true;
                 let wrap = false;
                 if (leftViewBound < rightViewBound) inView = (leftViewBound - game.playerWidth < p.number * game.playerWidth) && 
-                                                             (p.number * game.playerWidth < rightViewBound + game.playerWidth);
+                                                             (p.number * game.playerWidth < rightViewBound);
                 else {
-                    inView = (leftViewBound - game.playerWidth < p.number * game.playerWidth) || (p.number * game.playerWidth < rightViewBound + game.playerWidth);
+                    inView = (leftViewBound - game.playerWidth < p.number * game.playerWidth) || (p.number * game.playerWidth < rightViewBound);
                     wrap = (p.number * game.playerWidth < rightViewBound);
                 }
                 if (inView) {
@@ -291,9 +291,9 @@ export default class InterferenceRenderer extends Renderer {
             else {
                 let inView = true;
                 let wrap = false;
-                if (leftViewBound < rightViewBound) inView = (leftViewBound - game.playerWidth < n.xPos) && (n.xPos < rightViewBound + game.playerWidth);
+                if (leftViewBound < rightViewBound) inView = (leftViewBound - game.playerWidth < n.xPos) && (n.xPos < rightViewBound);
                 else {
-                    inView = (leftViewBound - game.playerWidth < n.xPos) || (n.xPos < rightViewBound + game.playerWidth);
+                    inView = (leftViewBound - game.playerWidth < n.xPos) || (n.xPos < rightViewBound);
                     wrap = (n.xPos < rightViewBound);
                 }
                 if (inView) this.drawNote(n, wrap);
