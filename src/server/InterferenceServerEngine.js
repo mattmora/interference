@@ -63,6 +63,7 @@ export default class InterferenceServerEngine extends ServerEngine {
             player.stage = this.roomStages[roomName];
             player.gridString = this.getEmptyGridStringByPalette(player.palette);
             player.grid = JSON.parse(player.gridString);
+            player.gridChanged = false;
 
             if (player.stage === 'build') {
                 for (let e of this.gameEngine.eggsByRoom[roomName]) {
@@ -89,6 +90,14 @@ export default class InterferenceServerEngine extends ServerEngine {
                 }
             }
             player.gridString = this.getEmptyGridStringByPalette(player.palette);
+        });
+
+        socket.on('paintStep', idArray => {
+            for (let noteId of idArray) {
+                let note = this.gameEngine.world.queryObject({ id: noteId });
+                if (note != null) note.paint();
+                player.gridChanged = true;
+            }
         });
 
         socket.on('playerHitEgg', (ammo, eggId, hp, x, y, sound, inputId) => {
@@ -216,6 +225,9 @@ export default class InterferenceServerEngine extends ServerEngine {
     }
 
     onEggBroke(e) {
+        for (let p of this.myRooms[e._roomName]) {
+            p.ammo = 0;
+        }
         this.setGameStage(e._roomName, 'fight');
     }
 
@@ -259,6 +271,11 @@ export default class InterferenceServerEngine extends ServerEngine {
                     for (let p of this.myRooms[room]) {
                         p.ammo += (this.gameEngine.reloadSize * this.gameEngine.eggsByRoom[room].length);
                     }
+                }
+            }
+            else if (this.roomStages[room] === 'fight') {
+                for (let p of this.myRooms[room]) {
+                    if (p.gridChanged) p.gridString = JSON.stringify(p.grid);
                 }
             }
         }

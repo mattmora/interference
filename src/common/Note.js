@@ -45,9 +45,9 @@ export default class Note extends DynamicObject {
         let pal = this.gameEngine.paletteAttributes[this.palette];
         let n = Math.floor(this.xPos / pal.gridWidth);
         for (let p of this.gameEngine.queryPlayers({ number: n })) {
-            p.grid = JSON.parse(p.gridString);
+            //p.grid = JSON.parse(p.gridString);
             p.grid[this.xPos % pal.gridWidth][this.yPos % pal.gridHeight] = this.palette;
-            p.gridString = JSON.stringify(p.grid);
+            //p.gridString = JSON.stringify(p.grid);
         }
     }
 

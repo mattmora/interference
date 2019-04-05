@@ -228,10 +228,10 @@ export default class InterferenceRenderer extends Renderer {
     drawSequences() {
         this.strokeWeight(2, 0);
         this.strokeWeight(2, 1);
-        for (let ownerId of Object.keys(sequences)) {
-            if (sequences[ownerId].bass != null) for (let step of sequences[ownerId].bass) if (step != null) this.drawStep(step);
-            if (sequences[ownerId].melody != null) for (let step of sequences[ownerId].melody) if (step != null) this.drawStep(step); 
-            if (sequences[ownerId].perc != null) for (let step of sequences[ownerId].perc) if (step != null) this.drawStep(step);                     
+        for (let number of Object.keys(sequences)) {
+            if (sequences[number].bass != null) for (let step of sequences[number].bass) if (step != null) this.drawStep(step);
+            if (sequences[number].melody != null) for (let step of sequences[number].melody) if (step != null) this.drawStep(step); 
+            if (sequences[number].perc != null) for (let step of sequences[number].perc) if (step != null) this.drawStep(step);                     
         }
     }
 
