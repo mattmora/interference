@@ -20,6 +20,7 @@ export default class InterferenceServerEngine extends ServerEngine {
         this.gameEngine.on('server__preStep', this.preStepLogic.bind(this));
         this.gameEngine.on('server__postStep', this.postStepLogic.bind(this));
         this.gameEngine.on('beginPerformance', player => { this.onBeginPerformance(player) });
+        this.gameEngine.on('eggBounce', e => { this.onEggBounce(e) });
         this.gameEngine.on('eggBroke', e => { this.onEggBroke(e) });
     }
 
@@ -222,6 +223,12 @@ export default class InterferenceServerEngine extends ServerEngine {
         this.gameEngine.eggSoundsToUse.splice(rand, 1);
         if (this.gameEngine.eggSoundsToUse.length === 0) this.gameEngine.eggSoundsToUse = this.gameEngine.eggSounds.slice();
         this.addEgg(sound, r);
+    }
+
+    onEggBounce(e) {
+        for (let p of this.myRooms[e._roomName]) {
+            p.ammo++;
+        }
     }
 
     onEggBroke(e) {
