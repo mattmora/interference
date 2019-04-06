@@ -39,6 +39,7 @@ export default class InterferenceClientEngine extends ClientEngine {
         this.bassStep = 0;
         this.percStep = 0;
         this.sequences = {};
+        this.pitchSet = 'scale';
 
         this.gameEngine.on('client__preStep', this.preStepLogic.bind(this));
         this.gameEngine.on('client__postStep', this.postStepLogic.bind(this));
@@ -91,7 +92,14 @@ export default class InterferenceClientEngine extends ClientEngine {
     }
 
     executeOption(optionString) {
-        console.log(optionString);
+        if (optionString === 'build') {
+            this.socket.emit('startBuildStage');
+            this.optionSelection = {};
+        }
+        else if (optionString === 'fight') {
+            this.socket.emit('startFightStage');
+            this.optionSelection = {};
+        }
     }
 
     start() {
@@ -206,6 +214,8 @@ export default class InterferenceClientEngine extends ClientEngine {
             this.controls.bindKey('a', 'a');
             this.controls.bindKey('s', 's');
             this.controls.bindKey('d', 'd');
+            this.controls.bindKey('p', 'p');
+            this.controls.bindKey('back slash', 'back slash');
         }
     } 
 
@@ -224,13 +234,16 @@ export default class InterferenceClientEngine extends ClientEngine {
             }
             this.transportSyncCount++;
         }
+
+        this.player = this.gameEngine.world.queryObject({ playerId: this.gameEngine.playerId });
+
+        this.pitchSet = this.player.pitchSet;
+        //console.log(this.pitchSet);
     }
 
 
     postStepLogic() {
         if (this.room == null) return; //if we've yet to be assigned a room, don't do this stuff
-
-        this.player = this.gameEngine.world.queryObject({ playerId: this.gameEngine.playerId });
         if (this.player == null) return;
         if (this.reverb == null && this.player.palette != 0) this.initSound();
 
@@ -253,8 +266,8 @@ export default class InterferenceClientEngine extends ClientEngine {
                 }
             }
             let pal = this.gameEngine.paletteAttributes[note.palette];
-            note.step = note.position.x % pal.gridWidth;
-            note.pitch = (pal.gridHeight - note.yPos) + (pal.scale.length * 4);
+            note.step = note.xPos % pal.gridWidth;
+            note.pitch = (pal.gridHeight - note.yPos) + (pal.pitchSets[this.pitchSet].length * 3);
             let number = Math.floor(note.xPos / pal.gridWidth);
             if (this.sequences[number] == null) this.sequences[number] = {};
             if (this.sequences[number][note.sound] == null) this.sequences[number][note.sound] = [];
@@ -328,15 +341,12 @@ export default class InterferenceClientEngine extends ClientEngine {
         let shadowId = this.gameEngine.getNewShadowId();
         this.socket.emit('playerHitEgg', p.ammo, e.id, e.hp, e.position.x, e.position.y, e.sound, shadowId);
         let pos = this.gameEngine.quantizedPosition(e.position.x, e.position.y, pal.gridWidth, pal.gridHeight);
-        let scale = pal.scale; //TODO should base this on palette of the cell?
-        let pitch = (pal.gridHeight - pos[1]) + (scale.length * 4);
         let dur = pal[e.sound].subdivision;
 
         let notes = this.gameEngine.queryNotes({            
             ownerId: p.playerId, 
             palette: p.grid[pos[0]%pal.gridWidth][pos[1]%pal.gridHeight],
             sound: e.sound, 
-            pitch: pitch, 
             //vel: 1, 
             xPos: pos[0],
             yPos: pos[1]
@@ -348,7 +358,6 @@ export default class InterferenceClientEngine extends ClientEngine {
                 ownerId: p.playerId, 
                 palette: p.grid[pos[0]%pal.gridWidth][pos[1]%pal.gridHeight],
                 sound: e.sound, 
-                pitch: pitch, 
                 dur: dur,
                 vel: 1, 
                 xPos: pos[0],
@@ -367,7 +376,8 @@ export default class InterferenceClientEngine extends ClientEngine {
         this.eggSynths[e.toString()].drone.triggerRelease();
         if (this.gameEngine.positionIsInPlayer(e.position.x, this.player)) {
             this.eggSynths[e.toString()].break.start(this.nextDiv('4n'));
-            this.optionSelection['Digit1'] = 'tetrisChain';
+            this.optionSelection['Digit1'] = 'build';
+            this.optionSelection['Digit2'] = 'fight';
             }
         }
 
@@ -402,6 +412,16 @@ export default class InterferenceClientEngine extends ClientEngine {
            events.push(i);
         }
 
+        // One possible way to sequence chords
+        // let progression = [];
+        // for (let i = 0; i < pal.pitchSets.length - 1; i++) {
+        //    events.push(i);
+        // }
+
+        // this.harmonySequencer = new Sequence((time, step) => {
+        //     this.pitchSet = pal.pitchSets[step];
+        // }, progression, '2m');
+
         this.melodySynth = new PolySynth(pal.gridHeight, Synth).toMaster();
 
         this.melodySequence = new Sequence((time, step) => {
@@ -409,7 +429,7 @@ export default class InterferenceClientEngine extends ClientEngine {
             if (this.sequences[this.player.number] == null) return;
             if (this.sequences[this.player.number].melody == null) return;
             let seqStep = this.sequences[this.player.number].melody[this.melodyStep];
-            if (seqStep) this.playNoteArrayOnSynth(this.melodySynth, seqStep, 2, time, true);
+            if (seqStep) this.playNoteArrayOnSynth(this.melodySynth, seqStep, 0, time, true);
         }, events, pal.melody.subdivision);
 
 
@@ -420,7 +440,7 @@ export default class InterferenceClientEngine extends ClientEngine {
             if (this.sequences[this.player.number] == null) return;
             if (this.sequences[this.player.number].bass == null) return;
             let seqStep = this.sequences[this.player.number].bass[this.bassStep];
-            if (seqStep) this.playNoteArrayOnSynth(this.bassSynth, seqStep, -1, time, true);       
+            if (seqStep) this.playNoteArrayOnSynth(this.bassSynth, seqStep, -2, time, true);       
         }, events, pal.bass.subdivision);
 
 
@@ -431,14 +451,14 @@ export default class InterferenceClientEngine extends ClientEngine {
             if (this.sequences[this.player.number] == null) return;
             if (this.sequences[this.player.number].perc == null) return;
             let seqStep = this.sequences[this.player.number].perc[this.percStep];
-            if (seqStep) this.playNoteArrayOnSynth(this.percSynth, seqStep, 0, time, true);
+            if (seqStep) this.playNoteArrayOnSynth(this.percSynth, seqStep, -1, time, true);
         }, events, pal.perc.subdivision);
-        this.percSequence.probability = 0.8;
     }
 
     constructEggSynths(e) {
         if (this.player == null) return;
-        let scale = this.gameEngine.paletteAttributes[this.player.palette].scale;
+
+        let pal = this.gameEngine.paletteAttributes[this.player.palette];
 
         if (e.sound === 'melody') {
             let synth = new Synth({
@@ -476,9 +496,10 @@ export default class InterferenceClientEngine extends ClientEngine {
                     }
                 }).toMaster(),
                 breakSynth: synth.toMaster(), 
-                break: new Sequence((time, note) => {
-                    let scale = this.gameEngine.paletteAttributes[this.player.palette].scale;
-                    this.playPitchOnSynth(synth, note, scale, 6, '64n', time, 0.1);
+                break: new Sequence((time, pitch) => {
+                    let scale = pal.scale;
+                    let chord = pal.pitchSets[this.pitchSet];
+                    this.playPitchOnSynth(synth, pitch, chord, scale, 6, '64n', time, 0.1);
                 }, [[4, 2, 3, 1, 3, 1, 2, 0], null, null, null], '4n')
             };
         }
@@ -518,9 +539,10 @@ export default class InterferenceClientEngine extends ClientEngine {
                     }
                 }).toMaster(),
                 breakSynth: synth.toMaster(), 
-                break: new Sequence((time, note) => {
-                    let scale = this.gameEngine.paletteAttributes[this.player.palette].scale;
-                    this.playPitchOnSynth(synth, note, scale, 6, '64n', time, 0.1);
+                break: new Sequence((time, pitch) => {
+                    let scale = pal.scale;
+                    let chord = pal.pitchSets[this.pitchSet];
+                    this.playPitchOnSynth(synth, pitch, chord, scale, 6, '64n', time, 0.1);
                 }, [[0, 1, 2, 3, 1, 2, 3, 4], null, null, null], '4n')
             };
         }
@@ -560,9 +582,10 @@ export default class InterferenceClientEngine extends ClientEngine {
                     }
                 }).toMaster(),
                 breakSynth: synth.toMaster(), 
-                break: new Sequence((time, note) => {
-                    let scale = this.gameEngine.paletteAttributes[this.player.palette].scale;
-                    this.playPitchOnSynth(synth, note, scale, 6, '64n', time, 0.1);
+                break: new Sequence((time, pitch) => {
+                    let scale = pal.scale;
+                    let chord = pal.pitchSets[this.pitchSet];
+                    this.playPitchOnSynth(synth, pitch, chord, scale, 6, '64n', time, 0.1);
                 }, [[0, 4, null, null, null, null, 1, 5], null, null, null], '4n')
             };
         }
@@ -570,18 +593,15 @@ export default class InterferenceClientEngine extends ClientEngine {
         this.eggSynths[e.toString()].drone.connect(this.reverb);
         this.eggSynths[e.toString()].bounce.connect(this.reverb);
         this.eggSynths[e.toString()].breakSynth.connect(this.reverb);
-        this.eggSynths[e.toString()].drone.triggerAttack('+0', 0.01);
-        this.eggSynths[e.toString()].break.loop = true;
+        this.eggSynths[e.toString()].drone.triggerAttack('+0.01', 0.01);
+        this.eggSynths[e.toString()].break.loop = 4;
     }
 
-    playPitchOnSynth(synth, note, scale, octaveShift, dur, time, vel) {
-        if (!note) return;
-        //console.log(note);
-        let degree = note % scale.length;
-        let octave = Math.floor(note / scale.length) + octaveShift;
-        let pitch = Frequency(scale[degree] + (12 * octave), 'midi');
-        //console.log(scale[degree] + (12 * octave));
-        synth.triggerAttackRelease(pitch, dur, time, vel);
+    playPitchOnSynth(synth, pitch, chord, scale, octaveShift, dur, time, vel) {
+        let degree = pitch % chord.length;
+        let octave = Math.floor(pitch / chord.length) + octaveShift;
+        let midi = Frequency(scale[chord[degree]] + (12 * octave), 'midi');
+        synth.triggerAttackRelease(midi, dur, time, vel);
     }
 
     playNoteArrayOnSynth(synth, noteArray, octaveShift, time) {
@@ -589,7 +609,7 @@ export default class InterferenceClientEngine extends ClientEngine {
         let idArray = [];
         for (let note of noteArray) {
             let pal = this.gameEngine.paletteAttributes[note.palette];
-            this.playPitchOnSynth(synth, note.pitch, pal.scale, octaveShift, note.dur, time, note.vel);
+            this.playPitchOnSynth(synth, note.pitch, pal.pitchSets[this.pitchSet], pal.scale, octaveShift, note.dur, time, note.vel);
             idArray.push(note.id);
             //note.paint();
         }

@@ -22,13 +22,32 @@ export default class InterferenceGameEngine extends GameEngine {
             // fight
             // },
             playerWidth: 32, playerHeight: 18, 
-            eggSounds: ['melody', 'bass', 'perc'], eggHPRange: 4, eggHPMin: 3, startingAmmo: 2, reloadSize: 2,
+            eggSounds: ['melody', 'bass', 'perc'], eggHPRange: 4, eggHPMin: 3, startingAmmo: 1, maxAmmo: 8, reloadSize: 2,
             leftBound: 0, topBound: 0, bottomBound: 18,
-            transportSyncInterval: 200, eggRadius: 1, eggBaseXVelocity: 0.5,
+            transportSyncInterval: 200, eggRadius: 1, eggBaseVelocity: 0.2,
             palettes: [1, 2, 3, 4, 5],
             paletteAttributes: [
                 { //default
                     scale: [0, 2, 4, 5, 7, 9, 11], 
+                    pitchSets: [
+                        [0, 2, 4], //1
+                        [0, 2, 4],
+                        [0, 2, 4],
+                        [0, 2, 4],
+                        [0, 2, 4], //5
+                        [0, 2, 4],
+                        [0, 2, 4],
+                        [0, 2, 4],
+                        [0, 2, 4], //9
+                        [0, 2, 4],
+                        [0, 2, 4],
+                        [0, 2, 4],
+                        [0, 2, 4], //13
+                        [0, 2, 4],
+                        [0, 2, 4],
+                        [0, 2, 4],
+                        [0, 1, 2, 3, 4, 5, 6] //scale
+                    ],
                     gridWidth: 1,
                     gridHeight: 1,
                     melody: {
@@ -46,6 +65,25 @@ export default class InterferenceGameEngine extends GameEngine {
                 },
                 { //rain
                     scale: [1, 2, 4, 5, 7, 9, 10], // D harm min
+                    pitchSets: [
+                        [1, 3, 5], //1
+                        [1, 3, 5],
+                        [0, 2, 5],
+                        [0, 2, 5],
+                        [2, 4, 6], //5
+                        [2, 4, 6],
+                        [1, 4, 6],
+                        [1, 4, 6],
+                        [1, 4, 6], //9
+                        [1, 4, 6],
+                        [1, 4, 6],
+                        [1, 4, 6],
+                        [0, 2, 5], //13
+                        [0, 2, 5],
+                        [1, 3, 5],
+                        [1, 3, 5],
+                        [0, 1, 2, 3, 4, 5, 6] //scale
+                    ],
                     gridWidth: 32,
                     gridHeight: 18,
                     melody: {
@@ -62,7 +100,26 @@ export default class InterferenceGameEngine extends GameEngine {
                     }
                 },
                 { //celeste
-                    scale: [0, 2, 3, 5, 7, 9, 10], // Bb diatonic (F mixo)
+                    scale: [1, 3, 4, 6, 7, 9, 11], // E mel min asc
+                    pitchSets: [
+                        [0, 3, 5], //1
+                        [0, 3, 5],
+                        [0, 3, 5],
+                        [2, 4, 6],
+                        [1, 3, 6], //5
+                        [1, 3, 6],
+                        [0, 2, 5],
+                        [0, 2, 5],
+                        [0, 3, 5], //9
+                        [0, 3, 5],
+                        [1, 3, 6],
+                        [1, 3, 6],
+                        [2, 4, 6], //13
+                        [1, 3, 6],
+                        [0, 3, 5],
+                        [0, 3, 5],
+                        [0, 1, 2, 3, 4, 5, 6] //scale
+                    ],
                     gridWidth: 32,
                     gridHeight: 18,
                     melody: {
@@ -79,7 +136,26 @@ export default class InterferenceGameEngine extends GameEngine {
                     }
                 },
                 { //pyre
-                    scale: [0, 2, 4, 6, 7, 9, 11], // G diatonic (E nat minor) 
+                    scale: [0, 2, 4, 6, 7, 9, 11], // E minor
+                    pitchSets: [
+                        [2, 4, 6], //1
+                        [2, 4, 6],
+                        [2, 4, 6],
+                        [2, 4, 6],
+                        [2, 4, 6], //5
+                        [1, 3, 6],
+                        [2, 4, 6],
+                        [2, 4, 6],
+                        [0, 2, 5], //9
+                        [0, 2, 5],
+                        [2, 4, 6],
+                        [2, 4, 6],
+                        [2, 4, 6], //13
+                        [1, 3, 5],
+                        [0, 2, 4],
+                        [1, 3, 5],
+                        [0, 1, 2, 3, 4, 5, 6] //scale
+                    ],
                     gridWidth: 32,
                     gridHeight: 18,
                     melody: {
@@ -96,7 +172,26 @@ export default class InterferenceGameEngine extends GameEngine {
                     }
                 },
                 { //journey
-                    scale: [1, 3, 4, 6, 7, 9, 11], // E mel min asc
+                    scale: [0, 2, 3, 5, 7, 9, 10], // F mixo
+                    pitchSets: [
+                        [0, 3, 5], //1
+                        [0, 3, 5],
+                        [2, 4, 6],
+                        [2, 4, 6],
+                        [1, 3, 5], //5
+                        [1, 3, 5],
+                        [1, 3, 5],
+                        [1, 3, 5],
+                        [0, 3, 5], //9
+                        [0, 3, 5],
+                        [0, 2, 4],
+                        [0, 2, 4],
+                        [1, 3, 6], //13
+                        [1, 3, 6],
+                        [1, 3, 6],
+                        [1, 3, 6],
+                        [0, 1, 2, 3, 4, 5, 6] //scale
+                    ],
                     gridWidth: 32,
                     gridHeight: 18,
                     melody: {
@@ -114,6 +209,25 @@ export default class InterferenceGameEngine extends GameEngine {
                 },
                 { //kirby
                     scale: [0, 2, 4, 5, 7, 9, 11], // C diatonic (C maj)
+                    pitchSets: [
+                        [0, 2, 4], //1
+                        [0, 2, 4],
+                        [0, 2, 4],
+                        [0, 2, 4],
+                        [1, 3, 5], //5
+                        [1, 4, 6],
+                        [0, 2, 4],
+                        [0, 2, 4],
+                        [0, 2, 5], //9
+                        [0, 2, 5],
+                        [1, 4, 6],
+                        [0, 2, 4],
+                        [0, 2, 5], //13
+                        [0, 2, 5],
+                        [1, 4, 6],
+                        [0, 2, 4],
+                        [0, 1, 2, 3, 4, 5, 6] //scale
+                    ],
                     gridWidth: 32,
                     gridHeight: 18,
                     melody: {
@@ -183,9 +297,11 @@ export default class InterferenceGameEngine extends GameEngine {
         return new TwoVector(x, y);
     }
 
-    velRandY() {
-        let y = (Math.random() - 0.5) * this.eggBaseXVelocity;
-        return new TwoVector(this.eggBaseXVelocity, y);
+    velRandY(roomName) {
+        let v = this.eggBaseVelocity * (1 + Math.log(this.playersByRoom[roomName].length));
+        let y = v * ((Math.random() * 2) - 1);
+        let x = v * ((Math.round(Math.random()) * 2) - 1)
+        return new TwoVector(x, y);
     }
 
     preStepLogic(stepInfo) {
@@ -226,30 +342,36 @@ export default class InterferenceGameEngine extends GameEngine {
                         }
                         else if (   this.notesByRoom[r][i].sound === 'melody' &&
                                     this.notesByRoom[r][j].sound === 'perc') {
-                            this.removeObjectFromWorld(this.notesByRoom[r][j].id)
-                            removed = this.notesByRoom[r][j].id
+                            this.removeObjectFromWorld(this.notesByRoom[r][j].id);
+                            removed = this.notesByRoom[r][j].id;
+                            this.emit('removedNote', r);
                         }
                         else if (   this.notesByRoom[r][i].sound === 'melody' &&
                                     this.notesByRoom[r][j].sound === 'bass') {
-                            this.removeObjectFromWorld(this.notesByRoom[r][i].id)
+                            this.removeObjectFromWorld(this.notesByRoom[r][i].id);
+                            this.emit('removedNote', r);
                         }
                         else if (   this.notesByRoom[r][i].sound === 'perc' &&
                                     this.notesByRoom[r][j].sound === 'bass') {
-                            this.removeObjectFromWorld(this.notesByRoom[r][j].id)
-                            removed = this.notesByRoom[r][j].id
+                            this.removeObjectFromWorld(this.notesByRoom[r][j].id);
+                            removed = this.notesByRoom[r][j].id;
+                            this.emit('removedNote', r);
                         }
                         else if (   this.notesByRoom[r][i].sound === 'perc' &&
                                     this.notesByRoom[r][j].sound === 'melody') {
-                            this.removeObjectFromWorld(this.notesByRoom[r][i].id)
+                            this.removeObjectFromWorld(this.notesByRoom[r][i].id);
+                            this.emit('removedNote', r);
                         }
                         else if (   this.notesByRoom[r][i].sound === 'bass' &&
                                     this.notesByRoom[r][j].sound === 'melody') {
-                            this.removeObjectFromWorld(this.notesByRoom[r][j].id)
-                            removed = this.notesByRoom[r][j].id
+                            this.removeObjectFromWorld(this.notesByRoom[r][j].id);
+                            removed = this.notesByRoom[r][j].id;
+                            this.emit('removedNote', r);
                         }                   
                         else if (   this.notesByRoom[r][i].sound === 'bass' &&
                                     this.notesByRoom[r][j].sound === 'perc') {
-                            this.removeObjectFromWorld(this.notesByRoom[r][i].id)
+                            this.removeObjectFromWorld(this.notesByRoom[r][i].id);
+                            this.emit('removedNote', r);
                         }
                     }
                 }
@@ -405,7 +527,7 @@ export default class InterferenceGameEngine extends GameEngine {
         if (eggs) {
             eggsByType = this.groupBy(eggs, 'sound');
         }
-
+        //console.log(inputData.input);
         if (player.stage === 'setup') {
             //TODO need to update a bunch of stuff on a color change, 
             // also need to be careful when referencing the player palette vs a cell palette, player palette should not change after setup?
@@ -445,7 +567,15 @@ export default class InterferenceGameEngine extends GameEngine {
                 } 
             }
         }
-        else if (player.stage === 'intro') {
+        else {
+            if (inputData.input == 'p') {
+                this.emit('playerAction', player);
+            }
+            else if (inputData.input == 'back slash') {
+                this.emit('playerForfeit', player);
+            }
+        }
+        if (player.stage === 'intro') {
 
         }
         else if (player.stage === 'build') {
@@ -473,7 +603,7 @@ export default class InterferenceGameEngine extends GameEngine {
                 }
             } */
         }
-        else if (player.stage === 'fight') {
+        else if (player.stage === 'fight' || player.stage === 'outro') {
             if (isServer) {
                 if (inputData.input == 'w') {
                     player.move(0, -1);

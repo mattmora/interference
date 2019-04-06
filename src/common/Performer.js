@@ -11,7 +11,8 @@ export default class Performer extends DynamicObject {
             stage: { type: BaseTypes.TYPES.STRING },
             gridString: { type: BaseTypes.TYPES.STRING },
             xPos: { type: BaseTypes.TYPES.INT16 },
-            yPos: { type: BaseTypes.TYPES.INT16 }
+            yPos: { type: BaseTypes.TYPES.INT16 },
+            pitchSet: { type: BaseTypes.TYPES.UINT8 }
         }, super.netScheme);
     }
 
