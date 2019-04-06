@@ -17,6 +17,7 @@ export default class InterferenceServerEngine extends ServerEngine {
         this.syncServers = {}; //roomName: syncServer
         this.moveTimes = {};
         this.actionCounts = {};
+        this.progressionCounts = {};
 
         this.gameEngine.on('server__preStep', this.preStepLogic.bind(this));
         this.gameEngine.on('server__postStep', this.postStepLogic.bind(this));
@@ -246,6 +247,7 @@ export default class InterferenceServerEngine extends ServerEngine {
         for (let p of this.myRooms[room]) {
             p.ammo = 0;
         }
+        this.progressionCounts[room] = 0;
     }
 
     startOutroStage(room) {
@@ -275,7 +277,7 @@ export default class InterferenceServerEngine extends ServerEngine {
                 this.gameEngine.removeObjectFromWorld(note.id);                
             }
             else {
-                for (let player of this.myRooms[p.roomName]) {
+                for (let player of this.myRooms[p._roomName]) {
                     this.assimilatePlayerToPalette(player, 0);
                 }
             }
@@ -357,12 +359,13 @@ export default class InterferenceServerEngine extends ServerEngine {
 
     postStepLogic() {
         for (let room of Object.keys(this.myRooms)) {
-            if (this.actionCounts[room] > this.myRooms[room].length * 8) {
+            if (this.actionCounts[room] > this.myRooms[room].length * 3) {
                 for (let p of this.myRooms[room]) {
                     p.pitchSet = (p.pitchSet + 1) % (this.gameEngine.paletteAttributes[p.palette].pitchSets.length - 1);
                     this.actionCounts[room] = 0;
                     console.log('change');
                 }
+                this.progressionCounts[room]++;
             }
             /*
             if (this.syncServers[room].getSyncTime() >= this.moveTimes[room]) {
@@ -383,6 +386,7 @@ export default class InterferenceServerEngine extends ServerEngine {
                 }
             }
             else if (this.roomStages[room] === 'fight') {
+                if (this.progressionCounts[room] > 4) this.startBuildStage(room);
                 for (let p of this.myRooms[room]) {
                     if (p.gridChanged) p.gridString = JSON.stringify(p.grid);
                 }

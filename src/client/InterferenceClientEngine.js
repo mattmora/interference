@@ -607,10 +607,14 @@ export default class InterferenceClientEngine extends ClientEngine {
     playNoteArrayOnSynth(synth, noteArray, octaveShift, time) {
         if (!noteArray) return;
         let idArray = [];
+        let pitchArray = [];
         for (let note of noteArray) {
             let pal = this.gameEngine.paletteAttributes[note.palette];
-            this.playPitchOnSynth(synth, note.pitch, pal.pitchSets[this.pitchSet], pal.scale, octaveShift, note.dur, time, note.vel);
+            if (!pitchArray.includes(note.pitch)) {
+                this.playPitchOnSynth(synth, note.pitch, pal.pitchSets[this.pitchSet], pal.scale, octaveShift, note.dur, time, note.vel);
+            }
             idArray.push(note.id);
+            pitchArray.push(note.pitch)
             //note.paint();
         }
         //this.player.gridString = JSON.stringify(this.player.grid);
