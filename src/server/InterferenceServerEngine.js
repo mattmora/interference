@@ -337,6 +337,7 @@ export default class InterferenceServerEngine extends ServerEngine {
 
     preStepLogic() {
         for (let room of Object.keys(this.myRooms)) {
+            if (this.myRooms[room].length === 1) continue; 
             if (this.roomStages[room] === 'setup' || this.roomStages[room] === 'outro') continue;
 
             let assimilated = true;

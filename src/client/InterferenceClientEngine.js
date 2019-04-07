@@ -66,8 +66,10 @@ export default class InterferenceClientEngine extends ClientEngine {
                     elem.requestFullscreen({navigationUI: 'hide'}).then({}).catch(err => {
                         //alert(`Error attempting to enable full-screen mode: ${err.message} (${err.name})`);
                     });
+                    this.renderer.setRendererSize();
                 } else {
                     document.exitFullscreen();
+                    this.renderer.setRendererSize();
                 }
             }
         }
