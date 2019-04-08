@@ -424,7 +424,26 @@ export default class InterferenceClientEngine extends ClientEngine {
         //     this.pitchSet = pal.pitchSets[step];
         // }, progression, '2m');
 
-        this.melodySynth = new PolySynth(pal.gridHeight, Synth).toMaster();
+        this.melodySynth = new PolySynth(pal.gridHeight, FMSynth, {
+            "modulationIndex" : 4,
+            "harmonicity": 4,
+            "oscillator": {
+                "type" : "sawtooth",
+                "partials" : [0, 1, 2, 3]
+            },
+            "envelope" : {
+                "attack" : 0.01,
+                "decay" : 0.2,
+                "sustain": 0.0
+            },
+            "modulation" : {
+                "type" : "sine"
+            },
+            "modulationEnvelope" : {
+                "attack" : 0.01,
+                "decay" : 0.1
+            }
+        }).toMaster();
 
         this.melodySequence = new Sequence((time, step) => {
             this.melodyStep = step;
@@ -446,7 +465,22 @@ export default class InterferenceClientEngine extends ClientEngine {
         }, events, pal.bass.subdivision);
 
 
-        this.percSynth = new PolySynth(pal.gridHeight, FMSynth).toMaster();
+        this.percSynth = new PolySynth(pal.gridHeight, FMSynth, {
+            "modulationIndex" : 7,
+            "harmonicity": 0.5,
+            "envelope" : {
+                "attack" : 0.01,
+                "decay" : 0.02,
+                "sustain": 0.0
+            },
+            "modulation" : {
+                "type" : "square"
+            },
+            "modulationEnvelope" : {
+                "attack" : 0.02,
+                "decay" : 0.07
+            }
+        }).toMaster();
 
         this.percSequence = new Sequence((time, step) => {
             this.percStep = step;
