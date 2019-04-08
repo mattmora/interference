@@ -617,9 +617,10 @@ export default class InterferenceGameEngine extends GameEngine {
                 else if (inputData.input == 'd') {
                     player.move(1, 0);
                 }
+                /*
                 if (inputData.input == 'b') {
                     this.emit('beginPerformance', player);
-                }
+                } */
             }
         }
     }
