@@ -2,7 +2,7 @@ const path = require('path');
 const fs = require('fs');
 
 module.exports = {
-    mode: 'production',
+    mode: 'development',
     entry: './src/client/clientEntryPoint.js',
     output: {
         path: path.join(__dirname, 'dist'),
