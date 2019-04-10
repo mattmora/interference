@@ -12,7 +12,9 @@ export default class Performer extends DynamicObject {
             gridString: { type: BaseTypes.TYPES.STRING },
             xPos: { type: BaseTypes.TYPES.INT16 },
             yPos: { type: BaseTypes.TYPES.INT16 },
-            pitchSet: { type: BaseTypes.TYPES.UINT8 }
+            pitchSet: { type: BaseTypes.TYPES.UINT8 },
+            active: { type: BaseTypes.TYPES.UINT8 },
+            bpm: { type: BaseTypes.TYPES.INT16 }
         }, super.netScheme);
     }
 

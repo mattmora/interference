@@ -109,14 +109,15 @@ export default class InterferenceClientEngine extends ClientEngine {
 
         let btn = document.getElementById('startButton');
         let roomNameInput = document.getElementById('roomNameInput');
-        let roomNameErrorText = document.querySelector('#startMenu .room-input-error');
+        let errorText = document.querySelector('#startMenu .room-error');
 
         btn.onclick = () => {
             let regex = /^\w+$/;
             if (regex.exec(roomNameInput.value) != null) {
                 this.assignToRoom(roomNameInput.value.substring(0, 20));
             } else {
-                roomNameErrorText.style.display = 'inline';
+                errorText.textContent = 
+                'Room name can only contain alphanumeric characters or underscores and must be at least 1 character long.';
             }
         };
 
@@ -132,7 +133,8 @@ export default class InterferenceClientEngine extends ClientEngine {
                     if (regex.exec(roomNameInput.value) != null) {
                         this.assignToRoom(roomNameInput.value.substring(0, 20));
                     } else {
-                        roomNameErrorText.style.display = 'inline';
+                        errorText.textContent = 
+                        'Room name can only contain alphanumeric characters or underscores and must be at least 1 character long.';
                     }
                 }
             }
@@ -150,9 +152,33 @@ export default class InterferenceClientEngine extends ClientEngine {
     connect(options = {}) {
         return super.connect().then(() => {
             this.socket.on('assignedRoom', roomName => { 
+                document.getElementById('startMenuWrapper').style.display = 'none';
+                // NETWORKED CONTROLS
+                // These inputs will also be processed on the server
+                //console.log('binding keys');
+                //this.controls.bindKey('space', 'space');
+                this.controls.bindKey('open bracket', '[');
+                this.controls.bindKey('close bracket / å', ']');
+                this.controls.bindKey('n', 'n');
+                this.controls.bindKey('b', 'b'); // begin
+                this.controls.bindKey('c', 'c'); // change color
+                this.controls.bindKey('space', 'space');
+                this.controls.bindKey('q', 'q');
+                this.controls.bindKey('w', 'w');
+                this.controls.bindKey('e', 'e');
+                this.controls.bindKey('a', 'a');
+                this.controls.bindKey('s', 's');
+                this.controls.bindKey('d', 'd');
+                this.controls.bindKey('p', 'p');
+                this.controls.bindKey('back slash', 'back slash');
                 this.startSyncClient(this.socket);
                 this.room = roomName;
                 this.transport.start('+0.1');
+            });
+            this.socket.on('accessDenied', () => {
+                let errorText = document.querySelector('#startMenu .room-error');
+                errorText.textContent = 
+                'Cannot join room. Performance in progress.';
             });
         });
     }
@@ -199,25 +225,6 @@ export default class InterferenceClientEngine extends ClientEngine {
     assignToRoom(roomName) {
         if (this.socket) {
             this.socket.emit('assignToRoom', roomName);
-            document.getElementById('startMenuWrapper').style.display = 'none';
-            // NETWORKED CONTROLS
-            // These inputs will also be processed on the server
-            //console.log('binding keys');
-            //this.controls.bindKey('space', 'space');
-            this.controls.bindKey('open bracket', '[');
-            this.controls.bindKey('close bracket / å', ']');
-            this.controls.bindKey('n', 'n');
-            this.controls.bindKey('b', 'b'); // begin
-            this.controls.bindKey('c', 'c'); // change color
-            this.controls.bindKey('space', 'space');
-            this.controls.bindKey('q', 'q');
-            this.controls.bindKey('w', 'w');
-            this.controls.bindKey('e', 'e');
-            this.controls.bindKey('a', 'a');
-            this.controls.bindKey('s', 's');
-            this.controls.bindKey('d', 'd');
-            this.controls.bindKey('p', 'p');
-            this.controls.bindKey('back slash', 'back slash');
         }
     } 
 
@@ -238,11 +245,7 @@ export default class InterferenceClientEngine extends ClientEngine {
         }
 
         this.player = this.gameEngine.world.queryObject({ playerId: this.gameEngine.playerId });
-
-        this.pitchSet = this.player.pitchSet;
-        //console.log(this.pitchSet);
     }
-
 
     postStepLogic() {
         if (this.room == null) return; //if we've yet to be assigned a room, don't do this stuff
@@ -257,6 +260,8 @@ export default class InterferenceClientEngine extends ClientEngine {
         this.eggs = this.gameEngine.world.queryObjects({ instanceType: Egg });
 
         let stage = this.player.stage;
+
+        this.pitchSet = this.player.pitchSet;
 
         this.sequences = {};
         for (let note of this.gameEngine.world.queryObjects({ instanceType: Note })) {
@@ -276,7 +281,7 @@ export default class InterferenceClientEngine extends ClientEngine {
             if (this.sequences[number][note.sound][note.step] == null) this.sequences[number][note.sound][note.step] = [];
             this.sequences[number][note.sound][note.step].push(note);
         }
-
+        //console.log(this.pitchSet);
 
         if (stage === 'setup') {
 
@@ -374,7 +379,7 @@ export default class InterferenceClientEngine extends ClientEngine {
     onEggBroke(e) {
         if (this.eggSynths == null) return;
         if (this.eggSynths[e.toString()] == null) return;
-        console.log('egg broke');
+        //console.log('egg broke');
         this.eggSynths[e.toString()].drone.triggerRelease();
         if (this.gameEngine.positionIsInPlayer(e.position.x, this.player)) {
             this.eggSynths[e.toString()].break.start(this.nextDiv('4n'));
@@ -433,15 +438,15 @@ export default class InterferenceClientEngine extends ClientEngine {
             },
             "envelope" : {
                 "attack" : 0.01,
-                "decay" : 0.2,
+                "decay" : 0.1,
                 "sustain": 0.0
             },
             "modulation" : {
                 "type" : "sine"
             },
             "modulationEnvelope" : {
-                "attack" : 0.01,
-                "decay" : 0.1
+                "attack" : 0.03,
+                "decay" : 0.7
             }
         }).toMaster();
 
@@ -654,7 +659,12 @@ export default class InterferenceClientEngine extends ClientEngine {
             //note.paint();
         }
         //this.player.gridString = JSON.stringify(this.player.grid);
-        this.socket.emit('paintStep', idArray);
+        //this.socket.emit('paintStep', idArray);
+    }
+
+    paintNote(n) {
+        n.paint();
+        this.socket.emit('paintCell', n.id, n.xPos, n.yPos, n.palette);
     }
 
     nextDiv(div) {

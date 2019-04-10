@@ -115,6 +115,7 @@ export default class InterferenceRenderer extends Renderer {
         time = client.syncClient.getSyncTime();
         playerId = game.playerId;
         thisPlayer = game.world.queryObject({ playerId });
+        if (thisPlayer == null) return;
         players = game.world.queryObjects({ instanceType: Performer });
         if (client.performanceView) {
             leftViewBound = thisPlayer.xPos;
@@ -298,6 +299,7 @@ export default class InterferenceRenderer extends Renderer {
                 }
                 if (inView) this.drawNote(n, wrap);
             }
+            if (n.animFrame < animLengths.eggNote) n.animFrame++;
         }
     }
 
@@ -325,7 +327,10 @@ export default class InterferenceRenderer extends Renderer {
                 dimY *= 2;
                 layer = 0; 
             }
-            if (n.step === client.melodyStep) c = 'c4';
+            if (n.step === client.melodyStep) {
+                client.paintNote(n);
+                c = 'c4';
+            }
             this.fillColor(n.palette, c, layer);
             this.strokeColor(n.palette, 'bg', layer);
             this.fillEllipse(x, y, dimX / 2, dimY / 2, 0, 0, 2*Math.PI, true, layer);
@@ -339,7 +344,10 @@ export default class InterferenceRenderer extends Renderer {
                 dimX *= (gridWidth / 2); 
                 layer = 0; 
             }
-            if (n.step === client.bassStep) c = 'c4';
+            if (n.step === client.bassStep) {
+                client.paintNote(n);
+                c = 'c4';
+            }
             this.fillColor(n.palette, c, layer);
             this.strokeColor(n.palette, 'bg', layer);
             this.fillRect(x, y, dimX, dimY, true, layer);
@@ -363,12 +371,14 @@ export default class InterferenceRenderer extends Renderer {
                 x4 -= dimX
                 layer = 0;             
             }
-            if (n.step === client.percStep) c = 'c4';
+            if (n.step === client.percStep) {
+                client.paintNote(n);
+                c = 'c4';
+            }
             this.fillColor(n.palette, c, layer);
             this.strokeColor(n.palette, 'bg', layer);
             this.fillQuad(x1, y1, x2, y2, x3, y3, x4, y4, true, layer);
         }   
-        if (n.animFrame < animLengths.eggNote) n.animFrame++;
     }
 
     setRendererSize() {
