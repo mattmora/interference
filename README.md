@@ -1,5 +1,5 @@
 ### Interference: 
-An experimental music composition / game hybrid
+An experimental generative music composition / game
 
 ---
 Hosted [here](interference.herokuapp.com) 
@@ -12,7 +12,7 @@ To run locally (requires Node.js):
 5. Run on localhost:8080: `npm start`
 
 Note:
-Might not work in browsers other than Chrome but likely works in Firefox
+Might not work in browsers other than Chrome
 
 Game and networking powered by [Lance](http://lance.gg/)
 
