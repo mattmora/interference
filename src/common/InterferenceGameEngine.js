@@ -531,26 +531,34 @@ export default class InterferenceGameEngine extends GameEngine {
                 }
                 else if (inputData.input == '[') {
                     let newNumber = player.number - 1;
+                    let newX = null;
+                    let newY = null;
                     if (newNumber < 0) newNumber = players.length - 1;
-                    for (let p of players) { 
+                    for (let p of players) {
                         if (p.number === newNumber) {
                             p.number = player.number; 
-                            p.move((p.number - newNumber) * this.playerWidth, 0);
+                            newX = p.xPos;
+                            newY = p.yPos;
+                            p.moveTo(player.xPos, player.yPos);
                         }
                     }
-                    player.move((newNumber - player.number) * this.playerWidth, 0);
+                    player.moveTo(newX, newY);
                     player.number = newNumber;
                 }
                 else if (inputData.input == ']') {
                     let newNumber = player.number + 1;
+                    let newX = null;
+                    let newY = null;
                     if (newNumber >= players.length) newNumber = 0;
                     for (let p of players) { 
                         if (p.number === newNumber) {
                             p.number = player.number; 
-                            p.move((p.number - newNumber) * this.playerWidth, 0);
+                            newX = p.xPos;
+                            newY = p.yPos;
+                            p.moveTo(player.xPos, player.yPos);
                         }
                     }
-                    player.move((newNumber - player.number) * this.playerWidth, 0);
+                    player.moveTo(newX, newY);
                     player.number = newNumber;
                 } 
             }

@@ -233,8 +233,11 @@ export default class InterferenceServerEngine extends ServerEngine {
                 }
                 this.myRooms[room].splice(this.myRooms[room].indexOf(player), 1);
                 for (let p of this.myRooms[room]) {
-                    if (p.number > removed) p.number--; 
-                }
+                    if (p.number > removed) {
+                        p.number--; 
+                        p.move(-this.gameEngine.playerWidth, 0);
+                    }
+                } 
             }
             else {
                 player.active = 0;
