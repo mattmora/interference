@@ -24,7 +24,7 @@ export default class InterferenceGameEngine extends GameEngine {
             playerWidth: 32, playerHeight: 18, 
             eggSounds: ['melody', 'bass', 'perc'], eggHPRange: 3, eggHPMin: 4, startingAmmo: 1, maxAmmo: 8, reloadSize: 2,
             leftBound: 0, topBound: 0, bottomBound: 18,
-            transportSyncInterval: 200, eggRadius: 1, eggBaseVelocity: 0.2, ammoDropChange: 0.3,
+            transportSyncInterval: 200, eggRadius: 1, eggBaseVelocity: 0.2, ammoDropChance: 0.3,
             actionThreshold: 2, progressionThreshold: 4, 
             palettes: [1, 2, 3, 4, 5],
             paletteAttributes: [
@@ -52,15 +52,15 @@ export default class InterferenceGameEngine extends GameEngine {
                     gridWidth: 1,
                     gridHeight: 1,
                     melody: {
-                        subdivision: '1n',
+                        subdivision: '32n',
                         length: 0
                     },
                     bass: {
-                        subdivision: '1n',
+                        subdivision: '8n',
                         length: 0
                     },
                     perc: {
-                        subdivision: '1n',
+                        subdivision: '16n',
                         length: 0
                     }
                 },
@@ -343,36 +343,48 @@ export default class InterferenceGameEngine extends GameEngine {
                         }
                         else if (   this.notesByRoom[r][i].sound === 'melody' &&
                                     this.notesByRoom[r][j].sound === 'perc') {
-                            this.removeObjectFromWorld(this.notesByRoom[r][j].id);
-                            removed = this.notesByRoom[r][j].id;
-                            this.emit('removedNote', r);
+                            if (this.world.queryObject(this.notesByRoom[r][j].id) != null) {
+                                this.removeObjectFromWorld(this.notesByRoom[r][j].id);
+                                removed = this.notesByRoom[r][j].id;
+                                this.emit('removedNote', r);
+                            } 
                         }
                         else if (   this.notesByRoom[r][i].sound === 'melody' &&
                                     this.notesByRoom[r][j].sound === 'bass') {
-                            this.removeObjectFromWorld(this.notesByRoom[r][i].id);
-                            this.emit('removedNote', r);
+                            if (this.world.queryObject(this.notesByRoom[r][i].id) != null) {
+                                this.removeObjectFromWorld(this.notesByRoom[r][i].id);
+                                this.emit('removedNote', r);
+                            }
                         }
                         else if (   this.notesByRoom[r][i].sound === 'perc' &&
                                     this.notesByRoom[r][j].sound === 'bass') {
-                            this.removeObjectFromWorld(this.notesByRoom[r][j].id);
-                            removed = this.notesByRoom[r][j].id;
-                            this.emit('removedNote', r);
+                            if (this.world.queryObject(this.notesByRoom[r][j].id) != null) {
+                                this.removeObjectFromWorld(this.notesByRoom[r][j].id);
+                                removed = this.notesByRoom[r][j].id;
+                                this.emit('removedNote', r);
+                            }
                         }
                         else if (   this.notesByRoom[r][i].sound === 'perc' &&
                                     this.notesByRoom[r][j].sound === 'melody') {
-                            this.removeObjectFromWorld(this.notesByRoom[r][i].id);
-                            this.emit('removedNote', r);
+                            if (this.world.queryObject(this.notesByRoom[r][i].id) != null) {
+                                this.removeObjectFromWorld(this.notesByRoom[r][i].id);
+                                this.emit('removedNote', r);
+                            }
                         }
                         else if (   this.notesByRoom[r][i].sound === 'bass' &&
                                     this.notesByRoom[r][j].sound === 'melody') {
-                            this.removeObjectFromWorld(this.notesByRoom[r][j].id);
-                            removed = this.notesByRoom[r][j].id;
-                            this.emit('removedNote', r);
+                            if (this.world.queryObject(this.notesByRoom[r][j].id) != null) {
+                                this.removeObjectFromWorld(this.notesByRoom[r][j].id);
+                                removed = this.notesByRoom[r][j].id;
+                                this.emit('removedNote', r);
+                            }
                         }                   
                         else if (   this.notesByRoom[r][i].sound === 'bass' &&
                                     this.notesByRoom[r][j].sound === 'perc') {
-                            this.removeObjectFromWorld(this.notesByRoom[r][i].id);
-                            this.emit('removedNote', r);
+                            if (this.world.queryObject(this.notesByRoom[r][i].id) != null) {
+                                this.removeObjectFromWorld(this.notesByRoom[r][i].id);
+                                this.emit('removedNote', r);
+                            }
                         }
                     }
                 }

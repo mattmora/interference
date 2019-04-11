@@ -301,6 +301,15 @@ export default class InterferenceRenderer extends Renderer {
             }
             if (n.animFrame < animLengths.eggNote) n.animFrame++;
         }
+        if (client.melodyStep === step) {
+            //this.fillRect(step + 0.5, )
+        }
+        else if (client.percStep === step) {
+            
+        }
+        else if (client.bassStep === step) {
+            
+        }
     }
 
     drawNote(n, wrap) {

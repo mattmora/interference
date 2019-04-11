@@ -93,6 +93,9 @@ export default class InterferenceServerEngine extends ServerEngine {
                 else {
                     console.log('found inactive');
                     player = inactivePlayers[0];
+                    for (let n of this.gameEngine.queryNotes({ ownerId: player.playerId })) {
+                        n.ownerId = socket.playerId;
+                    }
                     player.playerId = socket.playerId;
                     player.active = 1;
                     this.assignPlayerToRoom(player.playerId, roomName);
@@ -228,9 +231,6 @@ export default class InterferenceServerEngine extends ServerEngine {
             if (this.roomStages[room] === 'setup') {
                 let removed = player.number;
                 this.gameEngine.removeObjectFromWorld(player.id);
-                for (let n of this.gameEngine.queryNotes({ ownerId: playerId })) {
-                    this.gameEngine.removeObjectFromWorld(n);
-                }
                 this.myRooms[room].splice(this.myRooms[room].indexOf(player), 1);
                 for (let p of this.myRooms[room]) {
                     if (p.number > removed) {

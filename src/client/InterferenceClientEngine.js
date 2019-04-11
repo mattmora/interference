@@ -327,7 +327,7 @@ export default class InterferenceClientEngine extends ClientEngine {
             }
         }
         this.player.gridString = JSON.stringify(this.player.grid);
-        this.initSound();
+        //this.initSound();
     }
 
     onEggBounce(e) {
