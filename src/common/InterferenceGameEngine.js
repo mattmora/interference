@@ -395,22 +395,22 @@ export default class InterferenceGameEngine extends GameEngine {
             for (let e of this.eggsByRoom[r]) {
                 // bounce off walls
                 if ((e.position.x - this.eggRadius) < this.leftBound) {
-                    e.velocity.x *= -1;
+                    e.velocity.x = Math.abs(e.velocity.x);
                     e.position.x = this.leftBound + this.eggRadius;
                     this.emit('eggBounce', e);
                 } 
                 else if ((e.position.x + this.eggRadius) > this.rightBoundByRoom[r]) {
-                    e.velocity.x *= -1;
+                    e.velocity.x = -Math.abs(e.velocity.x);
                     e.position.x = this.rightBoundByRoom[r] - this.eggRadius;
                     this.emit('eggBounce', e);
                 }
                 if ((e.position.y - this.eggRadius) < this.topBound) {
-                    e.velocity.y *= -1
+                    e.velocity.y = Math.abs(e.velocity.x);
                     e.position.y = this.topBound + this.eggRadius;
                     this.emit('eggBounce', e);
                 }
                 else if ((e.position.y + this.eggRadius) > this.bottomBound) {
-                    e.velocity.y *= -1
+                    e.velocity.y = -Math.abs(e.velocity.x);
                     e.position.y = this.bottomBound - this.eggRadius;
                     this.emit('eggBounce', e);
                 }
