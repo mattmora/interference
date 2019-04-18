@@ -7,9 +7,9 @@ const paletteTable = [
     //'default': 
     {
         bg: 'black',
-        c1: 'white',
-        c2: 'white',
-        c3: 'white',
+        c1: 'black',
+        c2: 'black',
+        c3: 'black',
         c4: 'white'
     },
     //'rain': 
@@ -178,6 +178,8 @@ export default class InterferenceRenderer extends Renderer {
             if (players.length === 1) {
                 this.drawPlayer(p, false);
                 this.drawPlayer(p, true);
+                this.drawPlayheads(p, false);
+                this.drawPlayheads(p, true);
             }
             else {
                 let inView = true;
@@ -190,6 +192,7 @@ export default class InterferenceRenderer extends Renderer {
                 }
                 if (inView) {
                     this.drawPlayer(p, wrap)
+                    this.drawPlayheads(p, wrap);
                 }
             }
         }
@@ -229,6 +232,7 @@ export default class InterferenceRenderer extends Renderer {
     drawSequences() {
         this.strokeWeight(2, 0);
         this.strokeWeight(2, 1);
+        // draw notes
         for (let number of Object.keys(sequences)) {
             if (sequences[number].bass != null) for (let step of sequences[number].bass) if (step != null) this.drawStep(step);
             if (sequences[number].melody != null) for (let step of sequences[number].melody) if (step != null) this.drawStep(step); 
@@ -249,17 +253,17 @@ export default class InterferenceRenderer extends Renderer {
             this.strokeWeight((dimX + dimY) * 0.0625, 1);
             if (e.hp > 0) {
                 if (e.sound === 'melody') {
-                    this.fillEllipse(x, y, dimX, dimY, 0, 0, 2*Math.PI, true, 1);
+                    this.fillEllipse(x, y, dimX, dimY, 0, 0, 2*Math.PI, false, 1);
                 }
                 else if (e.sound === 'bass') {
-                    this.fillRect(x - dimX, y - dimY, dimX * 2, dimY * 2, true, 1);
+                    this.fillRect(x - dimX, y - dimY, dimX * 2, dimY * 2, false, 1);
                 }
                 else if (e.sound === 'perc') {
                     this.fillQuad(  x - dimX, y, x, y - dimY, 
-                                    x + dimX, y, x, y + dimY, true, 1);
+                                    x + dimX, y, x, y + dimY, false, 1);
                 }
             }
-            else this.drawBrokenEgg(e, x, y, dimX, dimY, true, 1);
+            else this.drawBrokenEgg(e, x, y, dimX, dimY, false, 1);
             if (e.position.x < game.playerWidth) {
                 pos = this.gamePositionToCanvasPosition(e.position.x + (players.length * game.playerWidth), e.position.y);
                 x = pos[0];
@@ -267,20 +271,36 @@ export default class InterferenceRenderer extends Renderer {
                 this.strokeWeight((dimX + dimY) * 0.0625, 1);
                 if (e.hp > 0) {
                     if (e.sound === 'melody') {
-                        this.fillEllipse(x, y, dimX, dimY, 0, 0, 2*Math.PI, true, 1);
+                        this.fillEllipse(x, y, dimX, dimY, 0, 0, 2*Math.PI, false, 1);
                     }
                     else if (e.sound === 'bass') {
-                        this.fillRect(x - dimX, y - dimY, dimX * 2, dimY * 2, true, 1);
+                        this.fillRect(x - dimX, y - dimY, dimX * 2, dimY * 2, false, 1);
                     }
                     else if (e.sound === 'perc') {
                         this.fillQuad(  x - dimX, y, x, y - dimY, 
-                                        x + dimX, y, x, y + dimY, true, 1);
+                                        x + dimX, y, x, y + dimY, false, 1);
                     }
                 }
-                else this.drawBrokenEgg(e, x, y, dimX, dimY, true, 1);
+                else this.drawBrokenEgg(e, x, y, dimX, dimY, false, 1);
             }
             if (e.animFrames.spawn < animLengths.eggSpawn) e.animFrames.spawn++;
         }
+    }
+
+    drawPlayheads(p, wrap) {
+        let dimX = this.gameXDimToCanvasXDim(1);   
+        let dimY = this.gameYDimToCanvasYDim(game.playerHeight);
+        let shift = p.number * game.playerWidth;
+        if (wrap) shift += players.length * game.playerWidth;
+        let melodyPos = this.cellToCanvasPosition(shift + client.melodyStep + 0.45, 0, 32, 18);
+        let percPos = this.cellToCanvasPosition(shift + client.percStep + 0.4, 0, 32, 18);
+        let bassPos = this.cellToCanvasPosition(shift + client.bassStep + 0.35, 0, 32, 18);
+        this.fillColor('default', 'c1', 1);
+        this.fillRect(melodyPos[0], melodyPos[1], dimX * 0.1, dimY, 0, 1);
+        this.fillColor('default', 'c2', 1);
+        this.fillRect(percPos[0], percPos[1], dimX * 0.2, dimY, 0, 1);
+        this.fillColor('default', 'c3', 1);
+        this.fillRect(bassPos[0], bassPos[1], dimX * 0.3, dimY, 0, 1);
     }
 
     drawStep(step) {
@@ -300,15 +320,6 @@ export default class InterferenceRenderer extends Renderer {
                 if (inView) this.drawNote(n, wrap);
             }
             if (n.animFrame < animLengths.eggNote) n.animFrame++;
-        }
-        if (client.melodyStep === step) {
-            //this.fillRect(step + 0.5, )
-        }
-        else if (client.percStep === step) {
-            
-        }
-        else if (client.bassStep === step) {
-            
         }
     }
 
@@ -350,7 +361,7 @@ export default class InterferenceRenderer extends Renderer {
             c = 'c2';
             if (n.dur === '2n') { 
                 c = 'c3'; 
-                dimX *= (gridWidth / 2); 
+                dimX *= (gridWidth / 4); 
                 layer = 0; 
             }
             if (n.step === client.bassStep) {

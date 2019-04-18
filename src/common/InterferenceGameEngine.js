@@ -405,12 +405,12 @@ export default class InterferenceGameEngine extends GameEngine {
                     this.emit('eggBounce', e);
                 }
                 if ((e.position.y - this.eggRadius) < this.topBound) {
-                    e.velocity.y = Math.abs(e.velocity.x);
+                    e.velocity.y = Math.abs(e.velocity.y);
                     e.position.y = this.topBound + this.eggRadius;
                     this.emit('eggBounce', e);
                 }
                 else if ((e.position.y + this.eggRadius) > this.bottomBound) {
-                    e.velocity.y = -Math.abs(e.velocity.x);
+                    e.velocity.y = -Math.abs(e.velocity.y);
                     e.position.y = this.bottomBound - this.eggRadius;
                     this.emit('eggBounce', e);
                 }
@@ -611,7 +611,7 @@ export default class InterferenceGameEngine extends GameEngine {
                 }
             } */
         }
-        else if (player.stage === 'fight' || player.stage === 'outro') {
+        else if (player.stage === 'fight') {
             if (isServer) {
                 if (inputData.input == 'w') {
                     player.move(0, -1);
@@ -629,6 +629,25 @@ export default class InterferenceGameEngine extends GameEngine {
                 if (inputData.input == 'b') {
                     this.emit('beginPerformance', player);
                 } */
+            }
+        }
+        else if (player.stage === 'outro') {
+            if (isServer) {
+                if (inputData.input == 'w') {
+                    player.move(0, -1);
+                }
+                else if (inputData.input == 'a') {
+                    player.move(-1, 0);
+                }
+                else if (inputData.input == 's') {
+                    player.move(0, 1);
+                }
+                else if (inputData.input == 'd') {
+                    player.move(1, 0);
+                }
+                else if (inputData.input == 'space') {
+                    this.emit('removeNote', player);
+                }
             }
         }
     }

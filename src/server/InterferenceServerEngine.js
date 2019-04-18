@@ -18,6 +18,7 @@ export default class InterferenceServerEngine extends ServerEngine {
         this.moveTimes = {};
         this.actionCounts = {};
         this.progressionCounts = {};
+        this.tempos = {};
 
         this.gameEngine.on('server__preStep', this.preStepLogic.bind(this));
         this.gameEngine.on('server__postStep', this.postStepLogic.bind(this));
@@ -26,7 +27,8 @@ export default class InterferenceServerEngine extends ServerEngine {
         this.gameEngine.on('noteRemoved', roomName => { this.actionCounts[roomName]++ });
         this.gameEngine.on('playerAction', player => { this.onPlayerAction(player) });
         this.gameEngine.on('playerForfeit', player => { this.onPlayerForfeit(player) });
-        this.gameEngine.on('autoProgress', roomName => { this.startFightStage(roomName) })
+        this.gameEngine.on('autoProgress', roomName => { this.startFightStage(roomName) });
+        this.gameEngine.on('removeNote', player => { this.onRemoveNote(player) });
     }
 
     // create food and AI robots
@@ -53,6 +55,7 @@ export default class InterferenceServerEngine extends ServerEngine {
                 this.roomStages[roomName] = 'setup';
                 //this.moveTimes[roomName] = 0;
                 this.actionCounts[roomName] = 0;
+                this.tempos[roomName] = 120;
             }
             if (this.roomStages[roomName] === 'setup') {
                 player = new Performer(this.gameEngine, null, {});
@@ -182,6 +185,19 @@ export default class InterferenceServerEngine extends ServerEngine {
             if (player == null) return;
             this.startFightStage(player._roomName) 
         });
+
+        socket.on('changeTempo', delta => {
+            if (player == null) return;
+            this.tempos[player._roomName] += delta
+            if (this.tempos[player._roomName] < 60) {
+                this.tempos[player._roomName] = 60;
+            }
+            else if (this.tempos[player._roomName] > 240) {
+                this.tempos[player._roomName] = 240;
+            }
+            socket.emit('changeTempo', this.tempos[player._roomName]);
+            this.startBuildStage(player._roomName);
+        });
     }
 
     createSyncServer(roomName) {
@@ -301,6 +317,7 @@ export default class InterferenceServerEngine extends ServerEngine {
             }           
         }
         for (let p of this.myRooms[room]) {
+            p.ammo = 0;
             this.assimilatePlayerToPalette(p, p.palette);
         }
     }
@@ -313,6 +330,9 @@ export default class InterferenceServerEngine extends ServerEngine {
 
     onPlayerAction(p) {
         this.actionCounts[p._roomName]++
+    }
+
+    onRemoveNote(p) {
         if (this.roomStages[p._roomName] === 'outro') {
             let notes = this.gameEngine.queryNotes({ _roomName: p._roomName });
             if (notes.length > 0) {
@@ -336,15 +356,17 @@ export default class InterferenceServerEngine extends ServerEngine {
             }
         }
         let max = 0;
-        let pal = p.palette;
+        let pal = null;
         for (let i = 0; i < counts.length; i++) {
             if (counts[i] == null) continue;
             if (counts[i] > max) {
-                max = counts[i];
-                pal = i;
+                if (i !== p.palette) {
+                    max = counts[i];
+                    pal = i;
+                }
             }
         }
-        if (pal === p.palette) return;
+        if (pal === null) return;
 
         this.assimilatePlayerToPalette(p, pal);
     } 

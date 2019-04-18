@@ -17,7 +17,7 @@ const io = socketIO(requestHandler);
 
 // Game Instances
 const gameEngine = new InterferenceGameEngine({ traceLevel: Lib.TRACE_NONE });
-const serverEngine = new InterferenceServerEngine(io, gameEngine, { debug: {}, updateRate: 6, timeoutInterval: 600 });
+const serverEngine = new InterferenceServerEngine(io, gameEngine, { debug: {}, updateRate: 5, timeoutInterval: 1800 });
 
 // start the game
 serverEngine.start();
