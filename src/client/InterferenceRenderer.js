@@ -178,8 +178,8 @@ export default class InterferenceRenderer extends Renderer {
             if (players.length === 1) {
                 this.drawPlayer(p, false);
                 this.drawPlayer(p, true);
-                this.drawPlayheads(p, false);
-                this.drawPlayheads(p, true);
+                //this.drawPlayheads(p, false);
+                //this.drawPlayheads(p, true);
             }
             else {
                 let inView = true;
@@ -192,7 +192,7 @@ export default class InterferenceRenderer extends Renderer {
                 }
                 if (inView) {
                     this.drawPlayer(p, wrap)
-                    this.drawPlayheads(p, wrap);
+                    //this.drawPlayheads(p, wrap);
                 }
             }
         }
