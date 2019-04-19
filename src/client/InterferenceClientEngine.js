@@ -282,7 +282,6 @@ export default class InterferenceClientEngine extends ClientEngine {
                 let serverCopy = this.gameEngine.resolveShadowObject(note);
                 if (serverCopy != null) {
                     serverCopy.animFrame = note.animFrame;
-                    continue;
                 }
             }
             let pal = this.gameEngine.paletteAttributes[note.palette];

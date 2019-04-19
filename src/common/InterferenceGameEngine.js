@@ -587,11 +587,13 @@ export default class InterferenceGameEngine extends GameEngine {
 
         }
         else if (player.stage === 'build') {
-            if (inputData.input == 'space') {
-                for (let e of eggs) {
-                    if (this.positionIsInPlayer(e.position.x, player)) {
-                        //player.direction = 1;
-                        this.playerHitEgg(player, e, isServer);
+            if (!isServer) {
+                if (inputData.input == 'space') {
+                    for (let e of eggs) {
+                        if (this.positionIsInPlayer(e.position.x, player)) {
+                            //player.direction = 1;
+                            this.playerHitEgg(player, e, isServer);
+                        }
                     }
                 }
             }
