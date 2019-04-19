@@ -364,7 +364,7 @@ export default class InterferenceClientEngine extends ClientEngine {
                 this.playPitchOnSynth(this.eggSynths[e.toString()].bounce, pitch, chord, scale, 6, '16n', '+0.01', 0.7);
             }
             else if (e.sound === 'bass') {
-                this.playPitchOnSynth(this.eggSynths[e.toString()].bounce, pitch, chord, scale, 3, '16n', '+0.01', 0.7);
+                this.playPitchOnSynth(this.eggSynths[e.toString()].bounce, pitch, chord, scale, 4, '16n', '+0.01', 0.7);
             }
             else if (e.sound === 'perc') {
                 this.eggSynths[e.toString()].bounce.triggerAttackRelease('16n', '+0.01', 0.2);
@@ -736,10 +736,10 @@ export default class InterferenceClientEngine extends ClientEngine {
             this.eggSynths[e.toString()].drone.triggerAttack(Frequency(pitch + 72, 'midi'), '+0.01', 0.2);
         }
         else if (e.sound === 'bass') {
-            this.eggSynths[e.toString()].drone.triggerAttack(Frequency(pitch + 36, 'midi'), '+0.01', 0.2);    
+            this.eggSynths[e.toString()].drone.triggerAttack(Frequency(pitch + 36, 'midi'), '+0.01', 0.3);    
         }
         else if (e.sound === 'perc') {
-            this.eggSynths[e.toString()].drone.triggerAttack('+0.01', 0.03);
+            this.eggSynths[e.toString()].drone.triggerAttack('+0.01', 0.02);
         }
         this.eggSynths[e.toString()].break.loop = 4;
     }
