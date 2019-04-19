@@ -144,6 +144,7 @@ export default class InterferenceServerEngine extends ServerEngine {
             let p = player;
             p.ammo = ammo;
             let e = this.gameEngine.world.queryObject({ id: eggId });
+            if (e == null) return;
             e.hp = hp;
             let pal = this.gameEngine.paletteAttributes[p.palette];
             let pos = this.gameEngine.quantizedPosition(x, y, pal.gridWidth, pal.gridHeight);

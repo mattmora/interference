@@ -22,9 +22,9 @@ export default class InterferenceGameEngine extends GameEngine {
             // fight
             // },
             playerWidth: 32, playerHeight: 18, 
-            eggSounds: ['melody', 'bass', 'perc'], eggHPRange: 3, eggHPMin: 4, startingAmmo: 1, maxAmmo: 8, reloadSize: 2,
+            eggSounds: ['melody', 'bass', 'perc'], eggHPRange: 2, eggHPMin: 2, startingAmmo: 1, maxAmmo: 8, reloadSize: 2,
             leftBound: 0, topBound: 0, bottomBound: 18,
-            transportSyncInterval: 200, eggRadius: 1, eggBaseVelocity: 0.2, ammoDropChance: 0.3,
+            transportSyncInterval: 200, eggRadius: 1, eggBaseVelocity: 0.2, ammoDropChance: 0.2,
             actionThreshold: 2, progressionThreshold: 4, 
             palettes: [1, 2, 3, 4, 5],
             paletteAttributes: [

@@ -178,8 +178,8 @@ export default class InterferenceRenderer extends Renderer {
             if (players.length === 1) {
                 this.drawPlayer(p, false);
                 this.drawPlayer(p, true);
-                //this.drawPlayheads(p, false);
-                //this.drawPlayheads(p, true);
+                this.drawPlayheads(p, false);
+                this.drawPlayheads(p, true);
             }
             else {
                 let inView = true;
@@ -192,7 +192,7 @@ export default class InterferenceRenderer extends Renderer {
                 }
                 if (inView) {
                     this.drawPlayer(p, wrap)
-                    //this.drawPlayheads(p, wrap);
+                    this.drawPlayheads(p, wrap);
                 }
             }
         }
@@ -244,13 +244,13 @@ export default class InterferenceRenderer extends Renderer {
         for (let e of eggs) {
             let scale = this.mapToRange(e.animFrames.spawn, 0, animLengths.eggSpawn, 0.0, 1.0);
             this.fillColor(0, 'c1', 1);
-            this.strokeColor(0, 'bg', 1);
+            //this.strokeColor(0, 'bg', 1);
             let dimX = this.gameXDimToCanvasXDim(game.eggRadius) * scale;
             let dimY = this.gameYDimToCanvasYDim(game.eggRadius) * scale;
             let pos = this.gamePositionToCanvasPosition(e.position.x, e.position.y);
             let x = pos[0];
             let y = pos[1];
-            this.strokeWeight((dimX + dimY) * 0.0625, 1);
+            //this.strokeWeight((dimX + dimY) * 0.0625, 1);
             if (e.hp > 0) {
                 if (e.sound === 'melody') {
                     this.fillEllipse(x, y, dimX, dimY, 0, 0, 2*Math.PI, false, 1);
@@ -268,7 +268,7 @@ export default class InterferenceRenderer extends Renderer {
                 pos = this.gamePositionToCanvasPosition(e.position.x + (players.length * game.playerWidth), e.position.y);
                 x = pos[0];
                 y = pos[1];
-                this.strokeWeight((dimX + dimY) * 0.0625, 1);
+                //this.strokeWeight((dimX + dimY) * 0.0625, 1);
                 if (e.hp > 0) {
                     if (e.sound === 'melody') {
                         this.fillEllipse(x, y, dimX, dimY, 0, 0, 2*Math.PI, false, 1);
@@ -296,11 +296,11 @@ export default class InterferenceRenderer extends Renderer {
         let percPos = this.cellToCanvasPosition(shift + client.percStep + 0.4, 0, 32, 18);
         let bassPos = this.cellToCanvasPosition(shift + client.bassStep + 0.35, 0, 32, 18);
         this.fillColor('default', 'c1', 1);
-        this.fillRect(melodyPos[0], melodyPos[1], dimX * 0.1, dimY, 0, 1);
+        this.fillRect(melodyPos[0], melodyPos[1], dimX * 0.1, dimY, false, 1);
         this.fillColor('default', 'c2', 1);
-        this.fillRect(percPos[0], percPos[1], dimX * 0.2, dimY, 0, 1);
+        this.fillRect(percPos[0], percPos[1], dimX * 0.2, dimY, false, 1);
         this.fillColor('default', 'c3', 1);
-        this.fillRect(bassPos[0], bassPos[1], dimX * 0.3, dimY, 0, 1);
+        this.fillRect(bassPos[0], bassPos[1], dimX * 0.3, dimY, false, 1);
     }
 
     drawStep(step) {

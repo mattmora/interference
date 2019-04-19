@@ -320,8 +320,8 @@ export default class InterferenceClientEngine extends ClientEngine {
         if (stage == 'build') {
             for (let e of this.eggs) {
                 if (!Object.keys(this.eggSynths).includes(e.toString())) this.constructEggSynths(e);
-                let vol = 0 - (12 * Math.abs(this.player.number - Math.floor(e.position.x / this.gameEngine.playerWidth)));
-                this.eggSynths[e.toString()].drone.volume.rampTo(vol, 0.1);
+                let vol = -(12 * Math.abs(this.player.number - Math.floor(e.position.x / this.gameEngine.playerWidth)));
+                this.eggSynths[e.toString()].drone.volume.value = vol;
                 let pal = this.gameEngine.paletteAttributes[this.player.palette];
                 let pitch = pal.scale[pal.pitchSets[this.pitchSet][0]];
                 if (e.sound === 'melody') {
@@ -435,7 +435,7 @@ export default class InterferenceClientEngine extends ClientEngine {
 
         //this.transport.timeSignature = 4;
 
-        this.reverb = new Reverb(5).toMaster();
+        this.reverb = new Reverb(2).toMaster();
         this.distVolume = new Volume(-12).toMaster();
         this.distVolume.connect(this.reverb);
         this.distortion = new Distortion(1).connect(this.distVolume);
