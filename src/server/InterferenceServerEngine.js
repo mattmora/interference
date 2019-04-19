@@ -387,10 +387,10 @@ export default class InterferenceServerEngine extends ServerEngine {
         let newEgg = new Egg(this.gameEngine, null, {   position: this.gameEngine.randPos(roomName), 
                                                         velocity: this.gameEngine.velRandY(roomName) });
         let numPlayers = this.gameEngine.playersByRoom[roomName].length;
-        for (let p of this.myRooms[roomName]) p.ammo += this.gameEngine.startingAmmo;
+        //for (let p of this.myRooms[roomName]) p.ammo += this.gameEngine.startingAmmo;
         //newEgg.number = 0;
         newEgg.sound = sound;
-        newEgg.hp = Math.floor((Math.random() * numPlayers * this.gameEngine.eggHPRange) + (numPlayers * this.gameEngine.eggHPMin));
+        newEgg.hp = Math.round((Math.random() * numPlayers * this.gameEngine.eggHPRange) + (numPlayers * this.gameEngine.eggHPMin));
         this.assignObjectToRoom(newEgg, roomName);
         this.gameEngine.addObjectToWorld(newEgg);
     }
