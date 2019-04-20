@@ -33,7 +33,8 @@ export default class InterferenceClientEngine extends ClientEngine {
             'KeyF': 'ToggleFullscreen',
             'KeyH': 'ToggleCursor',
             'KeyV': 'ToggleView',
-            'Slash': 'ToggleLock'
+            'Slash': 'ToggleLock',
+            'KeyX': 'ToggleEndGameControl'
         };
         this.melodyStep = 0;
         this.bassStep = 0;
@@ -91,6 +92,12 @@ export default class InterferenceClientEngine extends ClientEngine {
             //console.log('lock');
             this.viewLock = !this.viewLock;
         }
+        else if (controlString === 'ToggleEndGameControl') {
+            this.optionSelection['KeyO'] = 'endGame';
+            setTimeout(() => { 
+                if (this.optionSelection['KeyO'] != null) delete this.optionSelection['KeyO'];
+            }, 1000);
+        }
     }
 
     executeOption(optionString) {
@@ -102,13 +109,17 @@ export default class InterferenceClientEngine extends ClientEngine {
             this.socket.emit('startFightStage');
             this.optionSelection = {};
         }
-        else if (optionString === 'faster') {
-            this.socket.emit('changeTempo', 20);
-            this.optionSelection = {};
-        }
-        else if (optionString === 'slower') {
-            this.socket.emit('changeTempo', -20);
-            this.optionSelection = {}; 
+        // else if (optionString === 'faster') {
+        //     this.socket.emit('changeTempo', 20);
+        //     this.optionSelection = {};
+        // }
+        // else if (optionString === 'slower') {
+        //     this.socket.emit('changeTempo', -20);
+        //     this.optionSelection = {}; 
+        // }
+        else if (optionString === 'endGame') {
+            this.socket.emit('endGame');
+            delete this.optionSelection['KeyO'];
         }
     }
 

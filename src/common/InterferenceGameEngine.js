@@ -267,6 +267,7 @@ export default class InterferenceGameEngine extends GameEngine {
     // based on lance findLocalShadow; instead of finding the shadow of a server obj,
     // looks for the server copy of a shadow obj, and removes the shadow if the server copy if found
     resolveShadowObject(shadowObj) {
+        if (this.world.queryObject(shadowObj.id) == null) return null;
         for (let localId of Object.keys(this.world.objects)) {
             if (Number(localId) >= this.options.clientIDSpace) continue;
             let serverObj = this.world.objects[localId];

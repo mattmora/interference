@@ -187,17 +187,42 @@ export default class InterferenceServerEngine extends ServerEngine {
             this.startFightStage(player._roomName) 
         });
 
-        socket.on('changeTempo', delta => {
-            if (player == null) return;
-            this.tempos[player._roomName] += delta
-            if (this.tempos[player._roomName] < 60) {
-                this.tempos[player._roomName] = 60;
+        // socket.on('changeTempo', delta => {
+        //     if (player == null) return;
+        //     this.tempos[player._roomName] += delta
+        //     if (this.tempos[player._roomName] < 60) {
+        //         this.tempos[player._roomName] = 60;
+        //     }
+        //     else if (this.tempos[player._roomName] > 240) {
+        //         this.tempos[player._roomName] = 240;
+        //     }
+        //     socket.emit('changeTempo', this.tempos[player._roomName]);
+        //     this.startBuildStage(player._roomName);
+        // });
+
+        socket.on('endGame', () => {
+            let counts = [];
+            for (let p of this.myRooms[player._roomName]) {
+                for (let i = 0; i < p.grid.length; i++) {
+                    for (let j = 0; j < p.grid[i].length; j++) {
+                        if (counts[p.grid[i][j]] == null) counts[p.grid[i][j]] = 0;
+                        counts[p.grid[i][j]]++;
+                    }
+                }
             }
-            else if (this.tempos[player._roomName] > 240) {
-                this.tempos[player._roomName] = 240;
+            let max = 0;
+            let pal = null;
+            for (let i = 0; i < counts.length; i++) {
+                if (counts[i] == null) continue;
+                if (counts[i] > max) {
+                    max = counts[i];
+                    pal = i;
+                }
             }
-            socket.emit('changeTempo', this.tempos[player._roomName]);
-            this.startBuildStage(player._roomName);
+            for (let p of this.myRooms[player._roomName]) {
+                p.palette = pal;
+            }
+            this.startOutroStage(player._roomName);
         });
     }
 
@@ -243,7 +268,7 @@ export default class InterferenceServerEngine extends ServerEngine {
     onPlayerDisconnected(socketId, playerId) {
         super.onPlayerDisconnected(socketId, playerId);
         let player = this.gameEngine.world.queryObject({ playerId });
-        if (player) { 
+        if (player != null) { 
             let room = player._roomName;
             if (this.roomStages[room] === 'setup') {
                 let removed = player.number;
@@ -277,9 +302,7 @@ export default class InterferenceServerEngine extends ServerEngine {
     startBuildStage(room) {
         this.setGameStage(room, 'build');
         for (let p of this.myRooms[room]) {
-            if (p.active === 0) {
-                this.onPlayerForfeit(p);
-            }
+            this.attemptPlayerAssimilation(p);
         }
         if (this.gameEngine.eggsByRoom[room] != null) {
             for (let e of this.gameEngine.eggsByRoom[room]) {
@@ -372,6 +395,28 @@ export default class InterferenceServerEngine extends ServerEngine {
         this.assimilatePlayerToPalette(p, pal);
     } 
 
+    attemptPlayerAssimilation(p) {
+        let counts = [];
+        for (let i = 0; i < p.grid.length; i++) {
+            for (let j = 0; j < p.grid[i].length; j++) {
+                if (counts[p.grid[i][j]] == null) counts[p.grid[i][j]] = 0;
+                counts[p.grid[i][j]]++;
+            }
+        }
+        let max = 0;
+        let pal = null;
+        for (let i = 0; i < counts.length; i++) {
+            if (counts[i] == null) continue;
+            if (counts[i] > max) {
+                max = counts[i];
+                pal = i;
+            }
+        }
+        if (pal === p.palette) return;
+
+        this.assimilatePlayerToPalette(p, pal);
+    } 
+
     assimilatePlayerToPalette(player, pal) {
         player.palette = pal;
 
@@ -411,7 +456,7 @@ export default class InterferenceServerEngine extends ServerEngine {
             for (let p of this.myRooms[room]) {
                 if (pal == null) {
                     pal = p.palette;
-                    continue
+                    continue;
                 }
                 if (pal != p.palette) {
                     assimilated = false;
@@ -456,6 +501,13 @@ export default class InterferenceServerEngine extends ServerEngine {
                 if (this.progressionCounts[room] > this.gameEngine.progressionThreshold) this.startBuildStage(room);
                 for (let p of this.myRooms[room]) {
                     if (p.gridChanged) p.gridString = JSON.stringify(p.grid);
+                }
+            }
+            else if (this.roomStages[room] === 'outro') {
+                if (this.gameEngine.eggsByRoom[room] != null) {
+                    for (let e of this.gameEngine.eggsByRoom[room]) {
+                        this.gameEngine.removeObjectFromWorld(e.id);
+                    }           
                 }
             }
         }
