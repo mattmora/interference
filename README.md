@@ -4,6 +4,20 @@ An experimental generative music composition / game
 ---
 Hosted [here](interference.herokuapp.com) 
 
+Basic controls:
+- c (during setup) : Change color
+- [ and ] (during setup) : Change player position
+- b (during setup) : Start the game!
+- space (during build phase with a ball in your space) : Place a note at the ball position
+- 1 (with a broken ball in your space) : Start another build phase
+- 2 (with a broken ball in your space) : Start a fight phase
+- w/a/s/d (during fight phase) : Move
+- space (during outro) : Remove a random note from the game space
+- p (at any time after setup) : Progress the harmony after a number of presses
+- f : Toggle fullscreen
+- h : Toggle cursor
+- v : Toggle zoom
+
 To run locally (requires Node.js):
 1. Download this repo
 2. Navigate to the project folder in terminal
@@ -14,8 +28,6 @@ To run locally (requires Node.js):
 Note:
 Might not work in browsers other than Chrome
 
-Game and networking powered by [Lance](http://lance.gg/)
-
-Sound powered by [Tone.js](https://tonejs.github.io/) 
-
-Timing synchronization with [sync](https://github.com/collective-soundworks/sync)
+Game and networking powered by [Lance](http://lance.gg/)  
+Sound powered by [Tone.js](https://tonejs.github.io/)  
+Timing synchronization with [sync](https://github.com/collective-soundworks/sync) 
