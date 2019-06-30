@@ -3,6 +3,7 @@ An experimental generative music composition / game
 
 ---
 Hosted [here](interference.herokuapp.com) 
+Audio recording [here](https://soundcloud.com/user-519512177/interference-042019)
 
 Basic controls:
 - c (during setup) : Change color
