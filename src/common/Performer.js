@@ -9,7 +9,10 @@ export default class Performer extends DynamicObject {
             ammo: { type: BaseTypes.TYPES.INT16 },
             direction: { type: BaseTypes.TYPES.UINT8 },
             stage: { type: BaseTypes.TYPES.STRING },
-            gridString: { type: BaseTypes.TYPES.STRING },
+            grid: { 
+                type: BaseTypes.TYPES.LIST,
+                itemType: BaseTypes.TYPES.UINT8
+            },
             xPos: { type: BaseTypes.TYPES.INT16 },
             yPos: { type: BaseTypes.TYPES.INT16 },
             pitchSet: { type: BaseTypes.TYPES.UINT8 },
@@ -21,7 +24,7 @@ export default class Performer extends DynamicObject {
         super(gameEngine, options, props);
 
         this.class = Performer;
-        this.grid = [[]];
+        this.grid = [];
     }
 
     move(xStep, yStep) {
@@ -65,9 +68,10 @@ export default class Performer extends DynamicObject {
 
     syncTo(other) {
         super.syncTo(other);
+        this.grid = other.grid;
     }
 
     toString() {
-        return `Performer::${super.toString()} number=${this.number} `;
+        return `Performer::${super.toString()} number=${this.number} grid=${this.grid}`;
     }
 }

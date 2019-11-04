@@ -10,7 +10,7 @@ const paletteTable = [
         c1: 'black',
         c2: 'black',
         c3: 'black',
-        c4: 'white'
+        c4: 'black'
     },
     //'rain': 
     {   
@@ -208,17 +208,18 @@ export default class InterferenceRenderer extends Renderer {
         if (client.performanceView) n = 1;
         let i = p.number - (leftViewBound / game.playerWidth);
         if (wrap) i += players.length;
-        let xDim = this.gameXDimToCanvasXDim(game.playerWidth / game.paletteAttributes[p.palette].gridWidth);
-        let yDim = this.gameYDimToCanvasYDim(game.playerHeight / game.paletteAttributes[p.palette].gridHeight);
-        for (let xIdx = 0; xIdx < p.grid.length; xIdx++) {
+        let pal = game.paletteAttributes[p.palette];
+        let xDim = this.gameXDimToCanvasXDim(game.playerWidth / pal.gridWidth);
+        let yDim = this.gameYDimToCanvasYDim(game.playerHeight / pal.gridHeight);
+        for (let xIdx = 0; xIdx < pal.gridWidth; xIdx++) {
             let x = ((w / n) * i) + (xIdx * xDim);
-            for (let yIdx = 0; yIdx < p.grid[xIdx].length; yIdx++) {
+            for (let yIdx = 0; yIdx < pal.gridHeight; yIdx++) {
                 let y = yIdx * yDim;
-                this.fillColor(p.grid[xIdx][yIdx], 'bg', 0);
+                this.fillColor(p.grid[xIdx + (yIdx * pal.gridWidth)], 'bg', 0);
                 this.fillRect(x, y, xDim, yDim, false, 0)
             }
         }
-        this.fillColor('default', 'bg', 1);
+        this.fillColor(0, 'bg', 1);
         for (let a = 0; a < p.ammo; a++) {
             let x = ((w / n) * i);
             let x1 = x + ((a + 1) * ((w / n) / (p.ammo + 1)));
@@ -295,11 +296,11 @@ export default class InterferenceRenderer extends Renderer {
         let melodyPos = this.cellToCanvasPosition(shift + client.melodyStep + 0.45, 0, 32, 18);
         let percPos = this.cellToCanvasPosition(shift + client.percStep + 0.4, 0, 32, 18);
         let bassPos = this.cellToCanvasPosition(shift + client.bassStep + 0.35, 0, 32, 18);
-        this.fillColor('default', 'c1', 1);
+        this.fillColor(0, 'c1', 1);
         this.fillRect(melodyPos[0], melodyPos[1], dimX * 0.1, dimY, false, 1);
-        this.fillColor('default', 'c2', 1);
+        this.fillColor(0, 'c2', 1);
         this.fillRect(percPos[0], percPos[1], dimX * 0.2, dimY, false, 1);
-        this.fillColor('default', 'c3', 1);
+        this.fillColor(0, 'c3', 1);
         this.fillRect(bassPos[0], bassPos[1], dimX * 0.3, dimY, false, 1);
     }
 

@@ -256,6 +256,7 @@ export default class InterferenceGameEngine extends GameEngine {
 
         this.on('preStep', this.preStepLogic.bind(this));
         this.on('postStep', this.postStepLogic.bind(this));
+        this.on('client__syncReceived', this.updateValues.bind(this));
     }
 
     getNewShadowId() {
@@ -322,6 +323,11 @@ export default class InterferenceGameEngine extends GameEngine {
             this.resolveCollisions(r);
             this.gameLogic(r);
         }
+    }
+
+    updateValues(syncEvents, stepCount, fullUpdate)
+    {
+        
     }
 
     resolveCollisions(r) {

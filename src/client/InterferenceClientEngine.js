@@ -276,10 +276,9 @@ export default class InterferenceClientEngine extends ClientEngine {
         if (this.player == null) return;
         if (this.reverb == null && this.player.palette != 0) this.initSound();
 
+        console.log(`grid=${this.player.grid}`);
+
         this.players = this.gameEngine.playersByRoom[this.player._roomName];//this.gameEngine.world.queryObjects({ instanceType: Performer });
-        for (let p of this.players) {
-            if (p.gridString != null) p.grid = JSON.parse(p.gridString);
-        }
 
         this.eggs = this.gameEngine.world.queryObjects({ instanceType: Egg });
 
@@ -354,13 +353,8 @@ export default class InterferenceClientEngine extends ClientEngine {
         let palettes = this.gameEngine.palettes;
         this.player.palette = palettes[(palettes.indexOf(this.player.palette) + 1) % palettes.length];
         this.socket.emit('updatePalette', this.player.palette);
-        for (let i = 0; i < this.player.grid.length; i++) {
-            for (let j = 0; j < this.player.grid[i].length; j++) {
-                this.player.grid[i][j] = this.player.palette;
-            }
-        }
-        this.player.gridString = JSON.stringify(this.player.grid);
-        //this.initSound();
+        this.player.grid.fill(this.player.palette);
+        console.log(this.player.grid);
     }
 
     onEggBounce(e) {
@@ -397,7 +391,7 @@ export default class InterferenceClientEngine extends ClientEngine {
 
         let notes = this.gameEngine.queryNotes({            
             ownerId: p.playerId, 
-            palette: p.grid[pos[0]%pal.gridWidth][pos[1]%pal.gridHeight],
+            palette: p.grid[pos[0]%pal.gridWidth + ((pos[1]%pal.gridHeight) * pal.gridWidth)],
             sound: e.sound, 
             //vel: 1, 
             xPos: pos[0],
@@ -408,7 +402,7 @@ export default class InterferenceClientEngine extends ClientEngine {
             let newNote = new Note(this.gameEngine, null, { 
                 id: shadowId,
                 ownerId: p.playerId, 
-                palette: p.grid[pos[0]%pal.gridWidth][pos[1]%pal.gridHeight],
+                palette: p.grid[pos[0]%pal.gridWidth + ((pos[1]%pal.gridHeight) * pal.gridWidth)],
                 sound: e.sound, 
                 dur: dur,
                 vel: 1, 
@@ -774,7 +768,7 @@ export default class InterferenceClientEngine extends ClientEngine {
             pitchArray.push(note.pitch)
             //note.paint();
         }
-        //this.player.gridString = JSON.stringify(this.player.grid);
+
         //this.socket.emit('paintStep', idArray);
     }
 

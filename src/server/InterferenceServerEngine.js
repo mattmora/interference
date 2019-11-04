@@ -67,8 +67,8 @@ export default class InterferenceServerEngine extends ServerEngine {
                 player.yPos = 0;
                 player.palette = this.gameEngine.palettes[player.number%this.gameEngine.palettes.length];
                 player.stage = this.roomStages[roomName];
-                player.gridString = this.getEmptyGridStringByPalette(player.palette);
-                player.grid = JSON.parse(player.gridString);
+                let palAtt = this.gameEngine.paletteAttributes[player.palette];
+                player.grid = new Array(palAtt.gridWidth * palAtt.gridHeight).fill(player.palette);
                 player.gridChanged = false;
                 player.pitchSet = 0;
                 player.active = 1;
@@ -111,12 +111,9 @@ export default class InterferenceServerEngine extends ServerEngine {
         socket.on('updatePalette', pal => {
             if (player == null) return;
             player.palette = pal;
-            for (let i = 0; i < player.grid.length; i++) {
-                for (let j = 0; j < player.grid[i].length; j++) {
-                    player.grid[i][j] = player.palette;
-                }
-            }
-            player.gridString = this.getEmptyGridStringByPalette(player.palette);
+
+            let palAtt = this.gameEngine.paletteAttributes[player.palette];
+            player.grid = new Array(palAtt.gridWidth * palAtt.gridHeight).fill(player.palette);
         });
 
         socket.on('paintStep', idArray => {
@@ -131,28 +128,29 @@ export default class InterferenceServerEngine extends ServerEngine {
         socket.on('paintCell', (noteId, noteX, noteY, palette) => {
             let note = this.gameEngine.world.queryObject({ id: noteId });
             if (note == null) return;
-            let pal = this.gameEngine.paletteAttributes[palette];
-            let n = Math.floor(noteX / pal.gridWidth);
+            let palAtt = this.gameEngine.paletteAttributes[palette];
+            let n = Math.floor(noteX / palAtt.gridWidth);
             for (let p of this.gameEngine.queryPlayers({ number: n })) {
-                p.grid[noteX % pal.gridWidth][noteY % pal.gridHeight] = palette;
+                p.grid[(noteX % palAtt.gridWidth) + ((noteY % palAtt.gridHeight) * palAtt.gridWidth)] = palette;
             }
             player.gridChanged = true;   
         });
 
         socket.on('playerHitEgg', (ammo, eggId, hp, x, y, sound, inputId) => {
             if (player == null) return;
+            console.log(`grid=${player.grid}`);
             let p = player;
             p.ammo = ammo;
             let e = this.gameEngine.world.queryObject({ id: eggId });
             if (e == null) return;
             e.hp = hp;
-            let pal = this.gameEngine.paletteAttributes[p.palette];
-            let pos = this.gameEngine.quantizedPosition(x, y, pal.gridWidth, pal.gridHeight);
-            let dur = pal[sound].subdivision;
+            let palAtt = this.gameEngine.paletteAttributes[p.palette];
+            let pos = this.gameEngine.quantizedPosition(x, y, palAtt.gridWidth, palAtt.gridHeight);
+            let dur = palAtt[sound].subdivision;
 
             let notes = this.gameEngine.queryNotes({            
                 ownerId: p.playerId,
-                palette: p.grid[pos[0]%pal.gridWidth][pos[1]%pal.gridHeight],
+                palette: p.grid[(pos[0] % palAtt.gridWidth) + ((pos[1] % palAtt.gridHeight) * palAtt.gridWidth)],
                 sound: sound, 
                 //vel: 1, 
                 xPos: pos[0],
@@ -162,7 +160,7 @@ export default class InterferenceServerEngine extends ServerEngine {
             else {
                 let newNote = new Note(this.gameEngine, null, { 
                     ownerId: p.playerId, 
-                    palette: p.grid[pos[0]%pal.gridWidth][pos[1]%pal.gridHeight],
+                    palette: p.grid[(pos[0] % palAtt.gridWidth) + ((pos[1] % palAtt.gridHeight) * palAtt.gridWidth)],
                     sound: sound, 
                     dur: dur,
                     vel: 1, 
@@ -204,10 +202,8 @@ export default class InterferenceServerEngine extends ServerEngine {
             let counts = [];
             for (let p of this.myRooms[player._roomName]) {
                 for (let i = 0; i < p.grid.length; i++) {
-                    for (let j = 0; j < p.grid[i].length; j++) {
-                        if (counts[p.grid[i][j]] == null) counts[p.grid[i][j]] = 0;
-                        counts[p.grid[i][j]]++;
-                    }
+                    if (counts[p.grid[i]] == null) counts[p.grid[i]] = 0;
+                    counts[p.grid[i]]++;
                 }
             }
             let max = 0;
@@ -360,8 +356,8 @@ export default class InterferenceServerEngine extends ServerEngine {
         if (this.roomStages[p._roomName] === 'outro') {
             let notes = this.gameEngine.queryNotes({ _roomName: p._roomName });
             if (notes.length > 0) {
-                let note = notes[Math.floor(Math.random()*notes.length)];
-                this.gameEngine.removeObjectFromWorld(note.id);                
+                let note = notes.splice(Math.floor(Math.random()*notes.length), 1);
+                if (note != null) this.gameEngine.removeObjectFromWorld(note.id);                
             }
             else {
                 for (let player of this.myRooms[p._roomName]) {
@@ -374,10 +370,8 @@ export default class InterferenceServerEngine extends ServerEngine {
     onPlayerForfeit(p) {
         let counts = [];
         for (let i = 0; i < p.grid.length; i++) {
-            for (let j = 0; j < p.grid[i].length; j++) {
-                if (counts[p.grid[i][j]] == null) counts[p.grid[i][j]] = 0;
-                counts[p.grid[i][j]]++;
-            }
+            if (counts[p.grid[i]] == null) counts[p.grid[i]] = 0;
+            counts[p.grid[i]]++;
         }
         let max = 0;
         let pal = null;
@@ -398,10 +392,8 @@ export default class InterferenceServerEngine extends ServerEngine {
     attemptPlayerAssimilation(p) {
         let counts = [];
         for (let i = 0; i < p.grid.length; i++) {
-            for (let j = 0; j < p.grid[i].length; j++) {
-                if (counts[p.grid[i][j]] == null) counts[p.grid[i][j]] = 0;
-                counts[p.grid[i][j]]++;
-            }
+            if (counts[p.grid[i]] == null) counts[p.grid[i]] = 0;
+            counts[p.grid[i]]++;
         }
         let max = 0;
         let pal = null;
@@ -424,8 +416,8 @@ export default class InterferenceServerEngine extends ServerEngine {
             n.palette = player.palette
         }
 
-        player.gridString = this.getEmptyGridStringByPalette(player.palette);
-        player.grid = JSON.parse(player.gridString);
+        let palAtt = this.gameEngine.paletteAttributes[player.palette];
+        player.grid = new Array(palAtt.gridWidth * palAtt.gridHeight).fill(player.palette);
     }
 
     addEgg(sound, roomName) {
@@ -499,9 +491,9 @@ export default class InterferenceServerEngine extends ServerEngine {
             }
             else if (this.roomStages[room] === 'fight') {
                 if (this.progressionCounts[room] > this.gameEngine.progressionThreshold) this.startBuildStage(room);
-                for (let p of this.myRooms[room]) {
-                    if (p.gridChanged) p.gridString = JSON.stringify(p.grid);
-                }
+                // for (let p of this.myRooms[room]) {
+                //     if (p.gridChanged) p.gridString = JSON.stringify(p.grid);
+                // }
             }
             else if (this.roomStages[room] === 'outro') {
                 if (this.gameEngine.eggsByRoom[room] != null) {
@@ -511,11 +503,5 @@ export default class InterferenceServerEngine extends ServerEngine {
                 }
             }
         }
-    }
-
-    getEmptyGridStringByPalette(p) {
-        let gridString = new Array(this.gameEngine.paletteAttributes[p].gridWidth).fill(
-            new Array(this.gameEngine.paletteAttributes[p].gridHeight).fill(p));
-        return JSON.stringify(gridString);
     }
 }
