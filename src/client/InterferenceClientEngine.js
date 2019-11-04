@@ -276,8 +276,6 @@ export default class InterferenceClientEngine extends ClientEngine {
         if (this.player == null) return;
         if (this.reverb == null && this.player.palette != 0) this.initSound();
 
-        console.log(`grid=${this.player.grid}`);
-
         this.players = this.gameEngine.playersByRoom[this.player._roomName];//this.gameEngine.world.queryObjects({ instanceType: Performer });
 
         this.eggs = this.gameEngine.world.queryObjects({ instanceType: Egg });
@@ -354,7 +352,6 @@ export default class InterferenceClientEngine extends ClientEngine {
         this.player.palette = palettes[(palettes.indexOf(this.player.palette) + 1) % palettes.length];
         this.socket.emit('updatePalette', this.player.palette);
         this.player.grid.fill(this.player.palette);
-        console.log(this.player.grid);
     }
 
     onEggBounce(e) {
