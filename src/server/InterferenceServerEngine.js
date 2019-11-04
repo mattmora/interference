@@ -177,7 +177,7 @@ export default class InterferenceServerEngine extends ServerEngine {
 
         socket.on('startBuildStage', () => { 
             if (player == null) return;
-            this.startBuildStage(player._roomName) 
+            this.startBuildStage(player._roomName, this.roomStages[player._roomName]) 
         });
 
         socket.on('startFightStage', () => { 
@@ -292,10 +292,10 @@ export default class InterferenceServerEngine extends ServerEngine {
     }
 
     onBeginPerformance(player) {
-        this.startBuildStage(player._roomName);
+        this.startBuildStage(player._roomName, this.roomStages[player._roomName]);
     }
 
-    startBuildStage(room) {
+    startBuildStage(room, from) {
         this.setGameStage(room, 'build');
         for (let p of this.myRooms[room]) {
             this.attemptPlayerAssimilation(p);
@@ -309,18 +309,23 @@ export default class InterferenceServerEngine extends ServerEngine {
             p.moveTo(p.number * this.gameEngine.playerWidth, p.yPos);
             p.ammo = this.gameEngine.startingAmmo;
         }
-        let rand = Math.floor(Math.random()*this.gameEngine.eggSoundsToUse.length);
-        let sound = this.gameEngine.eggSoundsToUse[rand];
-        this.gameEngine.eggSoundsToUse.splice(rand, 1);
-        if (this.gameEngine.eggSoundsToUse.length === 0) this.gameEngine.eggSoundsToUse = this.gameEngine.eggSounds.slice();
-        this.addEgg(sound, room);
+        let numEggs = this.gameEngine.numEggsToAdd;
+        if (from === "setup") numEggs = this.gameEngine.numStartingEggs;
+
+        for (let i = 0; i < numEggs; i++) {
+            let rand = Math.floor(Math.random()*this.gameEngine.eggSoundsToUse.length);
+            let sound = this.gameEngine.eggSoundsToUse[rand];
+            // this.gameEngine.eggSoundsToUse.splice(rand, 1);
+            // if (this.gameEngine.eggSoundsToUse.length === 0) this.gameEngine.eggSoundsToUse = this.gameEngine.eggSounds.slice();
+            this.addEgg(sound, room);
+        }
     }
 
     startFightStage(room) {
         this.setGameStage(room, 'fight');
         if (this.gameEngine.eggsByRoom[room] != null) {
             for (let e of this.gameEngine.eggsByRoom[room]) {
-                this.gameEngine.removeObjectFromWorld(e.id);
+                if (e.broken) this.gameEngine.removeObjectFromWorld(e.id);
             }           
         }
         for (let p of this.myRooms[room]) {
@@ -427,7 +432,7 @@ export default class InterferenceServerEngine extends ServerEngine {
         //for (let p of this.myRooms[roomName]) p.ammo += this.gameEngine.startingAmmo;
         //newEgg.number = 0;
         newEgg.sound = sound;
-        newEgg.hp = Math.round((Math.random() * numPlayers * this.gameEngine.eggHPRange) + (numPlayers * this.gameEngine.eggHPMin));
+        newEgg.hp = Math.round((Math.random() * this.gameEngine.eggHPRange)) + (numPlayers * this.gameEngine.eggHPPerPlayer) + this.gameEngine.eggHPMin;
         this.assignObjectToRoom(newEgg, roomName);
         this.gameEngine.addObjectToWorld(newEgg);
     }
@@ -490,7 +495,7 @@ export default class InterferenceServerEngine extends ServerEngine {
                 }
             }
             else if (this.roomStages[room] === 'fight') {
-                if (this.progressionCounts[room] > this.gameEngine.progressionThreshold) this.startBuildStage(room);
+                if (this.progressionCounts[room] > this.gameEngine.progressionThreshold) this.startBuildStage(room, this.roomStages[room]);
                 // for (let p of this.myRooms[room]) {
                 //     if (p.gridChanged) p.gridString = JSON.stringify(p.grid);
                 // }

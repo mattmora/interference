@@ -22,9 +22,11 @@ export default class InterferenceGameEngine extends GameEngine {
             // fight
             // },
             playerWidth: 32, playerHeight: 18, 
-            eggSounds: ['melody', 'bass', 'perc'], eggHPRange: 2, eggHPMin: 2, startingAmmo: 4, maxAmmo: 8, reloadSize: 2,
+            eggSounds: ['melody', 'bass', 'perc'], numStartingEggs: 1, numEggsToAdd: 1,
+            eggHPRange: 0, eggHPMin: 2, eggHPPerPlayer: 2, 
+            startingAmmo: 3, maxAmmo: 5, reloadSize: 2,
             leftBound: 0, topBound: 0, bottomBound: 18,
-            transportSyncInterval: 200, eggRadius: 1, eggBaseVelocity: 0.15, ammoDropChance: 0.05,
+            transportSyncInterval: 200, eggRadius: 1, eggBaseVelocity: 0.12, ammoDropChance: 0.05,
             actionThreshold: 2, progressionThreshold: 4, 
             palettes: [1, 2, 3, 4, 5],
             paletteAttributes: [
@@ -88,15 +90,15 @@ export default class InterferenceGameEngine extends GameEngine {
                     gridWidth: 32,
                     gridHeight: 18,
                     melody: {
-                        subdivision: '32n',
+                        subdivision: '15n',
                         length: 32
                     },
                     bass: {
-                        subdivision: '8n',
+                        subdivision: '9n',
                         length: 32
                     },
                     perc: {
-                        subdivision: '16n',
+                        subdivision: '12n',
                         length: 32
                     }
                 },
@@ -327,7 +329,7 @@ export default class InterferenceGameEngine extends GameEngine {
 
     updateValues(syncEvents, stepCount, fullUpdate)
     {
-        
+
     }
 
     resolveCollisions(r) {
@@ -526,6 +528,8 @@ export default class InterferenceGameEngine extends GameEngine {
     processInput(inputData, playerId, isServer) {
 
         super.processInput(inputData, playerId);
+
+        if (player == null) return;
         
         let player = this.world.queryObject({ playerId });
         let players = this.playersByRoom[player._roomName];
@@ -603,6 +607,18 @@ export default class InterferenceGameEngine extends GameEngine {
                         }
                     }
                 }
+            }
+            else if (isServer) {
+                if (inputData.input == 'w') {
+                    player.move(0, -1);
+                }
+                else if (inputData.input == 's') {
+                    player.move(0, 1);
+                }
+                /*
+                if (inputData.input == 'b') {
+                    this.emit('beginPerformance', player);
+                } */
             }
             /*
             else if (inputData.input == 'w') {
