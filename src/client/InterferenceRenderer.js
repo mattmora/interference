@@ -371,7 +371,7 @@ export default class InterferenceRenderer extends Renderer {
             }
             this.fillColor(n.palette, c, layer);
             this.strokeColor(n.palette, 'bg', layer);
-            this.fillRect(x, y, dimX, dimY, true, layer);
+            this.fillRect(x + (0.15*dimX), y + (0.15*dimY), dimX*0.7, dimY*0.7, true, layer);
         }
         else if (n.sound === 'perc') {
             x += dimX * 0.5;
