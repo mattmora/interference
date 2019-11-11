@@ -1,3 +1,5 @@
+"use strict";
+
 import { GameEngine, SimplePhysicsEngine, TwoVector } from 'lance-gg';
 import Note from './Note';
 import Performer from './Performer';
@@ -14,240 +16,7 @@ export default class InterferenceGameEngine extends GameEngine {
             collisions: { autoResolve: false }
         });
 
-        // game constants
-        Object.assign(this, {
-            // map: { setup: { variations: [0]['intro'], 
-            // intro: ['buildMelody', 'buildBass', 'buildPerc'],
-            // buildMelody: ['fight']
-            // fight
-            // },
-            playerWidth: 32, playerHeight: 18, 
-            eggSounds: ['melody', 'bass', 'perc'], numStartingEggs: 1, numEggsToAdd: 1,
-            eggHPRange: 0, eggHPMin: 2, eggHPPerPlayer: 2, 
-            startingAmmo: 3, maxAmmo: 5, reloadSize: 2,
-            leftBound: 0, topBound: 0, bottomBound: 18,
-            transportSyncInterval: 200, eggRadius: 1, eggBaseVelocity: 0.12, ammoDropChance: 0.05,
-            actionThreshold: 2, progressionThreshold: 4, 
-            palettes: [1, 2, 3, 4, 5],
-            paletteAttributes: [
-                { //default
-                    scale: [0, 2, 4, 5, 7, 9, 11], 
-                    pitchSets: [
-                        [0, 2, 4], //1
-                        [0, 2, 4],
-                        [0, 2, 4],
-                        [0, 2, 4],
-                        [0, 2, 4], //5
-                        [0, 2, 4],
-                        [0, 2, 4],
-                        [0, 2, 4],
-                        [0, 2, 4], //9
-                        [0, 2, 4],
-                        [0, 2, 4],
-                        [0, 2, 4],
-                        [0, 2, 4], //13
-                        [0, 2, 4],
-                        [0, 2, 4],
-                        [0, 2, 4],
-                        [0, 1, 2, 3, 4, 5, 6] //scale
-                    ],
-                    gridWidth: 1,
-                    gridHeight: 1,
-                    melody: {
-                        subdivision: '32n',
-                        length: 0
-                    },
-                    bass: {
-                        subdivision: '8n',
-                        length: 0
-                    },
-                    perc: {
-                        subdivision: '16n',
-                        length: 0
-                    }
-                },
-                { //rain
-                    scale: [1, 2, 4, 5, 7, 9, 10], // D harm min
-                    pitchSets: [
-                        [1, 3, 5], //1
-                        [1, 3, 5],
-                        [0, 2, 5],
-                        [0, 2, 5],
-                        [2, 4, 6], //5
-                        [2, 4, 6],
-                        [1, 4, 6],
-                        [1, 4, 6],
-                        [1, 4, 6], //9
-                        [1, 4, 6],
-                        [1, 4, 6],
-                        [1, 4, 6],
-                        [0, 2, 5], //13
-                        [0, 2, 5],
-                        [1, 3, 5],
-                        [1, 3, 5],
-                        [0, 1, 2, 3, 4, 5, 6] //scale
-                    ],
-                    gridWidth: 32,
-                    gridHeight: 18,
-                    melody: {
-                        subdivision: '15n',
-                        length: 32
-                    },
-                    bass: {
-                        subdivision: '9n',
-                        length: 32
-                    },
-                    perc: {
-                        subdivision: '12n',
-                        length: 32
-                    }
-                },
-                { //celeste
-                    scale: [1, 3, 4, 6, 7, 9, 11], // E mel min asc
-                    pitchSets: [
-                        [0, 3, 5], //1
-                        [0, 3, 5],
-                        [0, 3, 5],
-                        [2, 4, 6],
-                        [1, 3, 6], //5
-                        [1, 3, 6],
-                        [0, 2, 5],
-                        [0, 2, 5],
-                        [0, 3, 5], //9
-                        [0, 3, 5],
-                        [1, 3, 6],
-                        [1, 3, 6],
-                        [2, 4, 6], //13
-                        [1, 3, 6],
-                        [0, 3, 5],
-                        [0, 3, 5],
-                        [0, 1, 2, 3, 4, 5, 6] //scale
-                    ],
-                    gridWidth: 32,
-                    gridHeight: 18,
-                    melody: {
-                        subdivision: '32n',
-                        length: 32
-                    },
-                    bass: {
-                        subdivision: '8n',
-                        length: 32
-                    },
-                    perc: {
-                        subdivision: '16n',
-                        length: 32
-                    }
-                },
-                { //pyre
-                    scale: [0, 2, 4, 6, 7, 9, 11], // E minor
-                    pitchSets: [
-                        [2, 4, 6], //1
-                        [2, 4, 6],
-                        [2, 4, 6],
-                        [2, 4, 6],
-                        [2, 4, 6], //5
-                        [1, 3, 6],
-                        [2, 4, 6],
-                        [2, 4, 6],
-                        [0, 2, 5], //9
-                        [0, 2, 5],
-                        [2, 4, 6],
-                        [2, 4, 6],
-                        [2, 4, 6], //13
-                        [1, 3, 5],
-                        [0, 2, 4],
-                        [1, 3, 5],
-                        [0, 1, 2, 3, 4, 5, 6] //scale
-                    ],
-                    gridWidth: 32,
-                    gridHeight: 18,
-                    melody: {
-                        subdivision: '32n',
-                        length: 32
-                    },
-                    bass: {
-                        subdivision: '8n',
-                        length: 32
-                    },
-                    perc: {
-                        subdivision: '16n',
-                        length: 32
-                    }
-                },
-                { //journey
-                    scale: [0, 2, 3, 5, 7, 9, 10], // F mixo
-                    pitchSets: [
-                        [0, 3, 5], //1
-                        [0, 3, 5],
-                        [2, 4, 6],
-                        [2, 4, 6],
-                        [1, 3, 5], //5
-                        [1, 3, 5],
-                        [1, 3, 5],
-                        [1, 3, 5],
-                        [0, 3, 5], //9
-                        [0, 3, 5],
-                        [0, 2, 4],
-                        [0, 2, 4],
-                        [1, 3, 6], //13
-                        [1, 3, 6],
-                        [1, 3, 6],
-                        [1, 3, 6],
-                        [0, 1, 2, 3, 4, 5, 6] //scale
-                    ],
-                    gridWidth: 32,
-                    gridHeight: 18,
-                    melody: {
-                        subdivision: '32n',
-                        length: 32
-                    },
-                    bass: {
-                        subdivision: '8n',
-                        length: 32
-                    },
-                    perc: {
-                        subdivision: '16n',
-                        length: 32
-                    }
-                },
-                { //kirby
-                    scale: [0, 2, 4, 5, 7, 9, 11], // C diatonic (C maj)
-                    pitchSets: [
-                        [0, 2, 4], //1
-                        [0, 2, 4],
-                        [0, 2, 4],
-                        [0, 2, 4],
-                        [1, 3, 5], //5
-                        [1, 4, 6],
-                        [0, 2, 4],
-                        [0, 2, 4],
-                        [0, 2, 5], //9
-                        [0, 2, 5],
-                        [1, 4, 6],
-                        [0, 2, 4],
-                        [0, 2, 5], //13
-                        [0, 2, 5],
-                        [1, 4, 6],
-                        [0, 2, 4],
-                        [0, 1, 2, 3, 4, 5, 6] //scale
-                    ],
-                    gridWidth: 32,
-                    gridHeight: 18,
-                    melody: {
-                        subdivision: '32n',
-                        length: 32
-                    },
-                    bass: {
-                        subdivision: '8n',
-                        length: 32
-                    },
-                    perc: {
-                        subdivision: '16n',
-                        length: 32
-                    }
-                }
-            ]
-        });
+        this.restoreDefaultSettings();
 
         // game variables
         Object.assign(this, {
@@ -412,9 +181,9 @@ export default class InterferenceGameEngine extends GameEngine {
                     e.position.y = this.topBound + this.eggRadius;
                     this.emit('eggBounce', e);
                 }
-                else if ((e.position.y + this.eggRadius) > this.bottomBound) {
+                else if ((e.position.y + this.eggRadius) > this.playerHeight) {
                     e.velocity.y = -Math.abs(e.velocity.y);
-                    e.position.y = this.bottomBound - this.eggRadius;
+                    e.position.y = this.playerHeight - this.eggRadius;
                     this.emit('eggBounce', e);
                 }
                 // check if broken
@@ -513,10 +282,6 @@ export default class InterferenceGameEngine extends GameEngine {
             }
         }
         return queriedNotes;
-    }
-
-    playerHitEgg(p, e, isServer) {
-        this.emit('playerHitEgg', e);
     }
 
     processInput(inputData, playerId, isServer) {
@@ -668,5 +433,258 @@ export default class InterferenceGameEngine extends GameEngine {
                 }
             }
         }
+    }
+
+    restoreDefaultSettings() {
+        // game constants
+        Object.assign(this, {
+            // map: { setup: { variations: [0]['intro'], 
+            // intro: ['buildMelody', 'buildBass', 'buildPerc'],
+            // buildMelody: ['fight']
+            // fight
+            // },
+            playerWidth: 32, playerHeight: 18, 
+            eggSounds: ['melody', 'bass', 'perc'], numStartingEggs: 1, numEggsToAdd: 1,
+            eggHPRange: 0, eggHPMin: 2, eggHPPerPlayer: 2, 
+            startingAmmo: 3, maxAmmo: 5, reloadSize: 2,
+            leftBound: 0, topBound: 0, eggDroneVolume: -6,
+            transportSyncInterval: 200, eggRadius: 1, eggBaseVelocity: 0.125, ammoDropChance: 0.05,
+            actionThreshold: 2, progressionThreshold: 4, 
+            palettes: [1, 2, 3, 4, 5],
+            paletteAttributes: [
+                { //default
+                     //'default': 
+                    colors: {
+                        bg: 'black',
+                        c1: 'black',
+                        c2: 'black',
+                        c3: 'black',
+                        c4: 'black'
+                    },
+                    scale: [0, 2, 4, 5, 7, 9, 11], 
+                    pitchSets: [
+                        [0, 2, 4], //1
+                        [0, 2, 4],
+                        [0, 2, 4],
+                        [0, 2, 4],
+                        [0, 2, 4], //5
+                        [0, 2, 4],
+                        [0, 2, 4],
+                        [0, 2, 4],
+                        [0, 2, 4], //9
+                        [0, 2, 4],
+                        [0, 2, 4],
+                        [0, 2, 4],
+                        [0, 2, 4], //13
+                        [0, 2, 4],
+                        [0, 2, 4],
+                        [0, 2, 4],
+                        [0, 1, 2, 3, 4, 5, 6] //scale
+                    ],
+                    melody: {
+                        subdivision: '32n',
+                        length: 0
+                    },
+                    bass: {
+                        subdivision: '8n',
+                        length: 0
+                    },
+                    perc: {
+                        subdivision: '16n',
+                        length: 0
+                    }
+                },
+                { //rain
+                    colors: {   
+                        bg: '#3e2f5b', 
+                        c1: '#d7dedc',
+                        c2: '#706563',
+                        c3: '#457eac',
+                        c4: '#748386' 
+                    },
+                    scale: [1, 2, 4, 5, 7, 9, 10], // D harm min
+                    pitchSets: [
+                        [1, 3, 5], //1
+                        [1, 3, 5],
+                        [0, 2, 5],
+                        [0, 2, 5],
+                        [2, 4, 6], //5
+                        [2, 4, 6],
+                        [1, 4, 6],
+                        [1, 4, 6],
+                        [1, 4, 6], //9
+                        [1, 4, 6],
+                        [1, 4, 6],
+                        [1, 4, 6],
+                        [0, 2, 5], //13
+                        [0, 2, 5],
+                        [1, 3, 5],
+                        [1, 3, 5],
+                        [0, 1, 2, 3, 4, 5, 6] //scale
+                    ],
+                    melody: {
+                        subdivision: '15n'
+                    },
+                    bass: {
+                        subdivision: '9n'
+                    },
+                    perc: {
+                        subdivision: '12n'
+                    }
+                },
+                { //celeste
+                    colors: {   
+                        bg: '#a5d8ff', 
+                        c1: '#ff8266',
+                        c2: '#4381af',
+                        c3: '#ac86b0',
+                        c4: '#4b719c' 
+                    },
+                    scale: [1, 3, 4, 6, 7, 9, 11], // E mel min asc
+                    pitchSets: [
+                        [0, 3, 5], //1
+                        [0, 3, 5],
+                        [0, 3, 5],
+                        [2, 4, 6],
+                        [1, 3, 6], //5
+                        [1, 3, 6],
+                        [0, 2, 5],
+                        [0, 2, 5],
+                        [0, 3, 5], //9
+                        [0, 3, 5],
+                        [1, 3, 6],
+                        [1, 3, 6],
+                        [2, 4, 6], //13
+                        [1, 3, 6],
+                        [0, 3, 5],
+                        [0, 3, 5],
+                        [0, 1, 2, 3, 4, 5, 6] //scale
+                    ],
+                    melody: {
+                        subdivision: '32n'
+                    },
+                    bass: {
+                        subdivision: '8n'
+                    },
+                    perc: {
+                        subdivision: '16n'
+                    }
+                },
+                { //pyre
+                    colors: {   
+                        bg: '#a32323', 
+                        c1: '#2375a8',
+                        c2: '#fbf6f7',
+                        c3: '#f0ae62',
+                        c4: '#011936' 
+                    },
+                    scale: [0, 2, 4, 6, 7, 9, 11], // E minor
+                    pitchSets: [
+                        [2, 4, 6], //1
+                        [2, 4, 6],
+                        [2, 4, 6],
+                        [2, 4, 6],
+                        [2, 4, 6], //5
+                        [1, 3, 6],
+                        [2, 4, 6],
+                        [2, 4, 6],
+                        [0, 2, 5], //9
+                        [0, 2, 5],
+                        [2, 4, 6],
+                        [2, 4, 6],
+                        [2, 4, 6], //13
+                        [1, 3, 5],
+                        [0, 2, 4],
+                        [1, 3, 5],
+                        [0, 1, 2, 3, 4, 5, 6] //scale
+                    ],
+                    melody: {
+                        subdivision: '32n'
+                    },
+                    bass: {
+                        subdivision: '8n'
+                    },
+                    perc: {
+                        subdivision: '16n'
+                    }
+                },
+                { //journey
+                    colors: {   
+                        bg: '#fad68a', 
+                        c1: '#7f2819',
+                        c2: '#a25a11',
+                        c3: '#d5a962',
+                        c4: '#fef8e8' 
+                    },
+                    scale: [0, 2, 3, 5, 7, 9, 10], // F mixo
+                    pitchSets: [
+                        [0, 3, 5], //1
+                        [0, 3, 5],
+                        [2, 4, 6],
+                        [2, 4, 6],
+                        [1, 3, 5], //5
+                        [1, 3, 5],
+                        [1, 3, 5],
+                        [1, 3, 5],
+                        [0, 3, 5], //9
+                        [0, 3, 5],
+                        [0, 2, 4],
+                        [0, 2, 4],
+                        [1, 3, 6], //13
+                        [1, 3, 6],
+                        [1, 3, 6],
+                        [1, 3, 6],
+                        [0, 1, 2, 3, 4, 5, 6] //scale
+                    ],
+                    melody: {
+                        subdivision: '32n'
+                    },
+                    bass: {
+                        subdivision: '8n'
+                    },
+                    perc: {
+                        subdivision: '16n'
+                    }
+                },
+                { //kirby
+                    colors: {   
+                        bg: '#a8c256', 
+                        c1: '#f4a4a7',
+                        c2: '#e84c41',
+                        c3: '#f9df6a',
+                        c4: '#fa8334' 
+                    },
+                    scale: [0, 2, 4, 5, 7, 9, 11], // C diatonic (C maj)
+                    pitchSets: [
+                        [0, 2, 4], //1
+                        [0, 2, 4],
+                        [0, 2, 4],
+                        [0, 2, 4],
+                        [1, 3, 5], //5
+                        [1, 4, 6],
+                        [0, 2, 4],
+                        [0, 2, 4],
+                        [0, 2, 5], //9
+                        [0, 2, 5],
+                        [1, 4, 6],
+                        [0, 2, 4],
+                        [0, 2, 5], //13
+                        [0, 2, 5],
+                        [1, 4, 6],
+                        [0, 2, 4],
+                        [0, 1, 2, 3, 4, 5, 6] //scale
+                    ],
+                    melody: {
+                        subdivision: '32n'
+                    },
+                    bass: {
+                        subdivision: '8n'
+                    },
+                    perc: {
+                        subdivision: '16n'
+                    }
+                }
+            ]
+        });
     }
 }

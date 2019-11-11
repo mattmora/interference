@@ -1,3 +1,5 @@
+"use strict";
+
 import path from 'path';
 import express from 'express';
 import socketIO from 'socket.io';
@@ -17,7 +19,7 @@ const io = socketIO(requestHandler);
 
 // Game Instances
 const gameEngine = new InterferenceGameEngine({ traceLevel: Lib.TRACE_NONE });
-const serverEngine = new InterferenceServerEngine(io, gameEngine, { debug: {}, updateRate: 10, timeoutInterval: 1800 });
+const serverEngine = new InterferenceServerEngine(io, gameEngine, { debug: {}, updateRate: 5, timeoutInterval: 1800 });
 
 // start the game
 serverEngine.start();

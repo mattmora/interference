@@ -1,3 +1,5 @@
+"use strict";
+
 import { BaseTypes, DynamicObject, TwoVector } from 'lance-gg';
 
 export default class Performer extends DynamicObject {

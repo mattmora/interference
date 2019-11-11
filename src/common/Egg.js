@@ -1,3 +1,5 @@
+"use strict";
+
 import { BaseTypes, DynamicObject } from 'lance-gg';
 
 export default class Egg extends DynamicObject {

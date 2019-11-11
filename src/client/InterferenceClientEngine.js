@@ -1,3 +1,5 @@
+"use strict";
+
 import { ClientEngine, KeyboardControls, TwoVector } from 'lance-gg';
 import SyncClient from '@ircam/sync/client';
 import InterferenceRenderer from '../client/InterferenceRenderer';
@@ -41,6 +43,8 @@ export default class InterferenceClientEngine extends ClientEngine {
         this.percStep = 0;
         this.sequences = {};
         this.pitchSet = 'scale';
+
+        this.params = {};
 
         this.gameEngine.on('client__preStep', this.preStepLogic.bind(this));
         this.gameEngine.on('client__postStep', this.postStepLogic.bind(this));
@@ -129,10 +133,23 @@ export default class InterferenceClientEngine extends ClientEngine {
         let btn = document.getElementById('startButton');
         let roomNameInput = document.getElementById('roomNameInput');
         let errorText = document.querySelector('#startMenu .room-error');
+        let paramInput = document.getElementById('paramInput');
 
         btn.onclick = () => {
             let regex = /^\w+$/;
             if (regex.exec(roomNameInput.value) != null) {
+
+                let paramString = paramInput.value.replace(/\s/g, '');
+                let members = paramString.split(';');
+                for (let m of members) {
+                    m = m.split(':');
+                    if (isNaN(Number(m[1]))) this.params[m[0]] = m[1];
+                    else {
+                        this.params[m[0]] = Number(m[1]);
+                        console.log(typeof this.params[m[0]]);
+                    }
+                }
+
                 this.assignToRoom(roomNameInput.value.substring(0, 20));
             } else {
                 errorText.textContent = 
@@ -146,10 +163,18 @@ export default class InterferenceClientEngine extends ClientEngine {
         // Any inputs that do nothing server-side (i.e. doesn't need to be known by other players)
         document.addEventListener('keypress', e => {
             //console.log(e.code);
-            if (document.activeElement === roomNameInput) {
+            if (document.activeElement === roomNameInput || document.activeElement === paramInput) {
                 if (e.code === 'Enter') {
                     let regex = /^\w+$/;
                     if (regex.exec(roomNameInput.value) != null) {
+
+                        let paramString = paramInput.value.replace(/\s/g, '');
+                        let members = paramString.split(';');
+                        for (let m of members) {
+                            m = m.split(':');
+                            this.params[m[0]] = m[1];
+                        }
+
                         this.assignToRoom(roomNameInput.value.substring(0, 20));
                     } else {
                         errorText.textContent = 
@@ -170,8 +195,13 @@ export default class InterferenceClientEngine extends ClientEngine {
 
     connect(options = {}) {
         return super.connect().then(() => {
-            this.socket.on('assignedRoom', roomName => { 
+            this.socket.on('assignedRoom', (roomName, params) => { 
                 document.getElementById('startMenuWrapper').style.display = 'none';
+
+                this.params = params;
+                // console.log(`params=${this.params}`);
+                Object.assign(this.gameEngine, this.params);
+
                 // NETWORKED CONTROLS
                 // These inputs will also be processed on the server
                 //console.log('binding keys');
@@ -248,7 +278,7 @@ export default class InterferenceClientEngine extends ClientEngine {
 
     assignToRoom(roomName) {
         if (this.socket) {
-            this.socket.emit('assignToRoom', roomName);
+            this.socket.emit('assignToRoom', roomName, this.params);
         }
     } 
 
@@ -292,10 +322,12 @@ export default class InterferenceClientEngine extends ClientEngine {
                     serverCopy.animFrame = note.animFrame;
                 }
             }
+            let playerWidth = this.gameEngine.playerWidth;
+            let playerHeight = this.gameEngine.playerHeight;
             let pal = this.gameEngine.paletteAttributes[note.palette];
-            note.step = note.xPos % pal.gridWidth;
-            note.pitch = (pal.gridHeight - note.yPos) + (pal.pitchSets[this.pitchSet].length * 3);
-            let number = Math.floor(note.xPos / pal.gridWidth);
+            note.step = note.xPos % playerWidth;
+            note.pitch = (playerHeight - note.yPos) + (pal.pitchSets[this.pitchSet].length * 3);
+            let number = Math.floor(note.xPos / playerWidth);
             if (this.sequences[number] == null) this.sequences[number] = {};
             if (this.sequences[number][note.sound] == null) this.sequences[number][note.sound] = [];
             if (this.sequences[number][note.sound][note.step] == null) this.sequences[number][note.sound][note.step] = [];
@@ -327,7 +359,7 @@ export default class InterferenceClientEngine extends ClientEngine {
         if (stage == 'build') {
             for (let e of this.eggs) {
                 if (!Object.keys(this.eggSynths).includes(e.toString())) this.constructEggSynths(e);
-                let vol = -(12 * Math.abs(this.player.number - Math.floor(e.position.x / this.gameEngine.playerWidth)));
+                let vol = this.gameEngine.eggDroneVolume * Math.abs(this.player.number - (e.position.x / this.gameEngine.playerWidth));
                 this.eggSynths[e.toString()].drone.volume.value = vol;
                 let pal = this.gameEngine.paletteAttributes[this.player.palette];
                 let pitch = pal.scale[pal.pitchSets[this.pitchSet][0]];
@@ -380,15 +412,18 @@ export default class InterferenceClientEngine extends ClientEngine {
         p.ammo--;
         e.hp--;
 
+        let playerWidth = this.gameEngine.playerWidth;
+        let playerHeight = this.gameEngine.playerHeight;
         let pal = this.gameEngine.paletteAttributes[p.palette];
         let shadowId = this.gameEngine.getNewShadowId();
         this.socket.emit('playerHitEgg', p.ammo, e.id, e.hp, e.position.x, e.position.y, e.sound, shadowId);
-        let pos = this.gameEngine.quantizedPosition(e.position.x, e.position.y, pal.gridWidth, pal.gridHeight);
+        let pos = this.gameEngine.quantizedPosition(e.position.x, e.position.y, playerWidth, playerHeight);
         let dur = pal[e.sound].subdivision;
 
         let notes = this.gameEngine.queryNotes({            
             ownerId: p.playerId, 
-            palette: p.grid[pos[0]%pal.gridWidth + ((pos[1]%pal.gridHeight) * pal.gridWidth)],
+            //palette: p.grid[pos[0]%playerWidth + ((pos[1]%playerHeight) * playerWidth)],
+            palette: p.palette,
             sound: e.sound, 
             //vel: 1, 
             xPos: pos[0],
@@ -399,7 +434,9 @@ export default class InterferenceClientEngine extends ClientEngine {
             let newNote = new Note(this.gameEngine, null, { 
                 id: shadowId,
                 ownerId: p.playerId, 
-                palette: p.grid[pos[0]%pal.gridWidth + ((pos[1]%pal.gridHeight) * pal.gridWidth)],
+                //palette: p.grid[pos[0]%playerWidth + ((pos[1]%playerHeight) * playerWidth)],
+                palette: p.palette,
+                sound: e.sound, 
                 sound: e.sound, 
                 dur: dur,
                 vel: 1, 
@@ -462,7 +499,7 @@ export default class InterferenceClientEngine extends ClientEngine {
         let pal = this.gameEngine.paletteAttributes[this.player.palette];
 
         let events = [];
-        for (let i = 0; i < pal.gridWidth; i++) {
+        for (let i = 0; i < this.gameEngine.playerWidth; i++) {
            events.push(i);
         }
 
@@ -476,7 +513,7 @@ export default class InterferenceClientEngine extends ClientEngine {
         //     this.pitchSet = pal.pitchSets[step];
         // }, progression, '2m');
 
-        this.melodySynth = new PolySynth(pal.gridHeight, FMSynth, {
+        this.melodySynth = new PolySynth(this.gameEngine.playerHeight, FMSynth, {
             "modulationIndex" : 4,
             "harmonicity": 4,
             "oscillator": {
@@ -507,7 +544,7 @@ export default class InterferenceClientEngine extends ClientEngine {
         }, events, pal.melody.subdivision);
 
 
-        this.bassSynth = new PolySynth(pal.gridHeight, FMSynth, {
+        this.bassSynth = new PolySynth(this.gameEngine.playerHeight, FMSynth, {
             "modulationIndex" : 6,
             "harmonicity": 5,
             "oscillator": {
@@ -537,7 +574,7 @@ export default class InterferenceClientEngine extends ClientEngine {
         }, events, pal.bass.subdivision);
 
 
-        this.percSynth = new PolySynth(pal.gridHeight, FMSynth, {
+        this.percSynth = new PolySynth(this.gameEngine.playerHeight, FMSynth, {
             "modulationIndex" : 40,
             "harmonicity": 0.01,
             "envelope" : {

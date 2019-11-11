@@ -1,58 +1,9 @@
+"use strict";
+
 import { Renderer, TwoVector } from 'lance-gg';
 import Note from '../common/Note';
 import Performer from '../common/Performer';
 import Egg from '../common/Egg';
-
-const paletteTable = [
-    //'default': 
-    {
-        bg: 'black',
-        c1: 'black',
-        c2: 'black',
-        c3: 'black',
-        c4: 'black'
-    },
-    //'rain': 
-    {   
-        bg: '#3e2f5b', 
-        c1: '#d7dedc',
-        c2: '#706563',
-        c3: '#457eac',
-        c4: '#748386' 
-    },
-    //'celeste': 
-    {   
-        bg: '#a5d8ff', 
-        c1: '#ff8266',
-        c2: '#4381af',
-        c3: '#ac86b0',
-        c4: '#4b719c' 
-    },
-    //'pyre': 
-    {   
-        bg: '#a32323', 
-        c1: '#2375a8',
-        c2: '#fbf6f7',
-        c3: '#f0ae62',
-        c4: '#011936' 
-    },
-    //'journey': 
-    {   
-        bg: '#fad68a', 
-        c1: '#7f2819',
-        c2: '#a25a11',
-        c3: '#d5a962',
-        c4: '#fef8e8' 
-    },
-    //'kirby': 
-    {   
-        bg: '#a8c256', 
-        c1: '#f4a4a7',
-        c2: '#e84c41',
-        c3: '#f9df6a',
-        c4: '#fa8334' 
-    }
-]
 
 const animLengths = {
     eggSpawn: 20,
@@ -74,16 +25,24 @@ let playerId = 0;
 let thisPlayer = null;
 let sequences = null;
 let eggs = [];
+let paletteTable = null;
+let bg = 'black';
+let c1 = 'black';
+let c2 = 'black';
+let c3 = 'black';
+let c4 = 'black';
 
-let bg = paletteTable[0].bg;
-let c1 = paletteTable[0].c1;
-let c2 = paletteTable[0].c2;
-let c3 = paletteTable[0].c3;
-let c4 = paletteTable[0].c4;
 
 export default class InterferenceRenderer extends Renderer {
 
     constructor(gameEngine, clientEngine) {
+        paletteTable = gameEngine.paletteAttributes;
+        bg = paletteTable[0].colors.bg;
+        c1 = paletteTable[0].colors.c1;
+        c2 = paletteTable[0].colors.c2;
+        c3 = paletteTable[0].colors.c3;
+        c4 = paletteTable[0].colors.c4;
+
         super(gameEngine, clientEngine);
 
         game = this.gameEngine;
@@ -118,8 +77,12 @@ export default class InterferenceRenderer extends Renderer {
         if (thisPlayer == null) return;
         players = game.world.queryObjects({ instanceType: Performer });
         if (client.performanceView) {
+            // console.log(`${thisPlayer.xPos}`);
             leftViewBound = thisPlayer.xPos;
-            rightViewBound = (leftViewBound + game.playerWidth) % (players.length * game.playerWidth);
+            // console.log(`${leftViewBound}`);
+            rightViewBound = (leftViewBound + Number(game.playerWidth)) % (players.length * Number(game.playerWidth));
+            // console.log(`${(leftViewBound + game.playerWidth)}`);
+            // console.log(`${(players.length * game.playerWidth)}`);
         }
         else {
             leftViewBound = 0;
@@ -128,11 +91,11 @@ export default class InterferenceRenderer extends Renderer {
         sequences = client.sequences;
         eggs = game.world.queryObjects({ instanceType: Egg });
 
-        bg = paletteTable[thisPlayer.palette].bg;
-        c1 = paletteTable[thisPlayer.palette].c1;
-        c2 = paletteTable[thisPlayer.palette].c2;
-        c3 = paletteTable[thisPlayer.palette].c3;
-        c4 = paletteTable[thisPlayer.palette].c4;
+        bg = paletteTable[thisPlayer.palette].colors.bg;
+        c1 = paletteTable[thisPlayer.palette].colors.c1;
+        c2 = paletteTable[thisPlayer.palette].colors.c2;
+        c3 = paletteTable[thisPlayer.palette].colors.c3;
+        c4 = paletteTable[thisPlayer.palette].colors.c4;
         
         // Clear the canvas
         this.ctx.clearRect(0, 0, w, h);
@@ -187,8 +150,8 @@ export default class InterferenceRenderer extends Renderer {
                 if (leftViewBound < rightViewBound) inView = (leftViewBound - game.playerWidth < p.number * game.playerWidth) && 
                                                              (p.number * game.playerWidth < rightViewBound);
                 else {
-                    inView = (leftViewBound - game.playerWidth < p.number * game.playerWidth) || (p.number * game.playerWidth < rightViewBound);
                     wrap = (p.number * game.playerWidth < rightViewBound);
+                    inView = (leftViewBound - game.playerWidth < p.number * game.playerWidth) || wrap;
                 }
                 if (inView) {
                     this.drawPlayer(p, wrap)
@@ -209,13 +172,13 @@ export default class InterferenceRenderer extends Renderer {
         let i = p.number - (leftViewBound / game.playerWidth);
         if (wrap) i += players.length;
         let pal = game.paletteAttributes[p.palette];
-        let xDim = this.gameXDimToCanvasXDim(game.playerWidth / pal.gridWidth);
-        let yDim = this.gameYDimToCanvasYDim(game.playerHeight / pal.gridHeight);
-        for (let xIdx = 0; xIdx < pal.gridWidth; xIdx++) {
+        let xDim = this.gameXDimToCanvasXDim(1);
+        let yDim = this.gameYDimToCanvasYDim(1);
+        for (let xIdx = 0; xIdx < game.playerWidth; xIdx++) {
             let x = ((w / n) * i) + (xIdx * xDim);
-            for (let yIdx = 0; yIdx < pal.gridHeight; yIdx++) {
+            for (let yIdx = 0; yIdx < game.playerHeight; yIdx++) {
                 let y = yIdx * yDim;
-                this.fillColor(p.grid[xIdx + (yIdx * pal.gridWidth)], 'bg', 0);
+                this.fillColor(p.grid[xIdx + (yIdx * game.playerWidth)], 'bg', 0);
                 this.fillRect(x, y, xDim, yDim, false, 0)
             }
         }
@@ -293,9 +256,9 @@ export default class InterferenceRenderer extends Renderer {
         let dimY = this.gameYDimToCanvasYDim(game.playerHeight);
         let shift = p.number * game.playerWidth;
         if (wrap) shift += players.length * game.playerWidth;
-        let melodyPos = this.cellToCanvasPosition(shift + client.melodyStep + 0.45, 0, 32, 18);
-        let percPos = this.cellToCanvasPosition(shift + client.percStep + 0.4, 0, 32, 18);
-        let bassPos = this.cellToCanvasPosition(shift + client.bassStep + 0.35, 0, 32, 18);
+        let melodyPos = this.cellToCanvasPosition(shift + client.melodyStep + 0.45, 0, game.playerWidth, game.playerHeight);
+        let percPos = this.cellToCanvasPosition(shift + client.percStep + 0.4, 0, game.playerWidth, game.playerHeight);
+        let bassPos = this.cellToCanvasPosition(shift + client.bassStep + 0.35, 0, game.playerWidth, game.playerHeight);
         this.fillColor(0, 'c1', 1);
         this.fillRect(melodyPos[0], melodyPos[1], dimX * 0.1, dimY, false, 1);
         this.fillColor(0, 'c2', 1);
@@ -325,13 +288,14 @@ export default class InterferenceRenderer extends Renderer {
     }
 
     drawNote(n, wrap) {
-        let gridWidth = game.paletteAttributes[n.palette].gridWidth;
-        let gridHeight = game.paletteAttributes[n.palette].gridHeight;
+        let playerWidth = Number(game.playerWidth);
+        let playerHeight = Number(game.playerHeight);
+
         let shift = 0;
-        if (wrap) shift = (gridWidth * players.length);
-        let pos = this.cellToCanvasPosition(n.xPos + shift, n.yPos, gridWidth, gridHeight);
-        let dimX = this.gameXDimToCanvasXDim(game.playerWidth / gridWidth); 
-        let dimY = this.gameYDimToCanvasYDim(game.playerHeight / gridHeight);
+        if (wrap) shift = (playerWidth * players.length);
+        let pos = this.cellToCanvasPosition(n.xPos + shift, n.yPos, playerWidth, playerHeight);
+        let dimX = this.gameXDimToCanvasXDim(1); 
+        let dimY = this.gameYDimToCanvasYDim(1);
         let x = pos[0];
         let y = pos[1];
         let c = 'bg';
@@ -339,8 +303,8 @@ export default class InterferenceRenderer extends Renderer {
         if (n.sound === 'melody') {
             x += dimX * 0.5;
             y += dimY * 0.5;
-            //dimX *= this.mapToRange(n.animFrame, 0, animLengths.eggNote, gridWidth, 1);
-            dimY *= this.mapToRange(n.animFrame, 0, animLengths.eggNote, gridHeight, 1);
+            //dimX *= this.mapToRange(n.animFrame, 0, animLengths.eggNote, playerWidth, 1);
+            dimY *= this.mapToRange(n.animFrame, 0, animLengths.eggNote, playerHeight, 1);
             c = 'c1';
             if (n.dur === '2n') { 
                 c = 'c2'; 
@@ -358,11 +322,11 @@ export default class InterferenceRenderer extends Renderer {
         }
         else if (n.sound === 'bass') {
             y = this.mapToRange(n.animFrame, 0, animLengths.eggNote, 0, y);
-            dimY *= this.mapToRange(n.animFrame, 0, animLengths.eggNote, gridHeight, 1);
+            dimY *= this.mapToRange(n.animFrame, 0, animLengths.eggNote, playerHeight, 1);
             c = 'c2';
             if (n.dur === '2n') { 
                 c = 'c3'; 
-                dimX *= (gridWidth / 4); 
+                dimX *= (playerWidth / 4); 
                 layer = 0; 
             }
             if (n.step === client.bassStep) {
@@ -376,7 +340,7 @@ export default class InterferenceRenderer extends Renderer {
         else if (n.sound === 'perc') {
             x += dimX * 0.5;
             y += dimY * 0.5;
-            dimY *= this.mapToRange(n.animFrame, 0, animLengths.eggNote, gridHeight / 2, 1);
+            dimY *= this.mapToRange(n.animFrame, 0, animLengths.eggNote, playerHeight / 2, 1);
             let x1 = x - (dimX * 0.5);
             let y1 = y;
             let x2 = x;
@@ -461,16 +425,20 @@ export default class InterferenceRenderer extends Renderer {
 
     strokeColor(pal, which, layer) {
         if (paletteTable[pal]) {
-            ctx[layer].strokeStyle = paletteTable[pal][which];
-        }  
-        else ctx[layer].strokeStyle = paletteTable[0][which];
+            if (paletteTable[pal].colors) {
+                ctx[layer].strokeStyle = paletteTable[pal].colors[which];
+            }  
+        }
+        else ctx[layer].strokeStyle = paletteTable[0].colors[which];
     }
 
     fillColor(pal, which, layer) {
         if (paletteTable[pal]) {
-            ctx[layer].fillStyle = paletteTable[pal][which];
-        }  
-        else ctx[layer].fillStyle = paletteTable[0][which];
+            if (paletteTable[pal].colors) {
+                ctx[layer].fillStyle = paletteTable[pal].colors[which];
+            }  
+        }
+        else ctx[layer].fillStyle = paletteTable[0].colors[which];
     }
 
     fillEllipse(x, y, radiusX, radiusY, rotation, startAngle, endAngle, stroke, layer) {

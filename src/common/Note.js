@@ -1,3 +1,5 @@
+"use strict";
+
 import { BaseTypes, DynamicObject } from 'lance-gg';
 
 export default class Note extends DynamicObject {
@@ -34,19 +36,20 @@ export default class Note extends DynamicObject {
         this.xPos += xStep;
         this.yPos += yStep;
         let rightBound = this.gameEngine.playersByRoom[this._roomName].length * this.gameEngine.playerWidth; //TODO should be width in cells
-        let leftBound = this.gameEngine.playerHeight;
+        let upperBound = Number(this.gameEngine.playerHeight);
         if (this.xPos >= rightBound) { this.xPos -= rightBound; }
-        if (this.yPos >= leftBound) { this.yPos -= leftBound; }
+        if (this.yPos >= upperBound) { this.yPos -= upperBound; }
         if (this.xPos < 0) { this.xPos += rightBound; }
-        if (this.yPos < 0) { this.yPos += leftBound; }
+        if (this.yPos < 0) { this.yPos += upperBound; }
     }
 
     paint() {
-        let pal = this.gameEngine.paletteAttributes[this.palette];
-        let n = Math.floor(this.xPos / pal.gridWidth);
+        let playerWidth = this.gameEngine.playerWidth;
+        let playerHeight = this.gameEngine.playerHeight;
+        let n = Math.floor(this.xPos / playerWidth);
         for (let p of this.gameEngine.queryPlayers({ number: n })) {
 
-            p.grid[(this.xPos % pal.gridWidth) + ((this.yPos % pal.gridHeight) * pal.gridWidth)] = this.palette;
+            p.grid[(this.xPos % playerWidth) + ((this.yPos % playerHeight) * playerWidth)] = this.palette;
 
         }
     }

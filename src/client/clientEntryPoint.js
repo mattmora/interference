@@ -1,3 +1,5 @@
+"use strict";
+
 import querystring from 'query-string';
 import { Lib } from 'lance-gg';
 import InterferenceClientEngine from '../client/InterferenceClientEngine';
