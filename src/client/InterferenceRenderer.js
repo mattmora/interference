@@ -36,16 +36,8 @@ let c4 = 'black';
 export default class InterferenceRenderer extends Renderer {
 
     constructor(gameEngine, clientEngine) {
-        paletteTable = gameEngine.paletteAttributes;
-        bg = paletteTable[0].colors.bg;
-        c1 = paletteTable[0].colors.c1;
-        c2 = paletteTable[0].colors.c2;
-        c3 = paletteTable[0].colors.c3;
-        c4 = paletteTable[0].colors.c4;
-
         super(gameEngine, clientEngine);
 
-        game = this.gameEngine;
         client = this.clientEngine;
 
         this.canvas = document.createElement('canvas');
@@ -71,11 +63,22 @@ export default class InterferenceRenderer extends Renderer {
 
         if (client.room == null) return;
 
+        if (game == null) {
+            game = this.gameEngine.paramsByRoom[client.room];
+
+            paletteTable = game.paletteAttributes;
+            bg = paletteTable[0].colors.bg;
+            c1 = paletteTable[0].colors.c1;
+            c2 = paletteTable[0].colors.c2;
+            c3 = paletteTable[0].colors.c3;
+            c4 = paletteTable[0].colors.c4;
+        }
+
         time = client.syncClient.getSyncTime();
-        playerId = game.playerId;
-        thisPlayer = game.world.queryObject({ playerId });
+        playerId = this.gameEngine.playerId;
+        thisPlayer = this.gameEngine.world.queryObject({ playerId });
         if (thisPlayer == null) return;
-        players = game.world.queryObjects({ instanceType: Performer });
+        players = this.gameEngine.world.queryObjects({ instanceType: Performer });
         if (client.performanceView) {
             // console.log(`${thisPlayer.xPos}`);
             leftViewBound = thisPlayer.xPos;
@@ -89,7 +92,7 @@ export default class InterferenceRenderer extends Renderer {
             rightViewBound = players.length * game.playerWidth;
         }
         sequences = client.sequences;
-        eggs = game.world.queryObjects({ instanceType: Egg });
+        eggs = this.gameEngine.world.queryObjects({ instanceType: Egg });
 
         bg = paletteTable[thisPlayer.palette].colors.bg;
         c1 = paletteTable[thisPlayer.palette].colors.c1;
@@ -335,7 +338,7 @@ export default class InterferenceRenderer extends Renderer {
             }
             this.fillColor(n.palette, c, layer);
             this.strokeColor(n.palette, 'bg', layer);
-            this.fillRect(x + (0.15*dimX), y + (0.15*dimY), dimX*0.7, dimY*0.7, true, layer);
+            this.fillRect(x + (0.15*dimX), y + (0.15*dimY), dimX*0.8, dimY*0.8, true, layer);
         }
         else if (n.sound === 'perc') {
             x += dimX * 0.5;

@@ -21,7 +21,6 @@ export default class InterferenceServerEngine extends ServerEngine {
         this.actionCounts = {};
         this.progressionCounts = {};
         this.tempos = {};
-        this.params = {};
 
         this.gameEngine.on('server__preStep', this.preStepLogic.bind(this));
         this.gameEngine.on('server__postStep', this.postStepLogic.bind(this));
@@ -59,8 +58,8 @@ export default class InterferenceServerEngine extends ServerEngine {
                 //this.moveTimes[roomName] = 0;
                 this.actionCounts[roomName] = 0;
                 this.tempos[roomName] = 120;
-                Object.assign(this.params, params);
-                Object.assign(this.gameEngine, this.params);
+                this.gameEngine.setRoomParamsToDefault(roomName);
+                Object.assign(this.gameEngine.paramsByRoom[roomName], params);
             }
             if (this.roomStages[roomName] === 'setup') {
                 player = new Performer(this.gameEngine, null, {});
@@ -68,11 +67,13 @@ export default class InterferenceServerEngine extends ServerEngine {
                 player.number = this.myRooms[roomName].length;
                 player.ammo = 0;
                 player.direction = 0;
-                player.xPos = player.number * this.gameEngine.playerWidth;
+                player.xPos = player.number * this.gameEngine.paramsByRoom[roomName].playerWidth;
                 player.yPos = 0;
-                player.palette = this.gameEngine.palettes[player.number%this.gameEngine.palettes.length];
+                player.palette = this.gameEngine.paramsByRoom[roomName]
+                                    .palettes[player.number%this.gameEngine.paramsByRoom[roomName].palettes.length];
                 player.stage = this.roomStages[roomName];
-                player.grid = new Array(this.gameEngine.playerWidth * this.gameEngine.playerHeight).fill(player.palette);
+                player.grid = new Array(this.gameEngine.paramsByRoom[roomName].playerWidth * 
+                                    this.gameEngine.paramsByRoom[roomName].playerHeight).fill(player.palette);
                 player.gridChanged = false;
                 player.pitchSet = 0;
                 player.active = 1;
@@ -90,14 +91,15 @@ export default class InterferenceServerEngine extends ServerEngine {
                 }
                 */
                 //console.log(player.number);
+                player.room = roomName;
                 this.assignPlayerToRoom(player.playerId, roomName);
                 this.assignObjectToRoom(player, roomName);
                 this.assignPlayerToSyncServer(socket, roomName);
 
-                socket.emit('assignedRoom', roomName, this.params);
+                socket.emit('assignedRoom', roomName, this.gameEngine.paramsByRoom[roomName]);
             }
             else {
-                let inactivePlayers = this.gameEngine.queryPlayers({ _roomName: roomName, active: 0 });
+                let inactivePlayers = this.gameEngine.queryPlayers({ room: roomName, active: 0 });
                 if (inactivePlayers.length === 0) socket.emit('accessDenied');
                 else {
                     console.log('found inactive');
@@ -119,7 +121,8 @@ export default class InterferenceServerEngine extends ServerEngine {
             if (player == null) return;
             player.palette = pal;
 
-            player.grid = new Array(this.gameEngine.playerWidth * this.gameEngine.playerHeight).fill(player.palette);
+            player.grid = new Array(this.gameEngine.paramsByRoom[player.room].playerWidth * 
+                this.gameEngine.paramsByRoom[player.room].playerHeight).fill(player.palette);
         });
 
         socket.on('paintStep', idArray => {
@@ -134,9 +137,11 @@ export default class InterferenceServerEngine extends ServerEngine {
         socket.on('paintCell', (noteId, noteX, noteY, palette) => {
             let note = this.gameEngine.world.queryObject({ id: noteId });
             if (note == null) return;
-            let n = Math.floor(noteX / this.gameEngine.playerWidth);
+            let n = Math.floor(noteX / this.gameEngine.paramsByRoom[note.room].playerWidth);
             for (let p of this.gameEngine.queryPlayers({ number: n })) {
-                p.grid[(noteX % this.gameEngine.playerWidth) + ((noteY % this.gameEngine.playerHeight) * this.gameEngine.playerWidth)] = palette;
+                p.grid[(noteX % this.gameEngine.paramsByRoom[note.room].playerWidth) + 
+                    ((noteY % this.gameEngine.paramsByRoom[note.room].playerHeight) * 
+                    this.gameEngine.paramsByRoom[note.room].playerWidth)] = palette;
             }
             player.gridChanged = true;   
         });
@@ -145,14 +150,15 @@ export default class InterferenceServerEngine extends ServerEngine {
             if (player == null) return;
             //console.log(`grid=${player.grid}`);
             let p = player;
+            let roomName = p.room;
             p.ammo = ammo;
             let e = this.gameEngine.world.queryObject({ id: eggId });
             if (e == null) return;
             e.hp = hp;
-            let playerWidth = this.gameEngine.playerWidth;
-            let playerHeight = this.gameEngine.playerHeight;
-            let pos = this.gameEngine.quantizedPosition(x, y, playerWidth, playerHeight);
-            let dur = this.gameEngine.paletteAttributes[player.palette][sound].subdivision;
+            let playerWidth = this.gameEngine.paramsByRoom[roomName].playerWidth;
+            let playerHeight = this.gameEngine.paramsByRoom[roomName].playerHeight;
+            let pos = this.gameEngine.quantizedPosition(x, y, playerWidth, playerHeight, roomName);
+            let dur = this.gameEngine.paramsByRoom[roomName].paletteAttributes[player.palette][sound].subdivision;
 
             let notes = this.gameEngine.queryNotes({            
                 ownerId: p.playerId,
@@ -177,38 +183,39 @@ export default class InterferenceServerEngine extends ServerEngine {
                     position: new TwoVector(pos[0], pos[1])
                 });
                 newNote.inputId = inputId;
-                this.assignObjectToRoom(newNote, p._roomName);
+                newNote.room = roomName;
+                this.assignObjectToRoom(newNote, roomName);
                 this.gameEngine.addObjectToWorld(newNote);
             }
-            this.actionCounts[p._roomName]++;
+            this.actionCounts[roomName]++;
         });
 
         socket.on('startBuildStage', () => { 
             if (player == null) return;
-            this.startBuildStage(player._roomName, this.roomStages[player._roomName]) 
+            this.startBuildStage(player.room, this.roomStages[player.room]) 
         });
 
         socket.on('startFightStage', () => { 
             if (player == null) return;
-            this.startFightStage(player._roomName) 
+            this.startFightStage(player.room) 
         });
 
         // socket.on('changeTempo', delta => {
         //     if (player == null) return;
-        //     this.tempos[player._roomName] += delta
-        //     if (this.tempos[player._roomName] < 60) {
-        //         this.tempos[player._roomName] = 60;
+        //     this.tempos[player.room] += delta
+        //     if (this.tempos[player.room] < 60) {
+        //         this.tempos[player.room] = 60;
         //     }
-        //     else if (this.tempos[player._roomName] > 240) {
-        //         this.tempos[player._roomName] = 240;
+        //     else if (this.tempos[player.room] > 240) {
+        //         this.tempos[player.room] = 240;
         //     }
-        //     socket.emit('changeTempo', this.tempos[player._roomName]);
-        //     this.startBuildStage(player._roomName);
+        //     socket.emit('changeTempo', this.tempos[player.room]);
+        //     this.startBuildStage(player.room);
         // });
 
         socket.on('endGame', () => {
             let counts = [];
-            for (let p of this.myRooms[player._roomName]) {
+            for (let p of this.myRooms[player.room]) {
                 for (let i = 0; i < p.grid.length; i++) {
                     if (counts[p.grid[i]] == null) counts[p.grid[i]] = 0;
                     counts[p.grid[i]]++;
@@ -223,10 +230,10 @@ export default class InterferenceServerEngine extends ServerEngine {
                     pal = i;
                 }
             }
-            for (let p of this.myRooms[player._roomName]) {
+            for (let p of this.myRooms[player.room]) {
                 p.palette = pal;
             }
-            this.startOutroStage(player._roomName);
+            this.startOutroStage(player.room);
         });
     }
 
@@ -273,7 +280,7 @@ export default class InterferenceServerEngine extends ServerEngine {
         super.onPlayerDisconnected(socketId, playerId);
         let player = this.gameEngine.world.queryObject({ playerId });
         if (player != null) { 
-            let room = player._roomName;
+            let room = player.room;
             if (this.roomStages[room] === 'setup') {
                 let removed = player.number;
                 this.gameEngine.removeObjectFromWorld(player.id);
@@ -281,17 +288,17 @@ export default class InterferenceServerEngine extends ServerEngine {
                 for (let p of this.myRooms[room]) {
                     if (p.number > removed) {
                         p.number--; 
-                        p.move(-this.gameEngine.playerWidth, 0);
+                        p.move(-this.gameEngine.paramsByRoom[room].playerWidth, 0);
                     }
                 } 
             }
             else {
                 player.active = 0;
             }
-            let activePlayers = this.gameEngine.queryPlayers({ _roomName: room, active: 1 });
+            let activePlayers = this.gameEngine.queryPlayers({ room: room, active: 1 });
             if (activePlayers.length === 0) {
                 this.gameEngine.world.forEachObject((objId, obj) => { 
-                    if (obj._roomName === room) this.gameEngine.removeObjectFromWorld(objId);
+                    if (obj.room === room) this.gameEngine.removeObjectFromWorld(objId);
                 });
                 delete this.myRooms[room];
                 delete this.syncServers[room];
@@ -301,7 +308,7 @@ export default class InterferenceServerEngine extends ServerEngine {
     }
 
     onBeginPerformance(player) {
-        this.startBuildStage(player._roomName, this.roomStages[player._roomName]);
+        this.startBuildStage(player.room, this.roomStages[player.room]);
     }
 
     startBuildStage(room, from) {
@@ -315,15 +322,15 @@ export default class InterferenceServerEngine extends ServerEngine {
             }           
         }
         for (let p of this.myRooms[room]) {
-            p.moveTo(p.number * this.gameEngine.playerWidth, p.yPos);
-            p.ammo = this.gameEngine.startingAmmo;
+            p.moveTo(p.number * this.gameEngine.paramsByRoom[room].playerWidth, p.yPos);
+            p.ammo = this.gameEngine.paramsByRoom[room].startingAmmo;
         }
-        let numEggs = this.gameEngine.numEggsToAdd;
-        if (from === "setup") numEggs = this.gameEngine.numStartingEggs;
+        let numEggs = this.gameEngine.paramsByRoom[room].numEggsToAdd;
+        if (from === "setup") numEggs = this.gameEngine.paramsByRoom[room].numStartingEggs;
 
         for (let i = 0; i < numEggs; i++) {
-            let rand = Math.floor(Math.random()*this.gameEngine.eggSoundsToUse.length);
-            let sound = this.gameEngine.eggSoundsToUse[rand];
+            let rand = Math.floor(Math.random()*this.gameEngine.paramsByRoom[room].eggSoundsToUse.length);
+            let sound = this.gameEngine.paramsByRoom[room].eggSoundsToUse[rand];
             // this.gameEngine.eggSoundsToUse.splice(rand, 1);
             // if (this.gameEngine.eggSoundsToUse.length === 0) this.gameEngine.eggSoundsToUse = this.gameEngine.eggSounds.slice();
             this.addEgg(sound, room);
@@ -357,24 +364,25 @@ export default class InterferenceServerEngine extends ServerEngine {
     }
 
     onEggBounce(e) {
-        for (let p of this.myRooms[e._roomName]) {
-            if (p.ammo < this.gameEngine.maxAmmo && Math.random() < this.gameEngine.ammoDropChance) p.ammo++;
+        for (let p of this.myRooms[e.room]) {
+            if (p.ammo < this.gameEngine.paramsByRoom[e.room].maxAmmo && 
+                Math.random() < this.gameEngine.paramsByRoom[e.room].ammoDropChance) p.ammo++;
         }
     }
 
     onPlayerAction(p) {
-        this.actionCounts[p._roomName]++
+        this.actionCounts[p.room]++
     }
 
     onRemoveNote(p) {
-        if (this.roomStages[p._roomName] === 'outro') {
-            let notes = this.gameEngine.queryNotes({ _roomName: p._roomName });
+        if (this.roomStages[p.room] === 'outro') {
+            let notes = this.gameEngine.queryNotes({ room: p.room });
             if (notes.length > 0) {
                 let note = notes.splice(Math.floor(Math.random()*notes.length), 1);
                 if (note != null) this.gameEngine.removeObjectFromWorld(note.id);                
             }
             else {
-                for (let player of this.myRooms[p._roomName]) {
+                for (let player of this.myRooms[p.room]) {
                     this.assimilatePlayerToPalette(player, 0);
                 }
             }
@@ -430,8 +438,8 @@ export default class InterferenceServerEngine extends ServerEngine {
             n.palette = player.palette
         }
 
-        let playerWidth = this.gameEngine.playerWidth;
-        let playerHeight = this.gameEngine.playerHeight;
+        let playerWidth = this.gameEngine.paramsByRoom[player.room].playerWidth;
+        let playerHeight = this.gameEngine.paramsByRoom[player.room].playerHeight;
         player.grid = new Array(playerWidth * playerHeight).fill(player.palette);
     }
 
@@ -442,7 +450,11 @@ export default class InterferenceServerEngine extends ServerEngine {
         //for (let p of this.myRooms[roomName]) p.ammo += this.gameEngine.startingAmmo;
         //newEgg.number = 0;
         newEgg.sound = sound;
-        newEgg.hp = Math.round((Math.random() * this.gameEngine.eggHPRange)) + (numPlayers * this.gameEngine.eggHPPerPlayer) + this.gameEngine.eggHPMin;
+        newEgg.hp = Math.round((Math.random() * 
+            this.gameEngine.paramsByRoom[roomName].eggHPRange)) + 
+            (numPlayers * this.gameEngine.paramsByRoom[roomName].eggHPPerPlayer) + 
+            this.gameEngine.paramsByRoom[roomName].eggHPMin;
+        newEgg.room = roomName;
         this.assignObjectToRoom(newEgg, roomName);
         this.gameEngine.addObjectToWorld(newEgg);
     }
@@ -478,9 +490,9 @@ export default class InterferenceServerEngine extends ServerEngine {
 
     postStepLogic() {
         for (let room of Object.keys(this.myRooms)) {
-            if (this.actionCounts[room] > this.myRooms[room].length * this.gameEngine.actionThreshold) {
+            if (this.actionCounts[room] > this.myRooms[room].length * this.gameEngine.paramsByRoom[room].actionThreshold) {
                 for (let p of this.myRooms[room]) {
-                    p.pitchSet = (p.pitchSet + 1) % (this.gameEngine.paletteAttributes[p.palette].pitchSets.length - 1);
+                    p.pitchSet = (p.pitchSet + 1) % (this.gameEngine.paramsByRoom[room].paletteAttributes[p.palette].pitchSets.length - 1);
                     this.actionCounts[room] = 0;
                     //console.log('change');
                 }
@@ -500,12 +512,13 @@ export default class InterferenceServerEngine extends ServerEngine {
                 }
                 if (reload) {
                     for (let p of this.myRooms[room]) {
-                        p.ammo += this.gameEngine.reloadSize;
+                        p.ammo += this.gameEngine.paramsByRoom[room].reloadSize;
                     }
                 }
             }
             else if (this.roomStages[room] === 'fight') {
-                if (this.progressionCounts[room] > this.gameEngine.progressionThreshold) this.startBuildStage(room, this.roomStages[room]);
+                if (this.progressionCounts[room] > this.gameEngine.paramsByRoom[room].progressionThreshold) 
+                    this.startBuildStage(room, this.roomStages[room]);
                 // for (let p of this.myRooms[room]) {
                 //     if (p.gridChanged) p.gridString = JSON.stringify(p.grid);
                 // }

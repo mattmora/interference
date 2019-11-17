@@ -7,23 +7,23 @@
   "description": "An HTML5 multiplayer snakes-game based on Lance",
   "main": "main.js",
   "dependencies": {
-    "@babel/node": "^7.2.2",
-    "@babel/preset-env": "^7.3.4",
+    "@babel/node": "^7.7.0",
+    "@babel/preset-env": "^7.7.1",
     "@ircam/sync": "^2.0.1",
-    "babel-loader": "^8.0.5",
-    "express": "^4.14.0",
-    "lance-gg": "^4.0.2",
+    "babel-loader": "^8.0.6",
+    "express": "^4.17.1",
+    "lance-gg": "^4.0.8",
     "query-string": "^4.2.3",
-    "socket.io": "^2.1.1",
-    "tone": "^13.8.2",
-    "webpack": "^4.6.0"
+    "socket.io": "^2.3.0",
+    "tone": "^13.8.25",
+    "webpack": "^4.41.2"
   },
   "devDependencies": {
-    "@babel/cli": "^7.2.3",
-    "@babel/core": "^7.3.4",
+    "@babel/cli": "^7.7.0",
+    "@babel/core": "^7.7.2",
     "eslint": "^3.16.1",
     "eslint-config-google": "^0.7.1",
-    "webpack-cli": "^3.3.0"
+    "webpack-cli": "^3.3.10"
   },
   "scripts": {
     "start": "node dist-server/main.js",

@@ -19,6 +19,7 @@ export default class Performer extends DynamicObject {
             yPos: { type: BaseTypes.TYPES.INT16 },
             pitchSet: { type: BaseTypes.TYPES.UINT8 },
             active: { type: BaseTypes.TYPES.UINT8 },
+            room: { type: BaseTypes.TYPES.STRING }
         }, super.netScheme);
     }
 
@@ -32,8 +33,8 @@ export default class Performer extends DynamicObject {
     move(xStep, yStep) {
         this.xPos += xStep;
         this.yPos += yStep;
-        let rightBound = this.gameEngine.playersByRoom[this._roomName].length * this.gameEngine.playerWidth;
-        let leftBound = this.gameEngine.playerHeight;
+        let rightBound = this.gameEngine.playersByRoom[this.room].length * this.gameEngine.paramsByRoom[this.room].playerWidth;
+        let leftBound = this.gameEngine.paramsByRoom[this.room].playerHeight;
         if (this.xPos >= rightBound) { this.xPos -= rightBound; }
         if (this.yPos >= leftBound) { this.yPos -= leftBound; }
         if (this.xPos < 0) { this.xPos += rightBound; }
@@ -49,8 +50,8 @@ export default class Performer extends DynamicObject {
         let yStep = yPos - this.yPos;
         this.xPos = xPos;
         this.yPos = yPos;
-        let rightBound = this.gameEngine.playersByRoom[this._roomName].length * this.gameEngine.playerWidth;
-        let leftBound = this.gameEngine.playerHeight;
+        let rightBound = this.gameEngine.playersByRoom[this.room].length * this.gameEngine.paramsByRoom[this.room].playerWidth;
+        let leftBound = this.gameEngine.paramsByRoom[this.room].playerHeight;
         if (this.xPos >= rightBound) { this.xPos -= rightBound; }
         if (this.yPos >= leftBound) { this.yPos -= leftBound; }
         if (this.xPos < 0) { this.xPos += rightBound; }
@@ -74,6 +75,6 @@ export default class Performer extends DynamicObject {
     }
 
     toString() {
-        return `Performer::${super.toString()} number=${this.number} grid=${this.grid}`;
+        return `Performer::${super.toString()} room=${this.room} number=${this.number} grid=${this.grid}`;
     }
 }

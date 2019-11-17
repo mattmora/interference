@@ -16,14 +16,13 @@ export default class InterferenceGameEngine extends GameEngine {
             collisions: { autoResolve: false }
         });
 
-        this.restoreDefaultSettings();
-
         // game variables
-        Object.assign(this, {
-            shadowIdCount: this.options.clientIDSpace, 
-            rooms: [], playersByRoom: {}, eggsByRoom: {}, rightBoundByRoom: {}, notesByRoom: {},
-            eggSoundsToUse: this.eggSounds.slice()
+        Object.assign(this, { room: null,
+            shadowIdCount: this.options.clientIDSpace, paramsByRoom: {},
+            rooms: [], playersByRoom: {}, eggsByRoom: {}, rightBoundByRoom: {}, notesByRoom: {}
         });
+
+        this.setRoomParamsToDefault('__defaultRoom');
 
         this.on('preStep', this.preStepLogic.bind(this));
         this.on('postStep', this.postStepLogic.bind(this));
@@ -65,26 +64,28 @@ export default class InterferenceGameEngine extends GameEngine {
     }
 
     randPos(roomName) {
-        let x = Math.random() * this.playerWidth * this.playersByRoom[roomName].length;
-        let y = Math.random() * this.playerHeight;
+        let x = Math.random() * this.paramsByRoom[roomName].playerWidth * this.playersByRoom[roomName].length;
+        let y = Math.random() * this.paramsByRoom[roomName].playerHeight;
         return new TwoVector(x, y);
     }
 
     velRandY(roomName) {
-        let v = this.eggBaseVelocity * (1 + Math.log(this.playersByRoom[roomName].length));
+        let v = this.paramsByRoom[roomName].eggBaseVelocity * (1 + Math.log(this.playersByRoom[roomName].length));
         let y = v * ((Math.random() * 2) - 1);
         let x = v * ((Math.round(Math.random()) * 2) - 1)
         return new TwoVector(x, y);
     }
 
     preStepLogic(stepInfo) {
-        this.playersByRoom = this.groupBy(this.world.queryObjects({ instanceType: Performer }), '_roomName');
+
+        this.playersByRoom = this.groupBy(this.world.queryObjects({ instanceType: Performer }), 'room');
         this.rooms = Object.keys(this.playersByRoom);
-        this.eggsByRoom = this.groupBy(this.world.queryObjects({ instanceType: Egg }), '_roomName');
+        this.eggsByRoom = this.groupBy(this.world.queryObjects({ instanceType: Egg }), 'room');
         this.rightBoundByRoom = {};
-        this.notesByRoom = this.groupBy(this.world.queryObjects({ instanceType: Note }), '_roomName');
+        this.notesByRoom = this.groupBy(this.world.queryObjects({ instanceType: Note }), 'room');
         for (let r of this.rooms) {
-            this.rightBoundByRoom[r] = this.playersByRoom[r].length * this.playerWidth;
+            if (this.paramsByRoom[r] == null) continue;
+            this.rightBoundByRoom[r] = this.playersByRoom[r].length * this.paramsByRoom[r].playerWidth;
         }
     }
 
@@ -100,62 +101,64 @@ export default class InterferenceGameEngine extends GameEngine {
         if (stepInfo.isReenact)
             return;
         */
+        if (this.paramsByRoom[r] == null) return;
+
         if (this.notesByRoom[r]) {
-            let removed = null;
             for (let i = 0; i < this.notesByRoom[r].length; i++) {
-                // skip this one if it's been removed?
-                // if (removed === this.notesByRoom[r][i].id) continue;
+                let removed = null;
                 for (let j = i + 1; j < this.notesByRoom[r].length; j++) {
+                    if (this.notesByRoom[r][i] == null) break;
+                    if (this.notesByRoom[r][j] == null) continue;
                     if (this.notesByRoom[r][i].xPos === this.notesByRoom[r][j].xPos &&
                         this.notesByRoom[r][i].yPos === this.notesByRoom[r][j].yPos) {
                         if (this.notesByRoom[r][i].palette === this.notesByRoom[r][j].palette) continue;
                         // two notes of the same type collide
                         if (this.notesByRoom[r][i].sound === this.notesByRoom[r][j].sound) {
-                            // TODO what to do?
+                            continue;
                         }
                         else if (   this.notesByRoom[r][i].sound === 'melody' &&
                                     this.notesByRoom[r][j].sound === 'perc') {
                             if (this.world.queryObject(this.notesByRoom[r][j].id) != null) {
                                 this.removeObjectFromWorld(this.notesByRoom[r][j].id);
-                                removed = this.notesByRoom[r][j].id;
-                                this.emit('removedNote', r);
+                                this.notesByRoom[r][j] = null;
                             } 
                         }
                         else if (   this.notesByRoom[r][i].sound === 'melody' &&
                                     this.notesByRoom[r][j].sound === 'bass') {
                             if (this.world.queryObject(this.notesByRoom[r][i].id) != null) {
                                 this.removeObjectFromWorld(this.notesByRoom[r][i].id);
-                                this.emit('removedNote', r);
+                                this.notesByRoom[r][i] = null;
+                                break;
                             }
                         }
                         else if (   this.notesByRoom[r][i].sound === 'perc' &&
                                     this.notesByRoom[r][j].sound === 'bass') {
                             if (this.world.queryObject(this.notesByRoom[r][j].id) != null) {
                                 this.removeObjectFromWorld(this.notesByRoom[r][j].id);
-                                removed = this.notesByRoom[r][j].id;
-                                this.emit('removedNote', r);
+                                this.notesByRoom[r][j] = null;
                             }
                         }
                         else if (   this.notesByRoom[r][i].sound === 'perc' &&
                                     this.notesByRoom[r][j].sound === 'melody') {
                             if (this.world.queryObject(this.notesByRoom[r][i].id) != null) {
                                 this.removeObjectFromWorld(this.notesByRoom[r][i].id);
-                                this.emit('removedNote', r);
+                                this.notesByRoom[r][i] = null;
+                                break;
                             }
                         }
                         else if (   this.notesByRoom[r][i].sound === 'bass' &&
                                     this.notesByRoom[r][j].sound === 'melody') {
                             if (this.world.queryObject(this.notesByRoom[r][j].id) != null) {
                                 this.removeObjectFromWorld(this.notesByRoom[r][j].id);
-                                removed = this.notesByRoom[r][j].id;
-                                this.emit('removedNote', r);
+                                this.notesByRoom[r][j] = null;
                             }
                         }                   
                         else if (   this.notesByRoom[r][i].sound === 'bass' &&
                                     this.notesByRoom[r][j].sound === 'perc') {
                             if (this.world.queryObject(this.notesByRoom[r][i].id) != null) {
                                 this.removeObjectFromWorld(this.notesByRoom[r][i].id);
-                                this.emit('removedNote', r);
+                                this.notesByRoom[r][i] = null;
+                                break;
                             }
                         }
                     }
@@ -166,24 +169,24 @@ export default class InterferenceGameEngine extends GameEngine {
         if (this.eggsByRoom[r]) {
             for (let e of this.eggsByRoom[r]) {
                 // bounce off walls
-                if ((e.position.x - this.eggRadius) < this.leftBound) {
+                if ((e.position.x - this.paramsByRoom[r].eggRadius) < this.paramsByRoom[r].leftBound) {
                     e.velocity.x = Math.abs(e.velocity.x);
-                    e.position.x = this.leftBound + this.eggRadius;
+                    e.position.x = this.paramsByRoom[r].leftBound + this.paramsByRoom[r].eggRadius;
                     this.emit('eggBounce', e);
                 } 
-                else if ((e.position.x + this.eggRadius) > this.rightBoundByRoom[r]) {
+                else if ((e.position.x + this.paramsByRoom[r].eggRadius) > this.rightBoundByRoom[r]) {
                     e.velocity.x = -Math.abs(e.velocity.x);
-                    e.position.x = this.rightBoundByRoom[r] - this.eggRadius;
+                    e.position.x = this.rightBoundByRoom[r] - this.paramsByRoom[r].eggRadius;
                     this.emit('eggBounce', e);
                 }
-                if ((e.position.y - this.eggRadius) < this.topBound) {
+                if ((e.position.y - this.paramsByRoom[r].eggRadius) < this.paramsByRoom[r].topBound) {
                     e.velocity.y = Math.abs(e.velocity.y);
-                    e.position.y = this.topBound + this.eggRadius;
+                    e.position.y = this.paramsByRoom[r].topBound + this.paramsByRoom[r].eggRadius;
                     this.emit('eggBounce', e);
                 }
-                else if ((e.position.y + this.eggRadius) > this.playerHeight) {
+                else if ((e.position.y + this.paramsByRoom[r].eggRadius) > this.paramsByRoom[r].playerHeight) {
                     e.velocity.y = -Math.abs(e.velocity.y);
-                    e.position.y = this.playerHeight - this.eggRadius;
+                    e.position.y = this.paramsByRoom[r].playerHeight - this.paramsByRoom[r].eggRadius;
                     this.emit('eggBounce', e);
                 }
                 // check if broken
@@ -218,19 +221,19 @@ export default class InterferenceGameEngine extends GameEngine {
     }
 
     positionIsInPlayer(x, p) {
-        let leftBound = p.number * this.playerWidth;
-        let rightBound = (p.number + 1) * this.playerWidth;
+        let leftBound = p.number * this.paramsByRoom[p.room].playerWidth;
+        let rightBound = (p.number + 1) * this.paramsByRoom[p.room].playerWidth;
         return (leftBound < x && x < rightBound);
     }
 
-    quantizedPosition(x, y, divX, divY) {
-        let cellX = Math.floor(x / (this.playerWidth / divX)) * (this.playerWidth / divX);
-        let cellY = Math.floor(y / (this.playerHeight / divY)) * (this.playerHeight / divY);
+    quantizedPosition(x, y, divX, divY, roomName) {
+        let cellX = Math.floor(x / (this.paramsByRoom[roomName].playerWidth / divX)) * (this.paramsByRoom[roomName].playerWidth / divX);
+        let cellY = Math.floor(y / (this.paramsByRoom[roomName].playerHeight / divY)) * (this.paramsByRoom[roomName].playerHeight / divY);
         return [cellX, cellY];
     }
 
     playerQuantizedPosition(p, x, y, divX, divY) {
-        let cell = this.quantizedPosition(x, y, divX, divY);
+        let cell = this.quantizedPosition(x, y, divX, divY, p.room);
         let playerCellX = cell[0] - (p.number * divX);
         let playerCellY = cell[1];
         return [playerCellX, playerCellY];
@@ -290,8 +293,9 @@ export default class InterferenceGameEngine extends GameEngine {
 
         let player = this.world.queryObject({ playerId });
         if (player == null) return;
-        let players = this.playersByRoom[player._roomName];
-        let eggs = this.eggsByRoom[player._roomName];
+        if (!isServer) player.room = this.room;
+        let players = this.playersByRoom[player.room];
+        let eggs = this.eggsByRoom[player.room];
         let eggsByType = {};
         if (eggs) {
             eggsByType = this.groupBy(eggs, 'sound');
@@ -435,19 +439,16 @@ export default class InterferenceGameEngine extends GameEngine {
         }
     }
 
-    restoreDefaultSettings() {
-        // game constants
-        Object.assign(this, {
-            // map: { setup: { variations: [0]['intro'], 
-            // intro: ['buildMelody', 'buildBass', 'buildPerc'],
-            // buildMelody: ['fight']
-            // fight
-            // },
+    setRoomParamsToDefault(room) {
+        this.paramsByRoom[room] = {};
+        Object.assign(this.paramsByRoom[room], {
+
             playerWidth: 32, playerHeight: 18, 
-            eggSounds: ['melody', 'bass', 'perc'], numStartingEggs: 1, numEggsToAdd: 1,
+            eggSounds: ['melody', 'bass', 'perc'], eggSoundsToUse: ['melody', 'bass', 'perc'], 
+            numStartingEggs: 1, numEggsToAdd: 1,
             eggHPRange: 0, eggHPMin: 2, eggHPPerPlayer: 2, 
             startingAmmo: 3, maxAmmo: 5, reloadSize: 2,
-            leftBound: 0, topBound: 0, eggDroneVolume: -6,
+            leftBound: 0, topBound: 0, eggDroneVolume: -6, // in decibels
             transportSyncInterval: 200, eggRadius: 1, eggBaseVelocity: 0.125, ammoDropChance: 0.05,
             actionThreshold: 2, progressionThreshold: 4, 
             palettes: [1, 2, 3, 4, 5],

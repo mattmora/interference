@@ -8,7 +8,8 @@ export default class Egg extends DynamicObject {
         return Object.assign({
             //number: { type: BaseTypes.TYPES.UINT8 },
             sound: { type: BaseTypes.TYPES.STRING },
-            hp: { type: BaseTypes.TYPES.INT16 }
+            hp: { type: BaseTypes.TYPES.INT16 },
+            room: { type: BaseTypes.TYPES.STRING }
         }, super.netScheme);
     }
 

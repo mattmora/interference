@@ -14,7 +14,8 @@ export default class Note extends DynamicObject {
             dur: { type: BaseTypes.TYPES.STRING },
             vel: { type: BaseTypes.TYPES.INT16 },
             xPos: { type: BaseTypes.TYPES.INT16 },
-            yPos: { type: BaseTypes.TYPES.INT16 }
+            yPos: { type: BaseTypes.TYPES.INT16 },
+            room: { type: BaseTypes.TYPES.STRING }
         }, super.netScheme);
     }
 
@@ -35,8 +36,8 @@ export default class Note extends DynamicObject {
     move(xStep, yStep) {
         this.xPos += xStep;
         this.yPos += yStep;
-        let rightBound = this.gameEngine.playersByRoom[this._roomName].length * this.gameEngine.playerWidth; //TODO should be width in cells
-        let upperBound = Number(this.gameEngine.playerHeight);
+        let rightBound = this.gameEngine.playersByRoom[this.room].length * this.gameEngine.paramsByRoom[this.room].playerWidth; //TODO should be width in cells
+        let upperBound = Number(this.gameEngine.paramsByRoom[this.room].playerHeight);
         if (this.xPos >= rightBound) { this.xPos -= rightBound; }
         if (this.yPos >= upperBound) { this.yPos -= upperBound; }
         if (this.xPos < 0) { this.xPos += rightBound; }
@@ -44,8 +45,8 @@ export default class Note extends DynamicObject {
     }
 
     paint() {
-        let playerWidth = this.gameEngine.playerWidth;
-        let playerHeight = this.gameEngine.playerHeight;
+        let playerWidth = this.gameEngine.paramsByRoom[this.room].playerWidth;
+        let playerHeight = this.gameEngine.paramsByRoom[this.room].playerHeight;
         let n = Math.floor(this.xPos / playerWidth);
         for (let p of this.gameEngine.queryPlayers({ number: n })) {
 
