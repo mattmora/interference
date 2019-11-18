@@ -930,7 +930,7 @@ export default class InterferenceClientEngine extends ClientEngine {
         else if (e.sound === 'perc') {
             this.eggSynths[e.toString()].drone.triggerAttack('+0.01', 0.02);
         }
-        this.eggSynths[e.toString()].break.loop = 4;
+        this.eggSynths[e.toString()].break.loop = 1;
     }
 
     playPitchOnSynth(synth, pitch, chord, scale, octaveShift, dur, time, vel) {
