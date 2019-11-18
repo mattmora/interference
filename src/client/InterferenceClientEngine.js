@@ -630,15 +630,16 @@ export default class InterferenceClientEngine extends ClientEngine {
 
         let pal = this.gameEngine.paramsByRoom[this.room].paletteAttributes[this.player.palette];
 
-        let release = 0.1;
+        let release = 0.5;
         let sustain = 0.5;
+        let decay = 0.1;
         if (this.player.stage == "build") {
             this.transport.scheduleOnce(() => {
                 this.melodySequence.playbackRate = this.gameEngine.paramsByRoom[this.room].buildRate;
                 this.bassSequence.playbackRate = this.gameEngine.paramsByRoom[this.room].buildRate;
                 this.percSequence.playbackRate = this.gameEngine.paramsByRoom[this.room].buildRate;   
             }, this.nextDiv('1m'));
-            release = 3.0;
+            release = this.gameEngine.paramsByRoom[this.room].buildRelease;
         }
         else if (this.player.stage == "fight") {
             this.transport.scheduleOnce(() => {
@@ -647,6 +648,7 @@ export default class InterferenceClientEngine extends ClientEngine {
                 this.percSequence.playbackRate = this.gameEngine.paramsByRoom[this.room].fightRate;
             }, this.nextDiv('1m'));
             sustain = 0.0;
+            decay = this.gameEngine.paramsByRoom[this.room].fightRelease;
         }
         else if (this.player.stage == "outro") {
             this.transport.scheduleOnce(() => {
@@ -654,6 +656,7 @@ export default class InterferenceClientEngine extends ClientEngine {
                 this.bassSequence.playbackRate = this.gameEngine.paramsByRoom[this.room].outroRate;
                 this.percSequence.playbackRate = this.gameEngine.paramsByRoom[this.room].outroRate; 
             }, this.nextDiv('1m'));
+            release = this.gameEngine.paramsByRoom[this.room].outroRelease;
         }
 
         this.melodySynth.set({
@@ -686,7 +689,7 @@ export default class InterferenceClientEngine extends ClientEngine {
             },
             "envelope" : {
                 "attack" : 0.01,
-                "decay" : 0.1,
+                "decay" : decay,
                 "sustain" : sustain,
                 "release" : release
             },

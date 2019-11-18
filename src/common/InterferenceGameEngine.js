@@ -476,6 +476,7 @@ export default class InterferenceGameEngine extends GameEngine {
             melodyBuildOctave: 0, melodyFightOctave: 1, 
             bassBuildOctave: 0, bassFightOctave: -1, 
             percBuildOctave: 0, percFightOctave: -1, 
+            buildRelease: 3.0, fightRelease: 0.3, outroRelease: 1.0,
             paletteAttributes: [
                 { //default
                      //'default': 
