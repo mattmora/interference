@@ -106,8 +106,6 @@ export default class InterferenceRenderer extends Renderer {
         ctx[1].clearRect(0, 0, w, h);
 
         // Transform the canvas
-        // Note that we need to flip the y axis since Canvas pixel coordinates
-        // goes from top to bottom, while physics does the opposite.
         ctx[0].save();
         ctx[1].save();
         //ctx.scale(this.clientEngine.zoom, this.clientEngine.zoom);  // Zoom in and flip y axis
@@ -162,6 +160,8 @@ export default class InterferenceRenderer extends Renderer {
                 }
             }
         }
+
+        // TODO: Ring
         let x = (w / n) * (thisPlayer.number + 0.5);
         ctx[0].fillStyle = 'white';
         this.fillTriangle(  x,                      (1.05 * h) / n, 
@@ -170,6 +170,7 @@ export default class InterferenceRenderer extends Renderer {
     }
 
     drawPlayer(p, wrap) {
+        // TODO: Ring
         let n = players.length;
         if (client.performanceView) n = 1;
         let i = p.number - (leftViewBound / game.playerWidth);
@@ -208,6 +209,7 @@ export default class InterferenceRenderer extends Renderer {
     }
 
     drawEggs() {
+        // TODO: Ring
         for (let e of eggs) {
             let scale = this.mapToRange(e.animFrames.spawn, 0, animLengths.eggSpawn, 0.0, 1.0);
             this.fillColor(0, 'c1', 1);
@@ -255,6 +257,7 @@ export default class InterferenceRenderer extends Renderer {
     }
 
     drawPlayheads(p, wrap) {
+        // TODO: Ring
         let dimX = this.gameXDimToCanvasXDim(1);   
         let dimY = this.gameYDimToCanvasYDim(game.playerHeight);
         let shift = p.number * game.playerWidth;
@@ -271,6 +274,7 @@ export default class InterferenceRenderer extends Renderer {
     }
 
     drawStep(step) {
+        // TODO: Ring
         for (let n of step) {
             if (players.length === 1) {
                 this.drawNote(n, false);
@@ -291,6 +295,7 @@ export default class InterferenceRenderer extends Renderer {
     }
 
     drawNote(n, wrap) {
+        // TODO: Ring
         let playerWidth = Number(game.playerWidth);
         let playerHeight = Number(game.playerHeight);
 

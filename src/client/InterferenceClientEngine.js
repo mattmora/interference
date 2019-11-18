@@ -414,10 +414,10 @@ export default class InterferenceClientEngine extends ClientEngine {
             let chord = pal.pitchSets[this.pitchSet];
             let pitch = Math.floor(Math.random() * chord.length);
             if (e.sound === 'melody') {
-                this.playPitchOnSynth(this.eggSynths[e.toString()].bounce, pitch, chord, scale, 6, '16n', '+0.01', 0.7);
+                this.playPitchOnSynth(this.eggSynths[e.toString()].bounce, pitch, chord, scale, 6, '16n', '+0.01', 0.5);
             }
             else if (e.sound === 'bass') {
-                this.playPitchOnSynth(this.eggSynths[e.toString()].bounce, pitch, chord, scale, 4, '16n', '+0.01', 0.7);
+                this.playPitchOnSynth(this.eggSynths[e.toString()].bounce, pitch, chord, scale, 4, '16n', '+0.01', 0.5);
             }
             else if (e.sound === 'perc') {
                 this.eggSynths[e.toString()].bounce.triggerAttackRelease('16n', '+0.01', 0.2);
@@ -812,7 +812,7 @@ export default class InterferenceClientEngine extends ClientEngine {
                 break: new Sequence((time, pitch) => {
                     let scale = pal.scale;
                     let chord = pal.pitchSets[this.pitchSet];
-                    this.playPitchOnSynth(synth, pitch, chord, scale, 6, '4n', time, 0.1);
+                    this.playPitchOnSynth(synth, pitch, chord, scale, 6, '4n', time, 0.2);
                 }, [[4, 2, 3, 1, 3, 1, 2, 0], null, null, null], '4n')
             };
         }
@@ -872,7 +872,7 @@ export default class InterferenceClientEngine extends ClientEngine {
                 break: new Sequence((time, pitch) => {
                     let scale = pal.scale;
                     let chord = pal.pitchSets[this.pitchSet];
-                    this.playPitchOnSynth(synth, pitch, chord, scale, 6, '4n', time, 0.1);
+                    this.playPitchOnSynth(synth, pitch, chord, scale, 6, '4n', time, 0.2);
                 }, [[0, 1, 2, 3, 1, 2, 3, 4], null, null, null], '4n')
             };
         }
@@ -915,7 +915,7 @@ export default class InterferenceClientEngine extends ClientEngine {
                 break: new Sequence((time, pitch) => {
                     let scale = pal.scale;
                     let chord = pal.pitchSets[this.pitchSet];
-                    this.playPitchOnSynth(synth, pitch, chord, scale, 6, '4n', time, 0.1);
+                    this.playPitchOnSynth(synth, pitch, chord, scale, 6, '4n', time, 0.2);
                 }, [[0, 4, null, null, null, null, 1, 5], null, null, null], '4n')
             };
         }
