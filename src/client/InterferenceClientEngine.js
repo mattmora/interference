@@ -6,7 +6,7 @@ import InterferenceRenderer from '../client/InterferenceRenderer';
 import Note from '../common/Note';
 import Performer from '../common/Performer';
 import Egg from '../common/Egg';
-import { Transport, Frequency, Sequence, Synth, MonoSynth, PolySynth, NoiseSynth, FMSynth, AMSynth } from 'tone';
+import { Transport, Frequency, Sequence, Synth, MonoSynth, PolySynth, NoiseSynth, MembraneSynth, FMSynth, AMSynth } from 'tone';
 import { Reverb, Distortion, Volume } from 'tone';
 
 export default class InterferenceClientEngine extends ClientEngine {
@@ -230,11 +230,11 @@ export default class InterferenceClientEngine extends ClientEngine {
                 errorText.textContent = 
                 'Cannot join room. Performance in progress.';
             });
-            this.socket.on('changeTempo', bpm => {
-                this.transport.scheduleOnce(() => {
-                    this.transport.bpm.value = bpm;
-                }, this.nextDiv('1m'));
-            });
+            // this.socket.on('changeTempo', bpm => {
+            //     this.transport.scheduleOnce(() => {
+            //         this.transport.bpm.value = bpm;
+            //     }, this.nextDiv('1m'));
+            // });
         });
     }
 
@@ -364,11 +364,11 @@ export default class InterferenceClientEngine extends ClientEngine {
             }
             if (this.bassSequence.state !== 'started') {
                 //console.log('start seq');
-                this.bassSequence.start(this.nextDiv('4m'));
+                this.bassSequence.start(this.nextDiv('1m'));
             }
             if (this.percSequence.state !== 'started') {
                 //console.log('start seq');
-                this.percSequence.start(this.nextDiv('2m'));
+                this.percSequence.start(this.nextDiv('1m'));
             }
         }
         if (stage == 'build') {
@@ -387,9 +387,12 @@ export default class InterferenceClientEngine extends ClientEngine {
                 }
             }
         }
-        if (stage == 'outro') {
+        else if (stage == 'outro') {
             this.eggVolume.mute = true;
         }
+        else if (stage == 'fight') {
+        }
+        if (stage != this.prevStage) this.updateSound();
         this.prevStage = stage;
     }
 
@@ -400,6 +403,7 @@ export default class InterferenceClientEngine extends ClientEngine {
         this.player.palette = palettes[(palettes.indexOf(this.player.palette) + 1) % palettes.length];
         this.socket.emit('updatePalette', this.player.palette);
         this.player.grid.fill(this.player.palette);
+        this.updateSound();
     }
 
     onEggBounce(e) {
@@ -488,14 +492,14 @@ export default class InterferenceClientEngine extends ClientEngine {
     initSound() {
         //this.transport.timeSignature = 4;
 
-        this.reverb = new Reverb(2).toMaster();
-        this.distVolume = new Volume(-12).toMaster();
+        this.reverb = new Reverb(1).toDestination();
+        this.distVolume = new Volume(-12).toDestination();
         this.distVolume.connect(this.reverb);
         this.distortion = new Distortion(1).connect(this.distVolume);
         //this.bitcrusher = new BitCrusher(4).connect(this.reverb); 
         this.reverb.generate();
 
-        this.eggVolume = new Volume(0).toMaster();
+        this.eggVolume = new Volume(0).toDestination();
         this.eggVolume.connect(this.reverb);
         //this.bitcrusher.start();
         /*
@@ -509,7 +513,7 @@ export default class InterferenceClientEngine extends ClientEngine {
                 sustain: 0,
                 release: 0.1,
             }
-        }).toMaster();
+        }).toDestination();
         */
         let roomName = this.room;
         let pal = this.gameEngine.paramsByRoom[roomName].paletteAttributes[this.player.palette];
@@ -528,13 +532,13 @@ export default class InterferenceClientEngine extends ClientEngine {
         // this.harmonySequencer = new Sequence((time, step) => {
         //     this.pitchSet = pal.pitchSets[step];
         // }, progression, '2m');
-
-        this.melodySynth = new PolySynth(this.gameEngine.paramsByRoom[roomName].playerHeight, FMSynth, {
-            "modulationIndex" : 4,
-            "harmonicity": 4,
+        
+        //this.gameEngine.paramsByRoom[roomName].playerHeight
+        this.melodySynth = new PolySynth(FMSynth, {
+            "modulationIndex" : pal.melody.modulationIndex,
+            "harmonicity": pal.melody.harmonicity,
             "oscillator": {
-                "type" : "sawtooth",
-                "partials" : [0, 1, 2, 3]
+                "type" : pal.melody.osc
             },
             "envelope" : {
                 "attack" : 0.01,
@@ -542,13 +546,13 @@ export default class InterferenceClientEngine extends ClientEngine {
                 "sustain": 0.2
             },
             "modulation" : {
-                "type" : "sine"
+                "type" : pal.melody.modType
             },
             "modulationEnvelope" : {
                 "attack" : 0.03,
                 "decay" : 0.7
             }
-        }).toMaster();
+        }).toDestination();
         this.melodySynth.connect(this.reverb);
 
         this.melodySequence = new Sequence((time, step) => {
@@ -556,15 +560,17 @@ export default class InterferenceClientEngine extends ClientEngine {
             if (this.sequences[this.player.number] == null) return;
             if (this.sequences[this.player.number].melody == null) return;
             let seqStep = this.sequences[this.player.number].melody[this.melodyStep];
-            if (seqStep) this.playNoteArrayOnSynth(this.melodySynth, seqStep, 0, time, true);
+            let octaveShift = this.gameEngine.paramsByRoom[roomName].melodyBuildOctave;
+            if (this.player.stage == "fight") octaveShift = this.gameEngine.paramsByRoom[roomName].melodyFightOctave;
+            if (seqStep) this.playNoteArrayOnSynth(this.melodySynth, seqStep, octaveShift, time, true);
         }, events, pal.melody.subdivision);
 
-
-        this.bassSynth = new PolySynth(this.gameEngine.paramsByRoom[roomName].playerHeight, FMSynth, {
-            "modulationIndex" : 6,
-            "harmonicity": 5,
+        //this.gameEngine.paramsByRoom[roomName].playerHeight
+        this.bassSynth = new PolySynth(FMSynth, {
+            "modulationIndex" : pal.bass.modulationIndex,
+            "harmonicity": pal.bass.harmonicity,
             "oscillator": {
-                "type" : "triangle",
+                "type" : pal.bass.osc
             },
             "envelope" : {
                 "attack" : 0.01,
@@ -572,13 +578,13 @@ export default class InterferenceClientEngine extends ClientEngine {
                 "sustain": 0.5
             },
             "modulation" : {
-                "type" : "sine"
+                "type" : pal.bass.modType
             },
             "modulationEnvelope" : {
                 "attack" : 0.01,
                 "decay" : 0.07
             }
-        }).toMaster();
+        }).toDestination();
         this.bassSynth.connect(this.reverb);
 
         this.bassSequence = new Sequence((time, step) => {
@@ -586,26 +592,25 @@ export default class InterferenceClientEngine extends ClientEngine {
             if (this.sequences[this.player.number] == null) return;
             if (this.sequences[this.player.number].bass == null) return;
             let seqStep = this.sequences[this.player.number].bass[this.bassStep];
-            if (seqStep) this.playNoteArrayOnSynth(this.bassSynth, seqStep, -2, time, true);       
+            let octaveShift = this.gameEngine.paramsByRoom[roomName].bassBuildOctave;
+            if (this.player.stage == "fight") octaveShift = this.gameEngine.paramsByRoom[roomName].bassFightOctave;
+            if (seqStep) this.playNoteArrayOnSynth(this.bassSynth, seqStep, octaveShift, time, true);       
         }, events, pal.bass.subdivision);
 
 
-        this.percSynth = new PolySynth(this.gameEngine.playerHeight, FMSynth, {
-            "modulationIndex" : 40,
-            "harmonicity": 0.01,
+        //this.gameEngine.playerHeight
+        this.percSynth = new PolySynth(MembraneSynth, {
+            "pitchDecay" : pal.perc.pitchDecay,//0.05,
+            "octaves" : pal.perc.octaves,//10 ,
+            "oscillator" : {
+                "type" : pal.perc.osc//sine
+            },
             "envelope" : {
-                "attack" : 0.01,
-                "decay" : 0.01,
-                "sustain": 0.05
-            },
-            "modulation" : {
-                "type" : "square"
-            },
-            "modulationEnvelope" : {
-                "attack" : 0.01,
-                "decay" : 0.07
+                "attack" : 0.001 ,
+                "decay" : 0.4 ,
+                "sustain" : 0.01 
             }
-        });//.toMaster();
+        });//.toDestination();
         this.percSynth.connect(this.distortion);
 
         this.percSequence = new Sequence((time, step) => {
@@ -613,8 +618,137 @@ export default class InterferenceClientEngine extends ClientEngine {
             if (this.sequences[this.player.number] == null) return;
             if (this.sequences[this.player.number].perc == null) return;
             let seqStep = this.sequences[this.player.number].perc[this.percStep];
-            if (seqStep) this.playNoteArrayOnSynth(this.percSynth, seqStep, -1, time, true);
+            let octaveShift = this.gameEngine.paramsByRoom[roomName].percBuildOctave;
+            if (this.player.stage == "fight") octaveShift = this.gameEngine.paramsByRoom[roomName].percFightOctave;
+            if (seqStep) this.playNoteArrayOnSynth(this.percSynth, seqStep, octaveShift, time, true);
         }, events, pal.perc.subdivision);
+    }
+
+    updateSound()
+    {
+        if (this.reverb == null) initSound();
+
+        let pal = this.gameEngine.paramsByRoom[this.room].paletteAttributes[this.player.palette];
+
+        let release = 0.1;
+        let sustain = 0.5;
+        if (this.player.stage == "build") {
+            this.transport.scheduleOnce(() => {
+                this.melodySequence.playbackRate = this.gameEngine.paramsByRoom[this.room].buildRate;
+                this.bassSequence.playbackRate = this.gameEngine.paramsByRoom[this.room].buildRate;
+                this.percSequence.playbackRate = this.gameEngine.paramsByRoom[this.room].buildRate;   
+            }, this.nextDiv('1m'));
+            release = 3.0;
+        }
+        else if (this.player.stage == "fight") {
+            this.transport.scheduleOnce(() => {
+                this.melodySequence.playbackRate = this.gameEngine.paramsByRoom[this.room].fightRate;
+                this.bassSequence.playbackRate = this.gameEngine.paramsByRoom[this.room].fightRate;
+                this.percSequence.playbackRate = this.gameEngine.paramsByRoom[this.room].fightRate;
+            }, this.nextDiv('1m'));
+            sustain = 0.0;
+        }
+        else if (this.player.stage == "outro") {
+            this.transport.scheduleOnce(() => {
+                this.melodySequence.playbackRate = this.gameEngine.paramsByRoom[this.room].outroRate;
+                this.bassSequence.playbackRate = this.gameEngine.paramsByRoom[this.room].outroRate;
+                this.percSequence.playbackRate = this.gameEngine.paramsByRoom[this.room].outroRate; 
+            }, this.nextDiv('1m'));
+        }
+
+        this.melodySynth.set({
+            "modulationIndex" : pal.melody.modulationIndex,
+            "harmonicity": pal.melody.harmonicity,
+            "oscillator": {
+                "type" : pal.melody.osc
+            },
+            "envelope" : {
+                "sustain" : sustain,
+                "release" : release
+            },
+
+            "modulation" : {
+                "type" : pal.melody.modType
+            },
+            "modulationEnvelope" : {
+                "attack" : 0.03,
+                "decay" : 0.7,
+                "sustain" : sustain,
+                "release" : release
+            }
+        });
+
+        this.bassSynth.set({
+            "modulationIndex" : pal.bass.modulationIndex,
+            "harmonicity": pal.bass.harmonicity,
+            "oscillator": {
+                "type" : pal.bass.osc
+            },
+            "envelope" : {
+                "attack" : 0.01,
+                "decay" : 0.1,
+                "sustain" : sustain,
+                "release" : release
+            },
+            "modulation" : {
+                "type" : pal.bass.modType
+            },
+            "modulationEnvelope" : {
+                "attack" : 0.01,
+                "decay" : 0.07,
+                "sustain" : sustain,
+                "release" : release
+            }
+        });
+
+        this.percSynth.set({
+            "pitchDecay" : pal.perc.pitchDecay,//0.05,
+            "octaves" : pal.perc.octaves,//10 ,
+            "oscillator" : {
+                "type" : pal.perc.osc//sine
+            },
+            "envelope" : {
+                "attack" : 0.001 ,
+                "decay" : 0.4 ,
+                "sustain" : 0.01 ,
+                "release" : release
+            }
+        });
+
+        // let events = [];
+        // for (let i = 0; i < this.gameEngine.paramsByRoom[this.room].playerWidth; i++) {
+        //    events.push(i);
+        // }
+
+        // this.melodySequence = new Sequence((time, step) => {
+        //     this.melodyStep = step;
+        //     if (this.sequences[this.player.number] == null) return;
+        //     if (this.sequences[this.player.number].melody == null) return;
+        //     let seqStep = this.sequences[this.player.number].melody[this.melodyStep];
+        //     let octaveShift = 0;
+        //     if (this.player.stage == "fight") octaveShift = 2;
+        //     if (seqStep) this.playNoteArrayOnSynth(this.melodySynth, seqStep, octaveShift, time, true);
+        // }, events, pal.melody.subdivision);
+
+        // this.bassSequence = new Sequence((time, step) => {
+        //     this.bassStep = step; 
+        //     if (this.sequences[this.player.number] == null) return;
+        //     if (this.sequences[this.player.number].bass == null) return;
+        //     let seqStep = this.sequences[this.player.number].bass[this.bassStep];
+        //     let octaveShift = -2;
+        //     if (this.player.stage == "fight") octaveShift = 0;
+        //     if (seqStep) this.playNoteArrayOnSynth(this.bassSynth, seqStep, octaveShift, time, true);       
+        // }, events, pal.bass.subdivision);
+        
+        // this.percSequence = new Sequence((time, step) => {
+        //     this.percStep = step;
+        //     if (this.sequences[this.player.number] == null) return;
+        //     if (this.sequences[this.player.number].perc == null) return;
+        //     let seqStep = this.sequences[this.player.number].perc[this.percStep];
+        //     let octaveShift = -1;
+        //     if (this.player.stage == "fight") octaveShift = 2;
+        //     if (seqStep) this.playNoteArrayOnSynth(this.percSynth, seqStep, octaveShift, time, true);
+        // }, events, pal.perc.subdivision);
     }
 
     constructEggSynths(e) {
@@ -678,7 +812,7 @@ export default class InterferenceClientEngine extends ClientEngine {
                 break: new Sequence((time, pitch) => {
                     let scale = pal.scale;
                     let chord = pal.pitchSets[this.pitchSet];
-                    this.playPitchOnSynth(synth, pitch, chord, scale, 6, '64n', time, 0.1);
+                    this.playPitchOnSynth(synth, pitch, chord, scale, 6, '4n', time, 0.1);
                 }, [[4, 2, 3, 1, 3, 1, 2, 0], null, null, null], '4n')
             };
         }
@@ -738,7 +872,7 @@ export default class InterferenceClientEngine extends ClientEngine {
                 break: new Sequence((time, pitch) => {
                     let scale = pal.scale;
                     let chord = pal.pitchSets[this.pitchSet];
-                    this.playPitchOnSynth(synth, pitch, chord, scale, 6, '64n', time, 0.1);
+                    this.playPitchOnSynth(synth, pitch, chord, scale, 6, '4n', time, 0.1);
                 }, [[0, 1, 2, 3, 1, 2, 3, 4], null, null, null], '4n')
             };
         }
@@ -781,7 +915,7 @@ export default class InterferenceClientEngine extends ClientEngine {
                 break: new Sequence((time, pitch) => {
                     let scale = pal.scale;
                     let chord = pal.pitchSets[this.pitchSet];
-                    this.playPitchOnSynth(synth, pitch, chord, scale, 6, '64n', time, 0.1);
+                    this.playPitchOnSynth(synth, pitch, chord, scale, 6, '4n', time, 0.1);
                 }, [[0, 4, null, null, null, null, 1, 5], null, null, null], '4n')
             };
         }
@@ -811,6 +945,7 @@ export default class InterferenceClientEngine extends ClientEngine {
         let idArray = [];
         let pitchArray = [];
         for (let note of noteArray) {
+            if (note.room == null) continue;
             let pal = this.gameEngine.paramsByRoom[note.room].paletteAttributes[note.palette];
             if (!pitchArray.includes(note.pitch)) {
                 this.playPitchOnSynth(synth, note.pitch, pal.pitchSets[this.pitchSet], pal.scale, octaveShift, note.dur, time, note.vel);

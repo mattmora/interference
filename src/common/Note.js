@@ -34,6 +34,7 @@ export default class Note extends DynamicObject {
     }
 
     move(xStep, yStep) {
+        if (this.room == null) return;
         this.xPos += xStep;
         this.yPos += yStep;
         let rightBound = this.gameEngine.playersByRoom[this.room].length * this.gameEngine.paramsByRoom[this.room].playerWidth; //TODO should be width in cells
@@ -45,6 +46,7 @@ export default class Note extends DynamicObject {
     }
 
     paint() {
+        if (this.room == null) return;
         let playerWidth = this.gameEngine.paramsByRoom[this.room].playerWidth;
         let playerHeight = this.gameEngine.paramsByRoom[this.room].playerHeight;
         let n = Math.floor(this.xPos / playerWidth);

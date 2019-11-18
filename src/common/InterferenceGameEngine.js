@@ -169,15 +169,25 @@ export default class InterferenceGameEngine extends GameEngine {
         if (this.eggsByRoom[r]) {
             for (let e of this.eggsByRoom[r]) {
                 // bounce off walls
-                if ((e.position.x - this.paramsByRoom[r].eggRadius) < this.paramsByRoom[r].leftBound) {
-                    e.velocity.x = Math.abs(e.velocity.x);
-                    e.position.x = this.paramsByRoom[r].leftBound + this.paramsByRoom[r].eggRadius;
-                    this.emit('eggBounce', e);
-                } 
-                else if ((e.position.x + this.paramsByRoom[r].eggRadius) > this.rightBoundByRoom[r]) {
-                    e.velocity.x = -Math.abs(e.velocity.x);
-                    e.position.x = this.rightBoundByRoom[r] - this.paramsByRoom[r].eggRadius;
-                    this.emit('eggBounce', e);
+                if (this.paramsByRoom[r].ballWraps) {
+                    if (e.position.x < this.paramsByRoom[r].leftBound) {
+                        e.position.x = this.rightBoundByRoom[r];
+                    }
+                    else if (e.position.x > this.rightBoundByRoom[r]) {
+                        e.position.x = this.paramsByRoom[r].leftBound;
+                    }
+                }
+                else {
+                    if ((e.position.x - this.paramsByRoom[r].eggRadius) < this.paramsByRoom[r].leftBound) {
+                        e.velocity.x = Math.abs(e.velocity.x);
+                        e.position.x = this.paramsByRoom[r].leftBound + this.paramsByRoom[r].eggRadius;
+                        this.emit('eggBounce', e);
+                    } 
+                    else if ((e.position.x + this.paramsByRoom[r].eggRadius) > this.rightBoundByRoom[r]) {
+                        e.velocity.x = -Math.abs(e.velocity.x);
+                        e.position.x = this.rightBoundByRoom[r] - this.paramsByRoom[r].eggRadius;
+                        this.emit('eggBounce', e);
+                    }
                 }
                 if ((e.position.y - this.paramsByRoom[r].eggRadius) < this.paramsByRoom[r].topBound) {
                     e.velocity.y = Math.abs(e.velocity.y);
@@ -373,9 +383,11 @@ export default class InterferenceGameEngine extends GameEngine {
             else if (isServer) {
                 if (inputData.input == 'w') {
                     player.move(0, -1);
+                    this.emit('playerAction', player);
                 }
                 else if (inputData.input == 's') {
                     player.move(0, 1);
+                    this.emit('playerAction', player);
                 }
                 /*
                 if (inputData.input == 'b') {
@@ -402,15 +414,19 @@ export default class InterferenceGameEngine extends GameEngine {
             if (isServer) {
                 if (inputData.input == 'w') {
                     player.move(0, -1);
+                    this.emit('playerAction', player);
                 }
                 else if (inputData.input == 'a') {
                     player.move(-1, 0);
+                    this.emit('playerAction', player);
                 }
                 else if (inputData.input == 's') {
                     player.move(0, 1);
+                    this.emit('playerAction', player);
                 }
                 else if (inputData.input == 'd') {
                     player.move(1, 0);
+                    this.emit('playerAction', player);
                 }
                 /*
                 if (inputData.input == 'b') {
@@ -422,18 +438,23 @@ export default class InterferenceGameEngine extends GameEngine {
             if (isServer) {
                 if (inputData.input == 'w') {
                     player.move(0, -1);
+                    this.emit('playerAction', player);
                 }
                 else if (inputData.input == 'a') {
                     player.move(-1, 0);
+                    this.emit('playerAction', player);
                 }
                 else if (inputData.input == 's') {
                     player.move(0, 1);
+                    this.emit('playerAction', player);
                 }
                 else if (inputData.input == 'd') {
                     player.move(1, 0);
+                    this.emit('playerAction', player);
                 }
                 else if (inputData.input == 'space') {
                     this.emit('removeNote', player);
+                    this.emit('playerAction', player);
                 }
             }
         }
@@ -443,15 +464,18 @@ export default class InterferenceGameEngine extends GameEngine {
         this.paramsByRoom[room] = {};
         Object.assign(this.paramsByRoom[room], {
 
-            playerWidth: 32, playerHeight: 18, 
+            playerWidth: 16, playerHeight: 9, 
             eggSounds: ['melody', 'bass', 'perc'], eggSoundsToUse: ['melody', 'bass', 'perc'], 
-            numStartingEggs: 1, numEggsToAdd: 1,
+            numStartingEggs: 2, numEggsToAdd: 2, ballWraps: false,
             eggHPRange: 0, eggHPMin: 2, eggHPPerPlayer: 2, 
             startingAmmo: 3, maxAmmo: 5, reloadSize: 2,
             leftBound: 0, topBound: 0, eggDroneVolume: -6, // in decibels
-            transportSyncInterval: 200, eggRadius: 1, eggBaseVelocity: 0.125, ammoDropChance: 0.05,
-            actionThreshold: 2, progressionThreshold: 4, 
-            palettes: [1, 2, 3, 4, 5],
+            transportSyncInterval: 200, eggRadius: 1, eggBaseVelocity: 0.1, ammoDropChance: 0.05,
+            actionThreshold: 32, progressionThreshold: 8, 
+            palettes: [1, 2, 3, 4, 5], buildRate: 0.5, fightRate: 0.5, outroRate: 0.5,
+            melodyBuildOctave: 0, melodyFightOctave: 1, 
+            bassBuildOctave: 0, bassFightOctave: -1, 
+            percBuildOctave: 0, percFightOctave: -1, 
             paletteAttributes: [
                 { //default
                      //'default': 
@@ -479,20 +503,27 @@ export default class InterferenceGameEngine extends GameEngine {
                         [0, 2, 4], //13
                         [0, 2, 4],
                         [0, 2, 4],
-                        [0, 2, 4],
-                        [0, 1, 2, 3, 4, 5, 6] //scale
+                        [0, 2, 4]
                     ],
                     melody: {
-                        subdivision: '32n',
-                        length: 0
+                        modulationIndex: 4,
+                        harmonicity: 4,
+                        osc: "sawtooth",
+                        modType: "sine",
+                        subdivision: '32n'
                     },
                     bass: {
-                        subdivision: '8n',
-                        length: 0
+                        modulationIndex: 6,
+                        harmonicity: 5,
+                        osc: "triangle",
+                        modType: "sine",
+                        subdivision: '8n'
                     },
                     perc: {
-                        subdivision: '16n',
-                        length: 0
+                        pitchDecay: 0.05,
+                        octaves: 10,
+                        osc: "sine",
+                        subdivision: '16n'
                     }
                 },
                 { //rain
@@ -503,34 +534,44 @@ export default class InterferenceGameEngine extends GameEngine {
                         c3: '#457eac',
                         c4: '#748386' 
                     },
-                    scale: [1, 2, 4, 5, 7, 9, 10], // D harm min
+                    scale: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
                     pitchSets: [
-                        [1, 3, 5], //1
-                        [1, 3, 5],
-                        [0, 2, 5],
-                        [0, 2, 5],
-                        [2, 4, 6], //5
-                        [2, 4, 6],
-                        [1, 4, 6],
-                        [1, 4, 6],
-                        [1, 4, 6], //9
-                        [1, 4, 6],
-                        [1, 4, 6],
-                        [1, 4, 6],
-                        [0, 2, 5], //13
-                        [0, 2, 5],
-                        [1, 3, 5],
-                        [1, 3, 5],
-                        [0, 1, 2, 3, 4, 5, 6] //scale
+                        [2, 7, 10], //1
+                        [2, 7, 10],
+                        [2, 6, 9],
+                        [2, 6, 9],
+                        [0, 5, 8], //5
+                        [0, 2, 5, 8],
+                        [0, 3, 7],
+                        [0, 3, 7],
+                        [0, 3, 8], //9
+                        [0, 3, 8],
+                        [0, 3, 7],
+                        [0, 3, 7],
+                        [2, 6, 9], //13
+                        [2, 6, 9],
+                        [2, 7, 11],
+                        [2, 7, 9]
                     ],
                     melody: {
-                        subdivision: '15n'
+                        modulationIndex: 2,
+                        harmonicity: 4,
+                        osc: "sawtooth",
+                        modType: "square",
+                        subdivision: '32n'
                     },
                     bass: {
-                        subdivision: '9n'
+                        modulationIndex: 6,
+                        harmonicity: 1.5,
+                        osc: "triangle",
+                        modType: "square",
+                        subdivision: '8n'
                     },
                     perc: {
-                        subdivision: '12n'
+                        pitchDecay: 0.05,
+                        octaves: 2,
+                        osc: "sine",
+                        subdivision: '16n'
                     }
                 },
                 { //celeste
@@ -541,33 +582,43 @@ export default class InterferenceGameEngine extends GameEngine {
                         c3: '#ac86b0',
                         c4: '#4b719c' 
                     },
-                    scale: [1, 3, 4, 6, 7, 9, 11], // E mel min asc
+                    scale: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
                     pitchSets: [
-                        [0, 3, 5], //1
-                        [0, 3, 5],
-                        [0, 3, 5],
-                        [2, 4, 6],
-                        [1, 3, 6], //5
-                        [1, 3, 6],
-                        [0, 2, 5],
-                        [0, 2, 5],
-                        [0, 3, 5], //9
-                        [0, 3, 5],
-                        [1, 3, 6],
-                        [1, 3, 6],
-                        [2, 4, 6], //13
-                        [1, 3, 6],
-                        [0, 3, 5],
-                        [0, 3, 5],
-                        [0, 1, 2, 3, 4, 5, 6] //scale
+                        [0, 4, 8, 9], //1
+                        [0, 4, 7],
+                        [0, 5, 9],
+                        [4, 8, 11],
+                        [0, 4, 8, 9], //5
+                        [0, 4, 7],
+                        [0, 5, 9],
+                        [4, 8, 11],
+                        [0, 4, 9], //9
+                        [2, 4, 8, 11],
+                        [0, 4, 7],
+                        [0, 2, 5, 9],
+                        [0, 4, 9], //13
+                        [0, 4, 9],
+                        [4, 8, 11],
+                        [4, 8, 11]
                     ],
                     melody: {
+                        modulationIndex: 3,
+                        harmonicity: 2,
+                        osc: "sine",
+                        modType: "square",
                         subdivision: '32n'
                     },
                     bass: {
+                        modulationIndex: 6,
+                        harmonicity: 3,
+                        osc: "triangle",
+                        modType: "sine",
                         subdivision: '8n'
                     },
                     perc: {
+                        pitchDecay: 0.05,
+                        octaves: 10,
+                        osc: "sine",
                         subdivision: '16n'
                     }
                 },
@@ -579,33 +630,43 @@ export default class InterferenceGameEngine extends GameEngine {
                         c3: '#f0ae62',
                         c4: '#011936' 
                     },
-                    scale: [0, 2, 4, 6, 7, 9, 11], // E minor
+                    scale: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11], 
                     pitchSets: [
-                        [2, 4, 6], //1
-                        [2, 4, 6],
-                        [2, 4, 6],
-                        [2, 4, 6],
-                        [2, 4, 6], //5
-                        [1, 3, 6],
-                        [2, 4, 6],
-                        [2, 4, 6],
-                        [0, 2, 5], //9
-                        [0, 2, 5],
-                        [2, 4, 6],
-                        [2, 4, 6],
-                        [2, 4, 6], //13
-                        [1, 3, 5],
-                        [0, 2, 4],
-                        [1, 3, 5],
-                        [0, 1, 2, 3, 4, 5, 6] //scale
+                        [4, 7, 11], //1
+                        [4, 7, 11],
+                        [2, 6, 9, 11],
+                        [2, 6, 9, 11],
+                        [0, 4, 7], //5
+                        [0, 4, 7],
+                        [2, 6, 9],
+                        [2, 6, 9],
+                        [2, 4, 7, 11], //9
+                        [2, 6, 11],
+                        [0, 4, 7],
+                        [2, 7, 11],
+                        [0, 4, 6, 9], //13
+                        [4, 7, 11],
+                        [3, 6, 11],
+                        [3, 6, 9, 11]
                     ],
                     melody: {
+                        modulationIndex: 40,
+                        harmonicity: 20,
+                        osc: "square",
+                        modType: "sawtooth",
                         subdivision: '32n'
                     },
                     bass: {
+                        modulationIndex: 8,
+                        harmonicity: 5,
+                        osc: "triangle",
+                        modType: "sawtooth",
                         subdivision: '8n'
                     },
                     perc: {
+                        pitchDecay: 0.001,
+                        octaves: 10,
+                        osc: "sine",
                         subdivision: '16n'
                     }
                 },
@@ -620,30 +681,40 @@ export default class InterferenceGameEngine extends GameEngine {
                     scale: [0, 2, 3, 5, 7, 9, 10], // F mixo
                     pitchSets: [
                         [0, 3, 5], //1
+                        [0, 2, 3, 6],
+                        [1, 2, 4, 6],
                         [0, 3, 5],
-                        [2, 4, 6],
-                        [2, 4, 6],
-                        [1, 3, 5], //5
-                        [1, 3, 5],
-                        [1, 3, 5],
-                        [1, 3, 5],
+                        [2, 4, 6], //5
+                        [1, 4, 6],
+                        [1, 3, 4, 6],
+                        [0, 4, 5],
                         [0, 3, 5], //9
+                        [0, 4, 5],
                         [0, 3, 5],
-                        [0, 2, 4],
-                        [0, 2, 4],
-                        [1, 3, 6], //13
-                        [1, 3, 6],
-                        [1, 3, 6],
-                        [1, 3, 6],
-                        [0, 1, 2, 3, 4, 5, 6] //scale
+                        [1, 2, 4],
+                        [0, 2, 4], //13
+                        [1, 4, 6],
+                        [1, 4, 5],
+                        [2, 4, 6]
                     ],
                     melody: {
+                        modulationIndex: 0,
+                        harmonicity: 4,
+                        osc: "triangle",
+                        modType: "sawtooth",
                         subdivision: '32n'
                     },
                     bass: {
+                        modulationIndex: 6,
+                        harmonicity: 0.5,
+                        osc: "triangle",
+                        modType: "square",
                         subdivision: '8n'
                     },
                     perc: {
+                        pitchDecay: 0.001,
+                        octaves: 5,
+                        osc: "sine",
                         subdivision: '16n'
                     }
                 },
@@ -658,30 +729,40 @@ export default class InterferenceGameEngine extends GameEngine {
                     scale: [0, 2, 4, 5, 7, 9, 11], // C diatonic (C maj)
                     pitchSets: [
                         [0, 2, 4], //1
-                        [0, 2, 4],
-                        [0, 2, 4],
+                        [0, 2, 4, 6],
+                        [0, 3, 4, 6],
                         [0, 2, 4],
                         [1, 3, 5], //5
+                        [0, 1, 3, 5],
                         [1, 4, 6],
-                        [0, 2, 4],
-                        [0, 2, 4],
+                        [1, 3, 4, 6],
                         [0, 2, 5], //9
-                        [0, 2, 5],
+                        [0, 2, 4, 5],
                         [1, 4, 6],
-                        [0, 2, 4],
-                        [0, 2, 5], //13
-                        [0, 2, 5],
-                        [1, 4, 6],
-                        [0, 2, 4],
-                        [0, 1, 2, 3, 4, 5, 6] //scale
+                        [0, 3, 5],
+                        [0, 2, 4], //13
+                        [0, 2, 4, 6],
+                        [0, 3, 4, 6],
+                        [1, 3, 4, 6]
                     ],
                     melody: {
+                        modulationIndex: 10,
+                        harmonicity: 4,
+                        osc: "square",
+                        modType: "sawtooth",
                         subdivision: '32n'
                     },
                     bass: {
+                        modulationIndex: 10,
+                        harmonicity: 20,
+                        osc: "square",
+                        modType: "sawtooth",
                         subdivision: '8n'
                     },
                     perc: {
+                        pitchDecay: 0.001,
+                        octaves: 1,
+                        osc: "sine",
                         subdivision: '16n'
                     }
                 }

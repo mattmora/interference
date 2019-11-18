@@ -137,6 +137,7 @@ export default class InterferenceServerEngine extends ServerEngine {
         socket.on('paintCell', (noteId, noteX, noteY, palette) => {
             let note = this.gameEngine.world.queryObject({ id: noteId });
             if (note == null) return;
+            if (note.room == null) return;
             let n = Math.floor(noteX / this.gameEngine.paramsByRoom[note.room].playerWidth);
             for (let p of this.gameEngine.queryPlayers({ number: n })) {
                 p.grid[(noteX % this.gameEngine.paramsByRoom[note.room].playerWidth) + 
