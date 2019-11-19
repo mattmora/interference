@@ -44,6 +44,8 @@ export default class InterferenceClientEngine extends ClientEngine {
         this.sequences = {};
         this.pitchSet = 'scale';
 
+        this.isSpectator = false;
+
         this.params = {};
 
         this.gameEngine.on('client__preStep', this.preStepLogic.bind(this));
@@ -97,6 +99,7 @@ export default class InterferenceClientEngine extends ClientEngine {
             this.viewLock = !this.viewLock;
         }
         else if (controlString === 'ToggleEndGameControl') {
+            if (this.isSpectator) return
             this.optionSelection['KeyO'] = 'endGame';
             setTimeout(() => { 
                 if (this.optionSelection['KeyO'] != null) delete this.optionSelection['KeyO'];
@@ -106,11 +109,13 @@ export default class InterferenceClientEngine extends ClientEngine {
 
     executeOption(optionString) {
         if (optionString === 'build') {
-            this.socket.emit('startBuildStage');
+            if (this.room != 'outro') this.socket.emit('startBuildStage');
+            else this.socket.emit('clearBrokenEggs');
             this.optionSelection = {};
         }
         else if (optionString === 'fight') {
-            this.socket.emit('startFightStage');
+            if (this.room != 'outro') this.socket.emit('startFightStage');
+            else this.socket.emit('clearBrokenEggs');
             this.optionSelection = {};
         }
         // else if (optionString === 'faster') {
@@ -202,24 +207,26 @@ export default class InterferenceClientEngine extends ClientEngine {
                 // console.log(`params=${this.params}`);
                 Object.assign(this.gameEngine.paramsByRoom[roomName], this.params);
 
-                // NETWORKED CONTROLS
-                // These inputs will also be processed on the server
-                //console.log('binding keys');
-                //this.controls.bindKey('space', 'space');
-                this.controls.bindKey('open bracket', '[');
-                this.controls.bindKey('close bracket / å', ']');
-                this.controls.bindKey('n', 'n');
-                this.controls.bindKey('b', 'b'); // begin
-                this.controls.bindKey('c', 'c'); // change color
-                this.controls.bindKey('space', 'space');
-                this.controls.bindKey('q', 'q');
-                this.controls.bindKey('w', 'w');
-                this.controls.bindKey('e', 'e');
-                this.controls.bindKey('a', 'a');
-                this.controls.bindKey('s', 's');
-                this.controls.bindKey('d', 'd');
-                this.controls.bindKey('p', 'p');
-                this.controls.bindKey('back slash', 'back slash');
+                if (!this.isSpectator) {
+                    // NETWORKED CONTROLS
+                    // These inputs will also be processed on the server
+                    //console.log('binding keys');
+                    //this.controls.bindKey('space', 'space');
+                    this.controls.bindKey('open bracket', '[');
+                    this.controls.bindKey('close bracket / å', ']');
+                    this.controls.bindKey('n', 'n');
+                    this.controls.bindKey('b', 'b'); // begin
+                    this.controls.bindKey('c', 'c'); // change color
+                    this.controls.bindKey('space', 'space');
+                    this.controls.bindKey('q', 'q');
+                    this.controls.bindKey('w', 'w');
+                    this.controls.bindKey('e', 'e');
+                    this.controls.bindKey('a', 'a');
+                    this.controls.bindKey('s', 's');
+                    this.controls.bindKey('d', 'd');
+                    this.controls.bindKey('p', 'p');
+                    this.controls.bindKey('back slash', 'back slash');
+                }
                 this.startSyncClient(this.socket);
                 this.room = roomName;
                 this.gameEngine.room = this.room;
@@ -281,6 +288,7 @@ export default class InterferenceClientEngine extends ClientEngine {
         if (this.socket) {
             this.gameEngine.setRoomParamsToDefault(roomName);
             Object.assign(this.gameEngine.paramsByRoom[roomName], this.params)
+            this.isSpectator = this.params.spectator;
             this.socket.emit('assignToRoom', roomName, this.params);
         }
     } 
@@ -309,6 +317,9 @@ export default class InterferenceClientEngine extends ClientEngine {
         }
 
         this.player = this.gameEngine.world.queryObject({ playerId: this.gameEngine.playerId });
+        if (this.player == null && this.isSpectator) 
+            this.player = this.gameEngine.world.queryObjects({ instanceType: Performer })[0];
+
         if (this.player != null) this.player.room = this.room;
     }
 
@@ -320,8 +331,6 @@ export default class InterferenceClientEngine extends ClientEngine {
         let roomName = this.player.room;
 
         if (this.gameEngine.paramsByRoom[roomName] == null) return;
-
-        this.players = this.gameEngine.playersByRoom[roomName];//this.gameEngine.world.queryObjects({ instanceType: Performer });
 
         this.eggs = this.gameEngine.world.queryObjects({ instanceType: Egg });
 
@@ -364,11 +373,11 @@ export default class InterferenceClientEngine extends ClientEngine {
             }
             if (this.bassSequence.state !== 'started') {
                 //console.log('start seq');
-                this.bassSequence.start(this.nextDiv('1m'));
+                this.bassSequence.start(this.nextDiv('4m'));
             }
             if (this.percSequence.state !== 'started') {
                 //console.log('start seq');
-                this.percSequence.start(this.nextDiv('1m'));
+                this.percSequence.start(this.nextDiv('2m'));
             }
         }
         if (stage == 'build') {
@@ -561,7 +570,8 @@ export default class InterferenceClientEngine extends ClientEngine {
             if (this.sequences[this.player.number].melody == null) return;
             let seqStep = this.sequences[this.player.number].melody[this.melodyStep];
             let octaveShift = this.gameEngine.paramsByRoom[roomName].melodyBuildOctave;
-            if (this.player.stage == "fight") octaveShift = this.gameEngine.paramsByRoom[roomName].melodyFightOctave;
+            if (this.player.stage == "fight" || this.player.stage == "fightEnd") 
+                octaveShift = this.gameEngine.paramsByRoom[roomName].melodyFightOctave;
             if (seqStep) this.playNoteArrayOnSynth(this.melodySynth, seqStep, octaveShift, time, true);
         }, events, pal.melody.subdivision);
 
@@ -593,7 +603,8 @@ export default class InterferenceClientEngine extends ClientEngine {
             if (this.sequences[this.player.number].bass == null) return;
             let seqStep = this.sequences[this.player.number].bass[this.bassStep];
             let octaveShift = this.gameEngine.paramsByRoom[roomName].bassBuildOctave;
-            if (this.player.stage == "fight") octaveShift = this.gameEngine.paramsByRoom[roomName].bassFightOctave;
+            if (this.player.stage == "fight" || this.player.stage == "fightEnd") 
+                octaveShift = this.gameEngine.paramsByRoom[roomName].bassFightOctave;
             if (seqStep) this.playNoteArrayOnSynth(this.bassSynth, seqStep, octaveShift, time, true);       
         }, events, pal.bass.subdivision);
 
@@ -619,7 +630,8 @@ export default class InterferenceClientEngine extends ClientEngine {
             if (this.sequences[this.player.number].perc == null) return;
             let seqStep = this.sequences[this.player.number].perc[this.percStep];
             let octaveShift = this.gameEngine.paramsByRoom[roomName].percBuildOctave;
-            if (this.player.stage == "fight") octaveShift = this.gameEngine.paramsByRoom[roomName].percFightOctave;
+            if (this.player.stage == "fight" || this.player.stage == "fightEnd") 
+                octaveShift = this.gameEngine.paramsByRoom[roomName].percFightOctave;
             if (seqStep) this.playNoteArrayOnSynth(this.percSynth, seqStep, octaveShift, time, true);
         }, events, pal.perc.subdivision);
     }
@@ -717,41 +729,6 @@ export default class InterferenceClientEngine extends ClientEngine {
                 "release" : release
             }
         });
-
-        // let events = [];
-        // for (let i = 0; i < this.gameEngine.paramsByRoom[this.room].playerWidth; i++) {
-        //    events.push(i);
-        // }
-
-        // this.melodySequence = new Sequence((time, step) => {
-        //     this.melodyStep = step;
-        //     if (this.sequences[this.player.number] == null) return;
-        //     if (this.sequences[this.player.number].melody == null) return;
-        //     let seqStep = this.sequences[this.player.number].melody[this.melodyStep];
-        //     let octaveShift = 0;
-        //     if (this.player.stage == "fight") octaveShift = 2;
-        //     if (seqStep) this.playNoteArrayOnSynth(this.melodySynth, seqStep, octaveShift, time, true);
-        // }, events, pal.melody.subdivision);
-
-        // this.bassSequence = new Sequence((time, step) => {
-        //     this.bassStep = step; 
-        //     if (this.sequences[this.player.number] == null) return;
-        //     if (this.sequences[this.player.number].bass == null) return;
-        //     let seqStep = this.sequences[this.player.number].bass[this.bassStep];
-        //     let octaveShift = -2;
-        //     if (this.player.stage == "fight") octaveShift = 0;
-        //     if (seqStep) this.playNoteArrayOnSynth(this.bassSynth, seqStep, octaveShift, time, true);       
-        // }, events, pal.bass.subdivision);
-        
-        // this.percSequence = new Sequence((time, step) => {
-        //     this.percStep = step;
-        //     if (this.sequences[this.player.number] == null) return;
-        //     if (this.sequences[this.player.number].perc == null) return;
-        //     let seqStep = this.sequences[this.player.number].perc[this.percStep];
-        //     let octaveShift = -1;
-        //     if (this.player.stage == "fight") octaveShift = 2;
-        //     if (seqStep) this.playNoteArrayOnSynth(this.percSynth, seqStep, octaveShift, time, true);
-        // }, events, pal.perc.subdivision);
     }
 
     constructEggSynths(e) {
@@ -954,7 +931,7 @@ export default class InterferenceClientEngine extends ClientEngine {
                 this.playPitchOnSynth(synth, note.pitch, pal.pitchSets[this.pitchSet], pal.scale, octaveShift, note.dur, time, note.vel);
             }
             idArray.push(note.id);
-            pitchArray.push(note.pitch)
+            pitchArray.push(note.pitch);
             //note.paint();
         }
 
@@ -962,6 +939,7 @@ export default class InterferenceClientEngine extends ClientEngine {
     }
 
     paintNote(n) {
+        if (this.isSpectator) return;
         n.paint();
         this.socket.emit('paintCell', n.id, n.xPos, n.yPos, n.palette);
     }

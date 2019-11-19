@@ -21,7 +21,6 @@ let leftViewBound = 0; // bounds of area to be rendered in game coordinates
 let rightViewBound = 0;
 let time = 0;
 let players = []; 
-let playerId = 0;
 let thisPlayer = null;
 let sequences = null;
 let eggs = [];
@@ -75,8 +74,7 @@ export default class InterferenceRenderer extends Renderer {
         }
 
         time = client.syncClient.getSyncTime();
-        playerId = this.gameEngine.playerId;
-        thisPlayer = this.gameEngine.world.queryObject({ playerId });
+        thisPlayer = client.player;
         if (thisPlayer == null) return;
         players = this.gameEngine.world.queryObjects({ instanceType: Performer });
         if (client.performanceView) {
@@ -114,7 +112,7 @@ export default class InterferenceRenderer extends Renderer {
         this.drawSequences();
         this.drawEggs();
 
-        if (!client.performanceView) {
+        if (!client.performanceView && !client.isSpectator) {
             ctx[1].fillStyle = 'white';
             ctx[1].strokeStyle = 'black';
             this.strokeWeight(1, 1);
@@ -162,11 +160,13 @@ export default class InterferenceRenderer extends Renderer {
         }
 
         // TODO: Ring
-        let x = (w / n) * (thisPlayer.number + 0.5);
-        ctx[0].fillStyle = 'white';
-        this.fillTriangle(  x,                      (1.05 * h) / n, 
-                            x - ((0.25 * w) / n),   (1.15 * h) / n,
-                            x + ((0.25 * w) / n),   (1.15 * h) / n, false, 0 );   
+        if (!client.isSpectator) {
+            let x = (w / n) * (thisPlayer.number + 0.5);
+            ctx[0].fillStyle = 'white';
+            this.fillTriangle(  x,                      (1.05 * h) / n, 
+                                x - ((0.25 * w) / n),   (1.15 * h) / n,
+                                x + ((0.25 * w) / n),   (1.15 * h) / n, false, 0 );   
+        }
     }
 
     drawPlayer(p, wrap) {
@@ -186,15 +186,17 @@ export default class InterferenceRenderer extends Renderer {
                 this.fillRect(x, y, xDim, yDim, false, 0)
             }
         }
-        this.fillColor(0, 'bg', 1);
-        for (let a = 0; a < p.ammo; a++) {
-            let x = ((w / n) * i);
-            let x1 = x + ((a + 1) * ((w / n) / (p.ammo + 1)));
-            let y1 = (h / n) * 0.92;
-            this.fillTriangle(  x1, y1, 
-                                x1 - ((0.02 * w) / n), y1 + ((0.04 * h) / n),
-                                x1 + ((0.02 * w) / n), y1 + ((0.04 * h) / n), false, 1);
-        }
+        if (client.player.stage != "outro") {
+            this.fillColor(0, 'bg', 1);
+            for (let a = 0; a < p.ammo; a++) {
+                let x = ((w / n) * i);
+                let x1 = x + ((a + 1) * ((w / n) / (p.ammo + 1)));
+                let y1 = (h / n) * 0.92;
+                this.fillTriangle(  x1, y1, 
+                                    x1 - ((0.02 * w) / n), y1 + ((0.04 * h) / n),
+                                    x1 + ((0.02 * w) / n), y1 + ((0.04 * h) / n), false, 1);
+            }  
+        }    
     }
 
     drawSequences() {

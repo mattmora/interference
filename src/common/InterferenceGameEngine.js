@@ -231,9 +231,10 @@ export default class InterferenceGameEngine extends GameEngine {
     }
 
     positionIsInPlayer(x, p) {
-        let leftBound = p.number * this.paramsByRoom[p.room].playerWidth;
-        let rightBound = (p.number + 1) * this.paramsByRoom[p.room].playerWidth;
-        return (leftBound < x && x < rightBound);
+        let leftBound = p.xPos;
+        let rightBound = (p.xPos + this.paramsByRoom[p.room].playerWidth) % this.rightBoundByRoom[p.room];
+        if (leftBound < rightBound) return (leftBound < x && x < rightBound);
+        else return (x > leftBound || x < rightBound);
     }
 
     quantizedPosition(x, y, divX, divY, roomName) {
@@ -359,28 +360,27 @@ export default class InterferenceGameEngine extends GameEngine {
             }
         }
         else {
-            if (inputData.input == 'p') {
-                this.emit('playerAction', player);
-            }
-            else if (inputData.input == 'back slash') {
-                this.emit('playerForfeit', player);
-            }
-        }
-        if (player.stage === 'intro') {
-
-        }
-        else if (player.stage === 'build') {
             if (!isServer) {
                 if (inputData.input == 'space') {
-                    for (let e of eggs) {
-                        if (this.positionIsInPlayer(e.position.x, player)) {
-                            //player.direction = 1;
-                            this.playerHitEgg(player, e, isServer);
+                    if (eggs != null) {
+                        for (let e of eggs) {
+                            if (this.positionIsInPlayer(e.position.x, player)) {
+                                //player.direction = 1;
+                                this.playerHitEgg(player, e, isServer);
+                            }
                         }
                     }
                 }
             }
-            else if (isServer) {
+            if (inputData.input == 'p') {
+                this.emit('playerAction', player);
+            }
+            // else if (inputData.input == 'back slash') {
+            //     this.emit('playerForfeit', player);
+            // }
+        }
+        if (player.stage === 'build') {
+            if (isServer) {
                 if (inputData.input == 'w') {
                     player.move(0, -1);
                     this.emit('playerAction', player);
@@ -466,17 +466,18 @@ export default class InterferenceGameEngine extends GameEngine {
 
             playerWidth: 16, playerHeight: 9, 
             eggSounds: ['melody', 'bass', 'perc'], eggSoundsToUse: ['melody', 'bass', 'perc'], 
-            numStartingEggs: 2, numEggsToAdd: 2, ballWraps: false,
+            numStartingEggs: 2, numEggsToAdd: 2, ballWraps: true,
             eggHPRange: 0, eggHPMin: 2, eggHPPerPlayer: 2, 
             startingAmmo: 3, maxAmmo: 5, reloadSize: 2,
             leftBound: 0, topBound: 0, eggDroneVolume: -6, // in decibels
             transportSyncInterval: 200, eggRadius: 1, eggBaseVelocity: 0.1, ammoDropChance: 0.05,
-            actionThreshold: 32, progressionThreshold: 8, 
-            palettes: [1, 2, 3, 4, 5], buildRate: 0.5, fightRate: 0.5, outroRate: 0.5,
+            actionThreshold: 16, progressionThreshold: 8, 
+            palettes: [1, 2, 3, 4, 5], buildRate: 0.5, fightRate: 1.0, outroRate: 0.5,
             melodyBuildOctave: 0, melodyFightOctave: 1, 
             bassBuildOctave: 0, bassFightOctave: -1, 
             percBuildOctave: 0, percFightOctave: -1, 
             buildRelease: 3.0, fightRelease: 0.3, outroRelease: 1.0,
+            spectator: false, freezeThreshold: 8,
             paletteAttributes: [
                 { //default
                      //'default': 
