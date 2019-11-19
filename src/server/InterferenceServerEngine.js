@@ -355,7 +355,8 @@ export default class InterferenceServerEngine extends ServerEngine {
         this.setGameStage(room, 'outro');
         if (this.gameEngine.eggsByRoom[room] != null) {
             for (let e of this.gameEngine.eggsByRoom[room]) {
-                this.gameEngine.removeObjectFromWorld(e.id);
+                let egg = this.gameEngine.world.queryObject({ id: e.id });
+                if (egg != null) this.gameEngine.removeObjectFromWorld(egg.id);
             }           
         }
         for (let p of this.myRooms[room]) {
