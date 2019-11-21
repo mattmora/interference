@@ -177,7 +177,11 @@ export default class InterferenceClientEngine extends ClientEngine {
                         let members = paramString.split(';');
                         for (let m of members) {
                             m = m.split(':');
-                            this.params[m[0]] = m[1];
+                            if (isNaN(Number(m[1]))) this.params[m[0]] = m[1];
+                            else {
+                                this.params[m[0]] = Number(m[1]);
+                                //console.log(typeof this.params[m[0]]);
+                            }
                         }
 
                         this.assignToRoom(roomNameInput.value.substring(0, 20));
