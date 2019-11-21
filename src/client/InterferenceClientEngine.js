@@ -321,6 +321,7 @@ export default class InterferenceClientEngine extends ClientEngine {
             this.player = this.gameEngine.world.queryObjects({ instanceType: Performer })[0];
 
         if (this.player != null) this.player.room = this.room;
+        this.players = this.gameEngine.world.queryObjects({ instanceType: Performer });
     }
 
     postStepLogic() {
@@ -383,8 +384,13 @@ export default class InterferenceClientEngine extends ClientEngine {
         if (stage == 'build') {
             for (let e of this.eggs) {
                 if (!Object.keys(this.eggSynths).includes(e.toString())) this.constructEggSynths(e);
-                let vol = this.gameEngine.paramsByRoom[roomName].eggDroneVolume * 
-                Math.abs(this.player.number - (e.position.x / this.gameEngine.paramsByRoom[roomName].playerWidth));
+
+                let playerWidth = this.gameEngine.paramsByRoom[roomName].playerWidth;
+                let eggPlayerDistance = Math.abs(this.player.number - (e.position.x / playerWidth));
+                if (eggPlayerDistance > (this.players.length * 0.5)) 
+                    eggPlayerDistance = this.players.length - eggPlayerDistance;
+                let vol = this.gameEngine.paramsByRoom[roomName].eggDroneVolume * eggPlayerDistance;
+                
                 this.eggSynths[e.toString()].drone.volume.value = vol;
                 let pal = this.gameEngine.paramsByRoom[roomName].paletteAttributes[this.player.palette];
                 let pitch = pal.scale[pal.pitchSets[this.pitchSet][0]];
