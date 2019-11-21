@@ -196,7 +196,7 @@ export default class InterferenceGameEngine extends GameEngine {
                 }
                 else if ((e.position.y + this.paramsByRoom[r].eggRadius) > this.paramsByRoom[r].playerHeight) {
                     e.velocity.y = -Math.abs(e.velocity.y);
-                    e.position.y = this.paramsByRoom[r].playerHeight - this.paramsByRoom[r].eggRadius;
+                    e.position.y = Number(this.paramsByRoom[r].playerHeight) - Number(this.paramsByRoom[r].eggRadius);
                     this.emit('eggBounce', e);
                 }
                 // check if broken
@@ -232,7 +232,7 @@ export default class InterferenceGameEngine extends GameEngine {
 
     positionIsInPlayer(x, p) {
         let leftBound = p.xPos;
-        let rightBound = (p.xPos + this.paramsByRoom[p.room].playerWidth) % this.rightBoundByRoom[p.room];
+        let rightBound = (p.xPos + Number(this.paramsByRoom[p.room].playerWidth)) % this.rightBoundByRoom[p.room];
         if (leftBound < rightBound) return (leftBound < x && x < rightBound);
         else return (x > leftBound || x < rightBound);
     }
@@ -379,6 +379,7 @@ export default class InterferenceGameEngine extends GameEngine {
             //     this.emit('playerForfeit', player);
             // }
         }
+
         if (player.stage === 'build') {
             if (isServer) {
                 if (inputData.input == 'w') {

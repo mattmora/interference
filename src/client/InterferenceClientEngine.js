@@ -348,7 +348,7 @@ export default class InterferenceClientEngine extends ClientEngine {
                 }
             }
             let playerWidth = this.gameEngine.paramsByRoom[roomName].playerWidth;
-            let playerHeight = this.gameEngine.paramsByRoom[roomName].playerHeight;
+            let playerHeight = Number(this.gameEngine.paramsByRoom[roomName].playerHeight);
             let pal = this.gameEngine.paramsByRoom[roomName].paletteAttributes[note.palette];
             note.step = note.xPos % playerWidth;
             note.pitch = (playerHeight - note.yPos) + (pal.pitchSets[this.pitchSet].length * 3);
@@ -443,7 +443,7 @@ export default class InterferenceClientEngine extends ClientEngine {
     onPlayerHitEgg(e) {
         let p = this.player;
         if (e.hp <= 0) return;
-        if (p.ammo <= 0 && p.stage != "outro") return;
+        if (p.ammo <= 0 && p.stage != 'outro') return;
         p.ammo--;
         e.hp--;
 

@@ -34,7 +34,7 @@ export default class Performer extends DynamicObject {
         this.xPos += xStep;
         this.yPos += yStep;
         let rightBound = this.gameEngine.playersByRoom[this.room].length * this.gameEngine.paramsByRoom[this.room].playerWidth;
-        let leftBound = this.gameEngine.paramsByRoom[this.room].playerHeight;
+        let leftBound = Number(this.gameEngine.paramsByRoom[this.room].playerHeight);
         if (this.xPos >= rightBound) { this.xPos -= rightBound; }
         if (this.yPos >= leftBound) { this.yPos -= leftBound; }
         if (this.xPos < 0) { this.xPos += rightBound; }
@@ -51,7 +51,7 @@ export default class Performer extends DynamicObject {
         this.xPos = xPos;
         this.yPos = yPos;
         let rightBound = this.gameEngine.playersByRoom[this.room].length * this.gameEngine.paramsByRoom[this.room].playerWidth;
-        let leftBound = this.gameEngine.paramsByRoom[this.room].playerHeight;
+        let leftBound = Number(this.gameEngine.paramsByRoom[this.room].playerHeight);
         if (this.xPos >= rightBound) { this.xPos -= rightBound; }
         if (this.yPos >= leftBound) { this.yPos -= leftBound; }
         if (this.xPos < 0) { this.xPos += rightBound; }

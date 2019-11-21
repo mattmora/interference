@@ -157,8 +157,8 @@ export default class InterferenceServerEngine extends ServerEngine {
             let e = this.gameEngine.world.queryObject({ id: eggId });
             if (e == null) return;
             e.hp = hp;
-            let playerWidth = this.gameEngine.paramsByRoom[roomName].playerWidth;
-            let playerHeight = this.gameEngine.paramsByRoom[roomName].playerHeight;
+            let playerWidth = Number(this.gameEngine.paramsByRoom[roomName].playerWidth);
+            let playerHeight = Number(this.gameEngine.paramsByRoom[roomName].playerHeight);
             let pos = this.gameEngine.quantizedPosition(x, y, playerWidth, playerHeight, roomName);
             let dur = this.gameEngine.paramsByRoom[roomName].paletteAttributes[player.palette][sound].subdivision;
 
@@ -295,7 +295,7 @@ export default class InterferenceServerEngine extends ServerEngine {
                 for (let p of this.myRooms[room]) {
                     if (p.number > removed) {
                         p.number--; 
-                        p.move(-this.gameEngine.paramsByRoom[room].playerWidth, 0);
+                        p.move(-Number(this.gameEngine.paramsByRoom[room].playerWidth), 0);
                     }
                 } 
             }
@@ -331,7 +331,7 @@ export default class InterferenceServerEngine extends ServerEngine {
         // }
         for (let p of this.myRooms[room]) {
             p.moveTo(p.number * this.gameEngine.paramsByRoom[room].playerWidth, p.yPos);
-            p.ammo = this.gameEngine.paramsByRoom[room].startingAmmo;
+            p.ammo = Number(this.gameEngine.paramsByRoom[room].startingAmmo);
         }
         let numEggs = this.gameEngine.paramsByRoom[room].numEggsToAdd;
         if (from === "setup") numEggs = this.gameEngine.paramsByRoom[room].numStartingEggs;
@@ -346,7 +346,8 @@ export default class InterferenceServerEngine extends ServerEngine {
     }
 
     clearBrokenEggs(room)
-    {
+    {   
+        this.gameEngine.eggsByRoom = this.gameEngine.groupBy(this.gameEngine.world.queryObjects({ instanceType: Egg }), 'room');
         if (this.gameEngine.eggsByRoom[room] != null) {
             for (let e of this.gameEngine.eggsByRoom[room]) {
                 if (e.broken) this.gameEngine.removeObjectFromWorld(e.id);
@@ -450,8 +451,11 @@ export default class InterferenceServerEngine extends ServerEngine {
     assimilatePlayerToPalette(player, pal) {
         player.palette = pal;
 
-        for (let n of this.gameEngine.queryNotes({ ownerId: player.playerId })) {
-            n.palette = player.palette
+        let notes = this.gameEngine.groupBy(this.gameEngine.world.queryObjects({ instanceType: Note }), 'ownerId')[player.playerId];
+        if (notes != null) {
+            for (let n of notes) {
+                n.palette = player.palette;
+            }
         }
 
         let playerWidth = this.gameEngine.paramsByRoom[player.room].playerWidth;
@@ -513,7 +517,7 @@ export default class InterferenceServerEngine extends ServerEngine {
             }
             if (reload) {
                 for (let p of this.myRooms[room]) {
-                    p.ammo += this.gameEngine.paramsByRoom[room].reloadSize;
+                    p.ammo += Number(this.gameEngine.paramsByRoom[room].reloadSize);
                 }
             }
             if (this.roomStages[room] !== 'fightEnd') {

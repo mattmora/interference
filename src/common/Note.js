@@ -47,8 +47,8 @@ export default class Note extends DynamicObject {
 
     paint() {
         if (this.room == null) return;
-        let playerWidth = this.gameEngine.paramsByRoom[this.room].playerWidth;
-        let playerHeight = this.gameEngine.paramsByRoom[this.room].playerHeight;
+        let playerWidth = Number(this.gameEngine.paramsByRoom[this.room].playerWidth);
+        let playerHeight = Number(this.gameEngine.paramsByRoom[this.room].playerHeight);
         let n = Math.floor(this.xPos / playerWidth);
         for (let p of this.gameEngine.queryPlayers({ number: n })) {
 
