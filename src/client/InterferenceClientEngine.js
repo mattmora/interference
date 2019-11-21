@@ -403,7 +403,7 @@ export default class InterferenceClientEngine extends ClientEngine {
             }
         }
         else if (stage == 'outro') {
-            this.eggVolume.mute = true;
+
         }
         else if (stage == 'fight') {
         }
@@ -443,7 +443,7 @@ export default class InterferenceClientEngine extends ClientEngine {
     onPlayerHitEgg(e) {
         let p = this.player;
         if (e.hp <= 0) return;
-        if (p.ammo <= 0) return;
+        if (p.ammo <= 0 && p.stage != "outro") return;
         p.ammo--;
         e.hp--;
 

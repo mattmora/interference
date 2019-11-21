@@ -364,7 +364,7 @@ export default class InterferenceGameEngine extends GameEngine {
                 if (inputData.input == 'space') {
                     if (eggs != null) {
                         for (let e of eggs) {
-                            if (this.positionIsInPlayer(e.position.x, player)) {
+                            if (this.positionIsInPlayer(e.position.x, player) || player.stage === 'outro') {
                                 //player.direction = 1;
                                 this.playerHitEgg(player, e, isServer);
                             }
