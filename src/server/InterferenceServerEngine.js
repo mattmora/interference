@@ -517,7 +517,7 @@ export default class InterferenceServerEngine extends ServerEngine {
                 }
             }
             if (this.roomStages[room] !== 'fightEnd') {
-                if (this.actionCounts[room] > this.myRooms[room].length * 
+                if (this.actionCounts[room] >= this.myRooms[room].length * 
                     this.gameEngine.paramsByRoom[room].actionThreshold) {
                     for (let p of this.myRooms[room]) {
                         p.pitchSet = (p.pitchSet + 1) % 
@@ -528,7 +528,7 @@ export default class InterferenceServerEngine extends ServerEngine {
                     this.progressionCounts[room]++;
                 }
             }
-            else if (this.roomStages[room] === 'fight') {
+            if (this.roomStages[room] === 'fight') {
                 if (this.progressionCounts[room] >= this.gameEngine.paramsByRoom[room].progressionThreshold) 
                     this.endFightStage(room)
                     

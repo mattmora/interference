@@ -30,6 +30,7 @@ let c1 = 'black';
 let c2 = 'black';
 let c3 = 'black';
 let c4 = 'black';
+let verticalOffset = 0;
 
 
 export default class InterferenceRenderer extends Renderer {
@@ -77,7 +78,11 @@ export default class InterferenceRenderer extends Renderer {
         thisPlayer = client.player;
         if (thisPlayer == null) return;
         players = this.gameEngine.world.queryObjects({ instanceType: Performer });
+
+    
+        // verticalOffset = game.playerHeight;
         if (client.performanceView) {
+            verticalOffset = 0;
             // console.log(`${thisPlayer.xPos}`);
             leftViewBound = thisPlayer.xPos;
             // console.log(`${leftViewBound}`);
