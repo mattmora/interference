@@ -474,7 +474,7 @@ export default class InterferenceGameEngine extends GameEngine {
             transportSyncInterval: 200, eggRadius: 1, eggBaseVelocity: 0.1, ammoDropChance: 0.025,
             actionThreshold: 16, progressionThreshold: 8, 
             palettes: [1, 2, 3, 4, 5], buildRate: 0.5, fightRate: 1.0, outroRate: 0.5,
-            fightRateInc: 0.5, maxFightRate: 4.0,
+            fightRateInc: 0.5, fightRateDec:2.0, maxFightRate: 3.0, 
             melodyBuildOctave: 0, melodyFightOctave: 1, 
             bassBuildOctave: 0, bassFightOctave: -1, 
             percBuildOctave: 0, percFightOctave: -1, 

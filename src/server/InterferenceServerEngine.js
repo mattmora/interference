@@ -68,26 +68,38 @@ export default class InterferenceServerEngine extends ServerEngine {
             }
             if (this.roomStages[roomName] === 'setup') {
                 if (!params.spectator) {
-                    player = new Performer(this.gameEngine, null, {});
-                    player.playerId = socket.playerId;
-                    player.number = this.myRooms[roomName].length;
-                    player.ammo = 0;
-                    player.direction = 0;
-                    player.xPos = player.number * this.gameEngine.paramsByRoom[roomName].playerWidth;
-                    player.yPos = 0;
-                    player.palette = this.gameEngine.paramsByRoom[roomName]
-                                        .palettes[player.number%this.gameEngine.paramsByRoom[roomName].palettes.length];
-                    player.stage = this.roomStages[roomName];
-                    player.grid = new Array(this.gameEngine.paramsByRoom[roomName].playerWidth * 
-                                        this.gameEngine.paramsByRoom[roomName].playerHeight).fill(player.palette);
-                    player.gridChanged = false;
-                    player.pitchSet = 0;
-                    player.active = 1;
-                    if (soloSpectator) player.active = 0;
-                    this.myRooms[roomName].push(player);
-                    this.gameEngine.addObjectToWorld(player);
-                    player.room = roomName;
-                    this.assignObjectToRoom(player, roomName);
+                    let inactivePlayers = this.gameEngine.queryPlayers({ room: roomName, active: 0 });
+                    if (inactivePlayers.length === 0) {
+                        player = new Performer(this.gameEngine, null, {});
+                        player.playerId = socket.playerId;
+                        player.number = this.myRooms[roomName].length;
+                        player.ammo = 0;
+                        player.direction = 0;
+                        player.xPos = player.number * this.gameEngine.paramsByRoom[roomName].playerWidth;
+                        player.yPos = 0;
+                        player.palette = this.gameEngine.paramsByRoom[roomName]
+                                            .palettes[player.number%this.gameEngine.paramsByRoom[roomName].palettes.length];
+                        player.stage = this.roomStages[roomName];
+                        player.grid = new Array(this.gameEngine.paramsByRoom[roomName].playerWidth * 
+                                            this.gameEngine.paramsByRoom[roomName].playerHeight).fill(player.palette);
+                        player.gridChanged = false;
+                        player.pitchSet = 0;
+                        player.active = 1;
+                        if (soloSpectator) player.active = 0;
+                        this.myRooms[roomName].push(player);
+                        this.gameEngine.addObjectToWorld(player);
+                        player.room = roomName;
+                        this.assignObjectToRoom(player, roomName);
+                    }
+                    else {
+                        console.log('found inactive');
+                        player = inactivePlayers[0];
+                        for (let n of this.gameEngine.queryNotes({ ownerId: player.playerId })) {
+                            n.ownerId = socket.playerId;
+                        }
+                        player.playerId = socket.playerId;
+                        player.active = 1;
+                    }
                 }
                 this.assignPlayerToRoom(socket.playerId, roomName);
                 this.assignPlayerToSyncServer(socket, roomName);
@@ -112,7 +124,7 @@ export default class InterferenceServerEngine extends ServerEngine {
                     this.assignPlayerToRoom(player.playerId, roomName);
                     this.assignPlayerToSyncServer(socket, roomName);
 
-                    socket.emit('assignedRoom', roomName, this.params);
+                    socket.emit('assignedRoom', roomName, this.gameEngine.paramsByRoom[roomName]);
                 }
             }
         });

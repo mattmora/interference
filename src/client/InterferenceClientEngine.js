@@ -416,8 +416,11 @@ export default class InterferenceClientEngine extends ClientEngine {
                 this.gameEngine.paramsByRoom[roomName].fightRate = 
                 Number(this.gameEngine.paramsByRoom[roomName].fightRate) +
                 Number(this.gameEngine.paramsByRoom[roomName].fightRateInc);
-                if (this.gameEngine.paramsByRoom[roomName].fightRate > this.gameEngine.paramsByRoom[roomName].maxFightRate)
-                    this.gameEngine.paramsByRoom[roomName].fightRate = this.gameEngine.paramsByRoom[roomName].maxFightRate
+                if (this.gameEngine.paramsByRoom[roomName].fightRate > this.gameEngine.paramsByRoom[roomName].maxFightRate) {
+                    this.gameEngine.paramsByRoom[roomName].fightRate = 
+                    this.gameEngine.paramsByRoom[roomName].maxFightRate - this.gameEngine.paramsByRoom[roomName].fightRateDec;
+                }
+
             }
         }
         if (stage != this.prevStage) this.updateSound();
