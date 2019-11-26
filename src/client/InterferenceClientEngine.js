@@ -411,6 +411,15 @@ export default class InterferenceClientEngine extends ClientEngine {
         }
         else if (stage == 'fight') {
         }
+        else if (stage == 'fightEnd') {
+            if (this.prevStage == 'fight') {
+                this.gameEngine.paramsByRoom[roomName].fightRate = 
+                Number(this.gameEngine.paramsByRoom[roomName].fightRate) +
+                Number(this.gameEngine.paramsByRoom[roomName].fightRateInc);
+                if (this.gameEngine.paramsByRoom[roomName].fightRate > this.gameEngine.paramsByRoom[roomName].maxFightRate)
+                    this.gameEngine.paramsByRoom[roomName].fightRate = this.gameEngine.paramsByRoom[roomName].maxFightRate
+            }
+        }
         if (stage != this.prevStage) this.updateSound();
         this.prevStage = stage;
     }
@@ -681,64 +690,66 @@ export default class InterferenceClientEngine extends ClientEngine {
             release = this.gameEngine.paramsByRoom[this.room].outroRelease;
         }
 
-        this.melodySynth.set({
-            "modulationIndex" : pal.melody.modulationIndex,
-            "harmonicity": pal.melody.harmonicity,
-            "oscillator": {
-                "type" : pal.melody.osc
-            },
-            "envelope" : {
-                "sustain" : sustain,
-                "release" : release
-            },
+        this.transport.scheduleOnce(() => {
+            this.melodySynth.set({
+                "modulationIndex" : pal.melody.modulationIndex,
+                "harmonicity": pal.melody.harmonicity,
+                "oscillator": {
+                    "type" : pal.melody.osc
+                },
+                "envelope" : {
+                    "sustain" : sustain,
+                    "release" : release
+                },
 
-            "modulation" : {
-                "type" : pal.melody.modType
-            },
-            "modulationEnvelope" : {
-                "attack" : 0.03,
-                "decay" : 0.7,
-                "sustain" : sustain,
-                "release" : release
-            }
-        });
+                "modulation" : {
+                    "type" : pal.melody.modType
+                },
+                "modulationEnvelope" : {
+                    "attack" : 0.03,
+                    "decay" : 0.7,
+                    "sustain" : sustain,
+                    "release" : release
+                }
+            });
 
-        this.bassSynth.set({
-            "modulationIndex" : pal.bass.modulationIndex,
-            "harmonicity": pal.bass.harmonicity,
-            "oscillator": {
-                "type" : pal.bass.osc
-            },
-            "envelope" : {
-                "attack" : 0.01,
-                "decay" : decay,
-                "sustain" : sustain,
-                "release" : release
-            },
-            "modulation" : {
-                "type" : pal.bass.modType
-            },
-            "modulationEnvelope" : {
-                "attack" : 0.01,
-                "decay" : 0.07,
-                "sustain" : sustain,
-                "release" : release
-            }
-        });
+            this.bassSynth.set({
+                "modulationIndex" : pal.bass.modulationIndex,
+                "harmonicity": pal.bass.harmonicity,
+                "oscillator": {
+                    "type" : pal.bass.osc
+                },
+                "envelope" : {
+                    "attack" : 0.01,
+                    "decay" : decay,
+                    "sustain" : sustain,
+                    "release" : release
+                },
+                "modulation" : {
+                    "type" : pal.bass.modType
+                },
+                "modulationEnvelope" : {
+                    "attack" : 0.01,
+                    "decay" : 0.07,
+                    "sustain" : sustain,
+                    "release" : release
+                }
+            });
 
-        this.percSynth.set({
-            "pitchDecay" : pal.perc.pitchDecay,//0.05,
-            "octaves" : pal.perc.octaves,//10 ,
-            "oscillator" : {
-                "type" : pal.perc.osc//sine
-            },
-            "envelope" : {
-                "attack" : 0.001 ,
-                "decay" : 0.4 ,
-                "sustain" : 0.01 ,
-                "release" : release
-            }
-        });
+            this.percSynth.set({
+                "pitchDecay" : pal.perc.pitchDecay,//0.05,
+                "octaves" : pal.perc.octaves,//10 ,
+                "oscillator" : {
+                    "type" : pal.perc.osc//sine
+                },
+                "envelope" : {
+                    "attack" : 0.001 ,
+                    "decay" : 0.4 ,
+                    "sustain" : 0.01 ,
+                    "release" : release
+                }
+            });
+        }, this.nextDiv('1m'));
     }
 
     constructEggSynths(e) {
