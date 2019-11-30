@@ -56,6 +56,7 @@ export default class InterferenceServerEngine extends ServerEngine {
                     params.spectator = false;
                     soloSpectator = true;
                 }
+                if (params.ringView) params.ringView = false;
                 this.createRoom(roomName);
                 this.createSyncServer(roomName);
                 this.myRooms[roomName] = [];

@@ -293,6 +293,7 @@ export default class InterferenceClientEngine extends ClientEngine {
             this.gameEngine.setRoomParamsToDefault(roomName);
             Object.assign(this.gameEngine.paramsByRoom[roomName], this.params)
             this.isSpectator = this.params.spectator;
+            this.ringView = this.params.ringView;
             this.socket.emit('assignToRoom', roomName, this.params);
         }
     } 

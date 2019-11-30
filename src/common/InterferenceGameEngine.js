@@ -480,6 +480,7 @@ export default class InterferenceGameEngine extends GameEngine {
             percBuildOctave: 0, percFightOctave: -1, 
             buildRelease: 3.0, fightRelease: 0.3, outroRelease: 1.0,
             spectator: false, freezeThreshold: 8, 
+            ringView: false,
             paletteAttributes: [
                 { //default
                      //'default': 
