@@ -469,7 +469,7 @@ export default class InterferenceGameEngine extends GameEngine {
             eggSounds: ['melody', 'bass', 'perc'], eggSoundsToUse: ['melody', 'bass', 'perc'], 
             numStartingEggs: 3, numEggsToAdd: 1, ballWraps: true,
             eggHPRange: 0, eggHPMin: 2, eggHPPerPlayer: 2, 
-            startingAmmo: 1, maxAmmo: 5, reloadSize: 1,
+            startingAmmo: 2, maxAmmo: 5, reloadSize: 2, // 1 5 1
             leftBound: 0, topBound: 0, eggDroneVolume: -4, // in decibels
             transportSyncInterval: 200, eggRadius: 1, eggBaseVelocity: 0.1, ammoDropChance: 0.025,
             actionThreshold: 16, progressionThreshold: 8, 
@@ -479,7 +479,7 @@ export default class InterferenceGameEngine extends GameEngine {
             bassBuildOctave: 0, bassFightOctave: -1, 
             percBuildOctave: 0, percFightOctave: -1, 
             buildRelease: 3.0, fightRelease: 0.3, outroRelease: 1.0,
-            spectator: false, freezeThreshold: 8, 
+            spectator: false, freezeThreshold: 2, //8
             ringView: false,
             paletteAttributes: [
                 { //default

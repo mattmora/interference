@@ -45,6 +45,7 @@ export default class InterferenceClientEngine extends ClientEngine {
         this.pitchSet = 'scale';
 
         this.isSpectator = false;
+        this.showControlText = true;
 
         this.params = {};
 
@@ -81,6 +82,7 @@ export default class InterferenceClientEngine extends ClientEngine {
             }
         }
         else if (controlString === 'ToggleCursor') {
+            this.showControlText = !this.showControlText;
             if (!this.viewLock) {
                 if (document.pointerLockElement === document.body || 
                     document.mozPointerLockElement === document.body) {

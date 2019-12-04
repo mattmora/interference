@@ -121,17 +121,36 @@ export default class InterferenceRenderer extends Renderer {
         this.drawSequences();
         this.drawEggs();
 
-        if (!client.performanceView && !client.isSpectator) {
-            ctx[1].fillStyle = 'white';
-            ctx[1].strokeStyle = 'black';
+        if (!client.isSpectator && client.showControlText) {
+
+            ctx[1].fillStyle = 'black';
+            if (thisPlayer.palette == 1) ctx[1].fillStyle = 'white';
             this.strokeWeight(1, 1);
-            ctx[1].font = "20px Lucida Console";
+            ctx[1].font = "bold 24px Lucida Console";
             //ctx[1].fillText(playerId, 50, 25);
             time = Number(time).toFixed(3);
+            let rules = ["Very basic rules/objective: ",
+            "Place notes in your sequence and using your notes, try to convert all players to your color palette.",
+            "The game ends when all players have the same color palette."];
+            let controls = [ "Basic controls:", 
+            "v : Toggle view between the whole game and your space",
+            "space (with a ball in your space) : Add a note to your sequence",
+            "1 or 2 (after breaking a ball) : Start a build phase or a fight phase",
+            "w/a/s/d : Move (cannot move horizontally during a build phase)",
+            "h : Hide/unhide this text and the cursor"];
+
+            ctx[1].fillText(rules[0], w * 0.05, h * 0.05);
+            ctx[1].fillText(rules[1], w * 0.05, h * 0.15);
+            ctx[1].fillText(rules[2], w * 0.05, h * 0.225);
+
+            ctx[1].fillText(controls[0], w * 0.05, h * 0.35);
+            ctx[1].fillText(controls[1], w * 0.05, h * 0.45);
+            ctx[1].fillText(controls[2], w * 0.05, h * 0.525);
+            ctx[1].fillText(controls[3], w * 0.05, h * 0.6);
+            ctx[1].fillText(controls[4], w * 0.05, h * 0.675)
+            
             ctx[1].fillText(time, w * 0.05, h * 0.95);
-            ctx[1].strokeText(time, w * 0.05, h * 0.95);
-            ctx[1].fillText(thisPlayer.number, w * 0.05, h * 0.85);
-            ctx[1].strokeText(thisPlayer.number, w * 0.05, h * 0.85);
+            ctx[1].fillText("Player " + thisPlayer.number, w * 0.05, h * 0.85);
             //ctx[1].fillText(client.transport.position, 50, 75);
         }
 
