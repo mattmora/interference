@@ -468,7 +468,7 @@ export default class InterferenceGameEngine extends GameEngine {
             playerWidth: 16, playerHeight: 9, 
             eggSounds: ['melody', 'bass', 'perc'], eggSoundsToUse: ['melody', 'bass', 'perc'], 
             numStartingEggs: 3, numEggsToAdd: 1, ballWraps: true,
-            eggHPRange: 0, eggHPMin: 2, eggHPPerPlayer: 2, 
+            eggHPRange: 0, eggHPMin: 2, eggHPPerPlayer: 1, 
             startingAmmo: 2, maxAmmo: 5, reloadSize: 2, // 1 5 1
             leftBound: 0, topBound: 0, eggDroneVolume: -4, // in decibels
             transportSyncInterval: 200, eggRadius: 1, eggBaseVelocity: 0.1, ammoDropChance: 0.025,
