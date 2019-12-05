@@ -123,10 +123,9 @@ export default class InterferenceRenderer extends Renderer {
 
         if (!client.isSpectator && client.showControlText) {
 
-            ctx[1].fillStyle = 'black';
-            if (thisPlayer.palette == 1) ctx[1].fillStyle = 'white';
+            this.fillColor(thisPlayer.palette, 'c2', 1);
             this.strokeWeight(1, 1);
-            ctx[1].font = "bold 24px Lucida Console";
+            ctx[1].font = "bold 20px sans serif";
             //ctx[1].fillText(playerId, 50, 25);
             time = Number(time).toFixed(3);
             let rules = ["Very basic rules/objective: ",
@@ -696,3 +695,5 @@ export default class InterferenceRenderer extends Renderer {
         ctx[layer].stroke();
     }
 }
+
+
