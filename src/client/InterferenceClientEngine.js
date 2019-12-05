@@ -46,6 +46,7 @@ export default class InterferenceClientEngine extends ClientEngine {
 
         this.isSpectator = false;
         this.showControlText = true;
+        this.isLeader = false;
 
         this.params = {};
 
@@ -129,6 +130,7 @@ export default class InterferenceClientEngine extends ClientEngine {
         //     this.optionSelection = {}; 
         // }
         else if (optionString === 'endGame') {
+            if (!this.isLeader) return;
             this.socket.emit('endGame');
             delete this.optionSelection['KeyO'];
         }
@@ -213,6 +215,8 @@ export default class InterferenceClientEngine extends ClientEngine {
                 // console.log(`params=${this.params}`);
                 Object.assign(this.gameEngine.paramsByRoom[roomName], this.params);
 
+                if (this.isLeader) this.controls.bindKey('b', 'b'); // begin
+                
                 if (!this.isSpectator) {
                     // NETWORKED CONTROLS
                     // These inputs will also be processed on the server
@@ -221,7 +225,6 @@ export default class InterferenceClientEngine extends ClientEngine {
                     this.controls.bindKey('open bracket', '[');
                     this.controls.bindKey('close bracket / å', ']');
                     this.controls.bindKey('n', 'n');
-                    this.controls.bindKey('b', 'b'); // begin
                     this.controls.bindKey('c', 'c'); // change color
                     this.controls.bindKey('space', 'space');
                     this.controls.bindKey('q', 'q');
@@ -296,6 +299,7 @@ export default class InterferenceClientEngine extends ClientEngine {
             Object.assign(this.gameEngine.paramsByRoom[roomName], this.params)
             this.isSpectator = this.params.spectator;
             this.ringView = this.params.ringView;
+            this.isLeader = this.params.isLeader;
             this.socket.emit('assignToRoom', roomName, this.params);
         }
     } 

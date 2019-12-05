@@ -453,7 +453,7 @@ export default class InterferenceGameEngine extends GameEngine {
                     player.move(1, 0);
                     this.emit('playerAction', player);
                 }
-                else if (inputData.input == 'space') {
+                else if (inputData.input == 'b') {
                     this.emit('removeNote', player);
                     this.emit('playerAction', player);
                 }
@@ -480,7 +480,7 @@ export default class InterferenceGameEngine extends GameEngine {
             percBuildOctave: 0, percFightOctave: -1, 
             buildRelease: 3.0, fightRelease: 0.3, outroRelease: 1.0,
             spectator: false, freezeThreshold: 2, //8
-            ringView: false,
+            ringView: false, isLeader: false,
             paletteAttributes: [
                 { //default
                      //'default': 
