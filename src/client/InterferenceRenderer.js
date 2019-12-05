@@ -148,6 +148,7 @@ export default class InterferenceRenderer extends Renderer {
             ctx[1].fillText(controls[2], w * 0.05, h * 0.525);
             ctx[1].fillText(controls[3], w * 0.05, h * 0.6);
             ctx[1].fillText(controls[4], w * 0.05, h * 0.675)
+            ctx[1].fillText(controls[5], w * 0.05, h * 0.75)
             
             ctx[1].fillText(time, w * 0.05, h * 0.95);
             ctx[1].fillText("Player " + thisPlayer.number, w * 0.05, h * 0.85);
