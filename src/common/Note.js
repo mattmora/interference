@@ -37,7 +37,7 @@ export default class Note extends DynamicObject {
         if (this.room == null) return;
         this.xPos += xStep;
         this.yPos += yStep;
-        let rightBound = this.gameEngine.playersByRoom[this.room].length * this.gameEngine.paramsByRoom[this.room].playerWidth; //TODO should be width in cells
+        let rightBound = this.gameEngine.playersByRoom[this.room].length * this.gameEngine.paramsByRoom[this.room].playerWidth;
         let upperBound = Number(this.gameEngine.paramsByRoom[this.room].playerHeight);
         if (this.xPos >= rightBound) { this.xPos -= rightBound; }
         if (this.yPos >= upperBound) { this.yPos -= upperBound; }
