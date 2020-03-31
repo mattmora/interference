@@ -12,6 +12,7 @@
     "@ircam/sync": "^2.0.1",
     "babel-loader": "^8.0.6",
     "express": "^4.17.1",
+    "invert-color": "^2.0.0",
     "lance-gg": "^4.0.8",
     "query-string": "^4.2.3",
     "socket.io": "^2.3.0",

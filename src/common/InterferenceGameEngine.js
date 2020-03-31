@@ -70,9 +70,9 @@ export default class InterferenceGameEngine extends GameEngine {
     }
 
     velRandY(roomName) {
-        let v = this.paramsByRoom[roomName].eggBaseVelocity * (1 + Math.log(this.playersByRoom[roomName].length));
+        let v = this.paramsByRoom[roomName].eggBaseVelocity;
         let y = v * ((Math.random() * 2) - 1);
-        let x = v * ((Math.round(Math.random()) * 2) - 1)
+        let x = v * ((Math.round(Math.random()) * 2) - 1) * (1 + Math.log(this.playersByRoom[roomName].length));
         return new TwoVector(x, y);
     }
 
@@ -453,7 +453,7 @@ export default class InterferenceGameEngine extends GameEngine {
                     player.move(1, 0);
                     this.emit('playerAction', player);
                 }
-                else if (inputData.input == 'b') {
+                else if (inputData.input == 'b' || inputData.input == 'r') {
                     this.emit('removeNote', player);
                     this.emit('playerAction', player);
                 }
@@ -467,7 +467,7 @@ export default class InterferenceGameEngine extends GameEngine {
 
             playerWidth: 16, playerHeight: 9, 
             eggSounds: ['melody', 'bass', 'perc'], eggSoundsToUse: ['melody', 'bass', 'perc'], 
-            numStartingEggs: 3, numEggsToAdd: 1, ballWraps: true,
+            numStartingEggs: 2, numEggsToAdd: 1, ballWraps: false,
             eggHPRange: 0, eggHPMin: 2, eggHPPerPlayer: 1, 
             startingAmmo: 2, maxAmmo: 5, reloadSize: 2, // 1 5 1
             leftBound: 0, topBound: 0, eggDroneVolume: -4, // in decibels
@@ -480,16 +480,16 @@ export default class InterferenceGameEngine extends GameEngine {
             percBuildOctave: 0, percFightOctave: -1, 
             buildRelease: 3.0, fightRelease: 0.3, outroRelease: 1.0,
             spectator: false, freezeThreshold: 2, //8
-            ringView: false, isLeader: true,
+            ringView: false, isLeader: true, inPersonPerformance: false,
             paletteAttributes: [
                 { //default
                      //'default': 
                     colors: {
-                        bg: 'black',
-                        c1: 'black',
-                        c2: 'black',
-                        c3: 'black',
-                        c4: 'black'
+                        bg: '#000',
+                        c1: '#000',
+                        c2: '#000',
+                        c3: '#000',
+                        c4: '#000'
                     },
                     scale: [0, 2, 4, 5, 7, 9, 11], 
                     pitchSets: [
@@ -515,20 +515,20 @@ export default class InterferenceGameEngine extends GameEngine {
                         harmonicity: 4,
                         osc: "sawtooth",
                         modType: "sine",
-                        subdivision: '32n'
+                        subdivision: '32n' // for now these need to be the same across each palette color
                     },
                     bass: {
                         modulationIndex: 6,
                         harmonicity: 5,
                         osc: "triangle",
                         modType: "sine",
-                        subdivision: '8n'
+                        subdivision: '8n' // for now these need to be the same across each palette color
                     },
                     perc: {
                         pitchDecay: 0.05,
                         octaves: 10,
                         osc: "sine",
-                        subdivision: '16n'
+                        subdivision: '16n' // for now these need to be the same across each palette color
                     }
                 },
                 { //rain

@@ -22,6 +22,8 @@ export default class InterferenceServerEngine extends ServerEngine {
         this.progressionCounts = {};
         this.tempos = {};
 
+        this.numEggsCleared = 0;
+
         this.gameEngine.on('server__preStep', this.preStepLogic.bind(this));
         this.gameEngine.on('server__postStep', this.postStepLogic.bind(this));
         this.gameEngine.on('beginPerformance', player => { this.onBeginPerformance(player) });
@@ -33,7 +35,6 @@ export default class InterferenceServerEngine extends ServerEngine {
         this.gameEngine.on('removeNote', player => { this.onRemoveNote(player) });
     }
 
-    // create food and AI robots
     start() {
         super.start();
         /*
@@ -346,7 +347,8 @@ export default class InterferenceServerEngine extends ServerEngine {
             p.moveTo(p.number * this.gameEngine.paramsByRoom[room].playerWidth, p.yPos);
             p.ammo = Number(this.gameEngine.paramsByRoom[room].startingAmmo);
         }
-        let numEggs = this.gameEngine.paramsByRoom[room].numEggsToAdd;
+        // let numEggs = this.gameEngine.paramsByRoom[room].numEggsToAdd;
+        let numEggs = this.numEggsCleared;
         if (from === "setup") numEggs = this.gameEngine.paramsByRoom[room].numStartingEggs;
 
         for (let i = 0; i < numEggs; i++) {
@@ -356,6 +358,7 @@ export default class InterferenceServerEngine extends ServerEngine {
             // if (this.gameEngine.eggSoundsToUse.length === 0) this.gameEngine.eggSoundsToUse = this.gameEngine.eggSounds.slice();
             this.addEgg(sound, room);
         }
+        this.numEggsCleared = 0;
     }
 
     clearBrokenEggs(room)
@@ -363,7 +366,11 @@ export default class InterferenceServerEngine extends ServerEngine {
         this.gameEngine.eggsByRoom = this.gameEngine.groupBy(this.gameEngine.world.queryObjects({ instanceType: Egg }), 'room');
         if (this.gameEngine.eggsByRoom[room] != null) {
             for (let e of this.gameEngine.eggsByRoom[room]) {
-                if (e.broken) this.gameEngine.removeObjectFromWorld(e.id);
+                if (e.broken) 
+                {
+                    this.gameEngine.removeObjectFromWorld(e.id);
+                    this.numEggsCleared++;
+                }
             }           
         }
     }

@@ -1,9 +1,10 @@
 "use strict";
 
-import { Renderer, TwoVector } from 'lance-gg';
-import Note from '../common/Note';
+import { Renderer } from 'lance-gg';
+// import Note from '../common/Note';
 import Performer from '../common/Performer';
 import Egg from '../common/Egg';
+import invert from 'invert-color';
 
 const animLengths = {
     eggSpawn: 20,
@@ -25,7 +26,8 @@ let players = [];
 let thisPlayer = null;
 let sequences = null;
 let eggs = [];
-let paletteTable = null;
+let paletteTable = [];
+let invertColors = [];
 let bg = 'black';
 let c1 = 'black';
 let c2 = 'black';
@@ -74,15 +76,22 @@ export default class InterferenceRenderer extends Renderer {
             c2 = paletteTable[0].colors.c2;
             c3 = paletteTable[0].colors.c3;
             c4 = paletteTable[0].colors.c4;
+
+            for (let i = 0; i < game.palettes.length; i++)
+            {
+                invertColors[i] = {};
+                invertColors[i].bg = invert(paletteTable[i].colors.bg);
+                invertColors[i].c1 = invert(paletteTable[i].colors.c1);
+                invertColors[i].c2 = invert(paletteTable[i].colors.c2);
+                invertColors[i].c3 = invert(paletteTable[i].colors.c3);
+                invertColors[i].c4 = invert(paletteTable[i].colors.c4);
+            }
         }
 
         time = client.syncClient.getSyncTime();
         thisPlayer = client.player;
         if (thisPlayer == null) return;
         players = this.gameEngine.world.queryObjects({ instanceType: Performer });
-
-
-
     
         // verticalOffset = game.playerHeight;
         if (client.performanceView) {
@@ -100,12 +109,6 @@ export default class InterferenceRenderer extends Renderer {
         }
         sequences = client.sequences;
         eggs = this.gameEngine.world.queryObjects({ instanceType: Egg });
-
-        bg = paletteTable[thisPlayer.palette].colors.bg;
-        c1 = paletteTable[thisPlayer.palette].colors.c1;
-        c2 = paletteTable[thisPlayer.palette].colors.c2;
-        c3 = paletteTable[thisPlayer.palette].colors.c3;
-        c4 = paletteTable[thisPlayer.palette].colors.c4;
         
         // Clear the canvas
         this.ctx.clearRect(0, 0, w, h);
@@ -191,9 +194,9 @@ export default class InterferenceRenderer extends Renderer {
         if (!client.isSpectator && !client.ringView) {
             let x = (w / n) * (thisPlayer.number + 0.5);
             ctx[0].fillStyle = 'white';
-            this.fillTriangle(  x,                      (1.05 * h) / n, 
+            this.drawTriangle(  x,                      (1.05 * h) / n, 
                                 x - ((0.25 * w) / n),   (1.15 * h) / n,
-                                x + ((0.25 * w) / n),   (1.15 * h) / n, false, 0 );   
+                                x + ((0.25 * w) / n),   (1.15 * h) / n, true, false, 0 );   
         }
     }
 
@@ -228,7 +231,7 @@ export default class InterferenceRenderer extends Renderer {
                 for (let yIdx = 0; yIdx < game.playerHeight; yIdx++) {
                     let y = yIdx * yDim;
                     this.fillColor(p.grid[xIdx + (yIdx * game.playerWidth)], 'bg', 0);
-                    this.fillRect(x, y, xDim, yDim, false, 0);
+                    this.drawRect(x, y, xDim, yDim, true, false, 0);
                 }
             }
             if (client.player.stage != "outro") {
@@ -237,9 +240,9 @@ export default class InterferenceRenderer extends Renderer {
                     let x = ((w / n) * i);
                     let x1 = x + ((a + 1) * ((w / n) / (p.ammo + 1)));
                     let y1 = (h / n) * 0.92;
-                    this.fillTriangle(  x1, y1, 
+                    this.drawTriangle(  x1, y1, 
                                         x1 - ((0.02 * w) / n), y1 + ((0.04 * h) / n),
-                                        x1 + ((0.02 * w) / n), y1 + ((0.04 * h) / n), false, 1);
+                                        x1 + ((0.02 * w) / n), y1 + ((0.04 * h) / n), true, false, 1);
                 }  
             }   
         } 
@@ -258,10 +261,10 @@ export default class InterferenceRenderer extends Renderer {
 
     drawEggs() {
         // TODO: Ring
+        this.strokeWeight(10, 1);
         for (let e of eggs) {
             let scale = this.mapToRange(e.animFrames.spawn, 0, animLengths.eggSpawn, 0.0, 1.0);
-            this.fillColor(0, 'c1', 1);
-            //this.strokeColor(0, 'bg', 1);
+            this.strokeColor(0, 'c1', 1);
             let pos = this.gamePositionToCanvasPosition(e.position.x, e.position.y);
             let rpos = this.gamePositionToCanvasPosition(e.position.x + game.eggRadius, e.position.y);
             let x = pos[0];
@@ -273,40 +276,40 @@ export default class InterferenceRenderer extends Renderer {
                 let gr = game.eggRadius * scale;
                 if (e.hp > 0) {
                     if (e.sound === 'melody') {
-                        this.fillEllipse(x, y, r, r, 0, 0, 2*Math.PI, false, 1);
+                        this.drawEllipse(x, y, r, r, 0, 0, 2*Math.PI, false, true, 1);
                     }
                     else if (e.sound === 'bass') {
                         let pos1 = this.gamePositionToCanvasPosition(e.position.x - gr, e.position.y - gr);
                         let pos2 = this.gamePositionToCanvasPosition(e.position.x - gr, e.position.y + gr);
                         let pos3 = this.gamePositionToCanvasPosition(e.position.x + gr, e.position.y + gr);
                         let pos4 = this.gamePositionToCanvasPosition(e.position.x + gr, e.position.y - gr);
-                        this.fillQuad(pos1[0], pos1[1], pos2[0], pos2[1], pos3[0], pos3[1], pos4[0], pos4[1], false, 1);
+                        this.drawQuad(pos1[0], pos1[1], pos2[0], pos2[1], pos3[0], pos3[1], pos4[0], pos4[1], false, true, 1);
                     }
                     else if (e.sound === 'perc') {
                         let pos1 = this.gamePositionToCanvasPosition(e.position.x, e.position.y - gr);
                         let pos2 = this.gamePositionToCanvasPosition(e.position.x - gr, e.position.y);
                         let pos3 = this.gamePositionToCanvasPosition(e.position.x, e.position.y + gr);
                         let pos4 = this.gamePositionToCanvasPosition(e.position.x + gr, e.position.y);
-                        this.fillQuad(pos1[0], pos1[1], pos2[0], pos2[1], pos3[0], pos3[1], pos4[0], pos4[1], false, 1);
+                        this.drawQuad(pos1[0], pos1[1], pos2[0], pos2[1], pos3[0], pos3[1], pos4[0], pos4[1], false, true, 1);
                     }
                 }
-                else this.drawBrokenEgg(e, x, y, r, r, false, 1);
+                else this.drawBrokenEgg(e, x, y, r, r, false, true, 1);
             }
             else {
                 //this.strokeWeight((dimX + dimY) * 0.0625, 1);
                 if (e.hp > 0) {
                     if (e.sound === 'melody') {
-                        this.fillEllipse(x, y, dimX, dimY, 0, 0, 2*Math.PI, false, 1);
+                        this.drawEllipse(x, y, dimX, dimY, 0, 0, 2*Math.PI, false, true, 1);
                     }
                     else if (e.sound === 'bass') {
-                        this.fillRect(x - dimX, y - dimY, dimX * 2, dimY * 2, false, 1);
+                        this.drawRect(x - dimX, y - dimY, dimX * 2, dimY * 2, false, true, 1);
                     }
                     else if (e.sound === 'perc') {
-                        this.fillQuad(  x - dimX, y, x, y - dimY, 
-                                        x + dimX, y, x, y + dimY, false, 1);
+                        this.drawQuad(  x - dimX, y, x, y - dimY, 
+                                        x + dimX, y, x, y + dimY, false, true, 1);
                     }
                 }
-                else this.drawBrokenEgg(e, x, y, dimX, dimY, false, 1);
+                else this.drawBrokenEgg(e, x, y, dimX, dimY, false, true, 1);
                 if (e.position.x < game.playerWidth) {
                     pos = this.gamePositionToCanvasPosition(e.position.x + (players.length * game.playerWidth), e.position.y);
                     x = pos[0];
@@ -314,17 +317,17 @@ export default class InterferenceRenderer extends Renderer {
                     //this.strokeWeight((dimX + dimY) * 0.0625, 1);
                     if (e.hp > 0) {
                         if (e.sound === 'melody') {
-                            this.fillEllipse(x, y, dimX, dimY, 0, 0, 2*Math.PI, false, 1);
+                            this.drawEllipse(x, y, dimX, dimY, 0, 0, 2*Math.PI, false, true, 1);
                         }
                         else if (e.sound === 'bass') {
-                            this.fillRect(x - dimX, y - dimY, dimX * 2, dimY * 2, false, 1);
+                            this.drawRect(x - dimX, y - dimY, dimX * 2, dimY * 2, false, true, 1);
                         }
                         else if (e.sound === 'perc') {
-                            this.fillQuad(  x - dimX, y, x, y - dimY, 
-                                            x + dimX, y, x, y + dimY, false, 1);
+                            this.drawQuad(  x - dimX, y, x, y - dimY, 
+                                            x + dimX, y, x, y + dimY, false, true, 1);
                         }
                     }
-                    else this.drawBrokenEgg(e, x, y, dimX, dimY, false, 1);
+                    else this.drawBrokenEgg(e, x, y, dimX, dimY, false, true, 1);
                 }
             }
             if (e.animFrames.spawn < animLengths.eggSpawn) e.animFrames.spawn++;
@@ -358,11 +361,11 @@ export default class InterferenceRenderer extends Renderer {
             let percPos = this.gamePositionToCanvasPosition(shift + client.percStep + 0.4, 0);
             let bassPos = this.gamePositionToCanvasPosition(shift + client.bassStep + 0.35, 0);
             this.fillColor(0, 'c1', 1);
-            this.fillRect(melodyPos[0], melodyPos[1], dimX * 0.1, dimY, false, 1);
+            this.drawRect(melodyPos[0], melodyPos[1], dimX * 0.1, dimY, true, false, 1);
             this.fillColor(0, 'c2', 1);
-            this.fillRect(percPos[0], percPos[1], dimX * 0.2, dimY, false, 1);
+            this.drawRect(percPos[0], percPos[1], dimX * 0.2, dimY, true, false, 1);
             this.fillColor(0, 'c3', 1);
-            this.fillRect(bassPos[0], bassPos[1], dimX * 0.3, dimY, false, 1);         
+            this.drawRect(bassPos[0], bassPos[1], dimX * 0.3, dimY, true, false, 1);         
         }
 
     }
@@ -416,7 +419,7 @@ export default class InterferenceRenderer extends Renderer {
                 }
                 this.fillColor(n.palette, c, layer);
                 this.strokeColor(n.palette, 'bg', layer);
-                this.fillEllipse(x, y, r, r, 0, 0, 2*Math.PI, true, layer);
+                this.drawEllipse(x, y, r, r, 0, 0, 2*Math.PI, true, true, layer);
             }
             else if (n.sound === 'bass') {
                 let pos1 = [];
@@ -444,7 +447,7 @@ export default class InterferenceRenderer extends Renderer {
                 }
                 this.fillColor(n.palette, c, layer);
                 this.strokeColor(n.palette, 'bg', layer);
-                this.fillQuad(pos1[0], pos1[1], pos2[0], pos2[1], pos3[0], pos3[1], pos4[0], pos4[1], true, layer);
+                this.drawQuad(pos1[0], pos1[1], pos2[0], pos2[1], pos3[0], pos3[1], pos4[0], pos4[1], true, true, layer);
             }
             else if (n.sound === 'perc') {
                 let pos1 = [];
@@ -472,7 +475,7 @@ export default class InterferenceRenderer extends Renderer {
                 }
                 this.fillColor(n.palette, c, layer);
                 this.strokeColor(n.palette, 'bg', layer);
-                this.fillQuad(pos1[0], pos1[1], pos2[0], pos2[1], pos3[0], pos3[1], pos4[0], pos4[1], true, layer);
+                this.drawQuad(pos1[0], pos1[1], pos2[0], pos2[1], pos3[0], pos3[1], pos4[0], pos4[1], true, true, layer);
             }   
 
         }
@@ -504,7 +507,7 @@ export default class InterferenceRenderer extends Renderer {
                 }
                 this.fillColor(n.palette, c, layer);
                 this.strokeColor(n.palette, 'bg', layer);
-                this.fillEllipse(x, y, dimX / 2, dimY / 2, 0, 0, 2*Math.PI, true, layer);
+                this.drawEllipse(x, y, dimX / 2, dimY / 2, 0, 0, 2*Math.PI, true, true, layer);
             }
             else if (n.sound === 'bass') {
                 y = this.mapToRange(n.animFrame, 0, animLengths.eggNote, 0, y);
@@ -521,7 +524,7 @@ export default class InterferenceRenderer extends Renderer {
                 }
                 this.fillColor(n.palette, c, layer);
                 this.strokeColor(n.palette, 'bg', layer);
-                this.fillRect(x + (0.1*dimX), y + (0.1*dimY), dimX*0.8, dimY*0.8, true, layer);
+                this.drawRect(x + (0.1*dimX), y + (0.1*dimY), dimX*0.8, dimY*0.8, true, true, layer);
             }
             else if (n.sound === 'perc') {
                 x += dimX * 0.5;
@@ -548,7 +551,7 @@ export default class InterferenceRenderer extends Renderer {
                 }
                 this.fillColor(n.palette, c, layer);
                 this.strokeColor(n.palette, 'bg', layer);
-                this.fillQuad(x1, y1, x2, y2, x3, y3, x4, y4, true, layer);
+                this.drawQuad(x1, y1, x2, y2, x3, y3, x4, y4, true, true, layer);
             }   
         }
         
@@ -613,13 +616,13 @@ export default class InterferenceRenderer extends Renderer {
         return (l2 + (h2 - l2) * (val - l1) / (h1 - l1));
     }
 
-    drawBrokenEgg(e, x, y, radiusX, radiusY, stroke, layer) {
+    drawBrokenEgg(e, x, y, radiusX, radiusY, fill, stroke, layer) {
         let gapX = radiusX * (e.animFrames.break / animLengths.eggBreak);
         let gapY = radiusY * (e.animFrames.break / animLengths.eggBreak);
-        this.fillEllipse(x+gapX, y-gapY, radiusX, radiusY, 0, 0, 0.5*Math.PI, stroke, layer)
-        this.fillEllipse(x-gapX, y-gapY, radiusX, radiusY, 0, 0.5*Math.PI, Math.PI, stroke, layer)
-        this.fillEllipse(x-gapX, y+gapY, radiusX, radiusY, 0, Math.PI, 1.5*Math.PI, stroke, layer)
-        this.fillEllipse(x+gapX, y+gapY, radiusX, radiusY, 0, 1.5*Math.PI, 2*Math.PI, stroke, layer)
+        this.drawEllipse(x+gapX, y-gapY, radiusX, radiusY, 0, 1.5*Math.PI, 2*Math.PI, fill, stroke, layer)
+        this.drawEllipse(x-gapX, y-gapY, radiusX, radiusY, 0, Math.PI, 1.5*Math.PI, fill, stroke, layer)
+        this.drawEllipse(x-gapX, y+gapY, radiusX, radiusY, 0, 0.5*Math.PI, Math.PI, fill, stroke, layer)
+        this.drawEllipse(x+gapX, y+gapY, radiusX, radiusY, 0, 0, 0.5*Math.PI, fill, stroke, layer)
         if (e.animFrames.break < animLengths.eggBreak) e.animFrames.break++
     }
     
@@ -627,53 +630,57 @@ export default class InterferenceRenderer extends Renderer {
         ctx[layer].lineWidth = weight;
     }
 
-    strokeColor(pal, which, layer) {
+    strokeColor(pal, which, layer) {    
+        let color = paletteTable[0].colors[which];
         if (paletteTable[pal]) {
             if (paletteTable[pal].colors) {
-                ctx[layer].strokeStyle = paletteTable[pal].colors[which];
+                color = paletteTable[pal].colors[which];
             }  
         }
-        else ctx[layer].strokeStyle = paletteTable[0].colors[which];
+        if (client.player.stage == "fightEnd") ctx[layer].strokeStyle = invert(color);
+        else ctx[layer].strokeStyle = color
     }
 
     fillColor(pal, which, layer) {
+        let color = paletteTable[0].colors[which];
         if (paletteTable[pal]) {
             if (paletteTable[pal].colors) {
-                ctx[layer].fillStyle = paletteTable[pal].colors[which];
+                color = paletteTable[pal].colors[which];
             }  
         }
-        else ctx[layer].fillStyle = paletteTable[0].colors[which];
+        if (client.player.stage == "fightEnd") ctx[layer].fillStyle = invert(color);
+        else ctx[layer].fillStyle = color
     }
 
-    fillEllipse(x, y, radiusX, radiusY, rotation, startAngle, endAngle, stroke, layer) {
+    drawEllipse(x, y, radiusX, radiusY, rotation, startAngle, endAngle, fill, stroke, layer) {
         ctx[layer].beginPath();
         ctx[layer].ellipse(x, y, radiusX, radiusY, rotation, startAngle, endAngle);
-        ctx[layer].fill();
+        if (fill) ctx[layer].fill();
         if (stroke) ctx[layer].stroke();
     }
 
-    fillTriangle(x1, y1, x2, y2, x3, y3, stroke, layer) {
+    drawTriangle(x1, y1, x2, y2, x3, y3, fill, stroke, layer) {
         ctx[layer].beginPath();
         ctx[layer].moveTo(x1, y1);
         ctx[layer].lineTo(x2, y2);
         ctx[layer].lineTo(x3, y3);
-        ctx[layer].fill();
+        if (fill) ctx[layer].fill();
         ctx[layer].closePath();
         if (stroke) ctx[layer].stroke();
     }
 
-    fillRect(x, y, dimX, dimY, stroke, layer) {
-        ctx[layer].fillRect(x, y, dimX, dimY);
+    drawRect(x, y, dimX, dimY, fill, stroke, layer) {
+        if (fill) ctx[layer].fillRect(x, y, dimX, dimY);
         if (stroke) ctx[layer].strokeRect(x, y, dimX, dimY);
     }
 
-    fillQuad(x1, y1, x2, y2, x3, y3, x4, y4, stroke, layer) {
+    drawQuad(x1, y1, x2, y2, x3, y3, x4, y4, fill, stroke, layer) {
         ctx[layer].beginPath();
         ctx[layer].moveTo(x1, y1);
         ctx[layer].lineTo(x2, y2);
         ctx[layer].lineTo(x3, y3);
         ctx[layer].lineTo(x4, y4);
-        ctx[layer].fill();
+        if (fill) ctx[layer].fill();
         ctx[layer].closePath();
         if (stroke) ctx[layer].stroke();
     }
