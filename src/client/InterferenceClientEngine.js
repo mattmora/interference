@@ -362,7 +362,10 @@ export default class InterferenceClientEngine extends ClientEngine {
         this.players = this.gameEngine.world.queryObjects({ instanceType: Performer });
 
         if (this.gameEngine.paramsByRoom[this.room].inPersonPerformance)
-            this.soundingPlayers = [this.player];
+        {
+            this.soundingPlayers = [];
+            this.soundingPlayers.push(this.player);
+        }
         else this.soundingPlayers = this.players;
 
         if (numPlayers != this.players.length || this.reverb == null) this.initSound();
