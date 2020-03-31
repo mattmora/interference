@@ -13,7 +13,7 @@ Basic controls:
 - 1 (with a broken ball in your space) : Start another build phase
 - 2 (with a broken ball in your space) : Start a fight phase
 - w/a/s/d (during fight phase) : Move
-- space (during outro) : Remove a random note from the game space
+- r/b (during outro) : Remove a random note from the game space
 - p (at any time after setup) : Progress the harmony after a number of presses
 - f : Toggle fullscreen
 - h : Toggle cursor
