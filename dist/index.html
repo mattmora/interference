@@ -3,7 +3,7 @@
         <title></title>
         <style>
             * {
-                font-family: "Lucida Console", Monaco, monospace;
+                font-family: "Lucida Sans Unicode", "Lucida Grande", sans-serif;
                 font-size: 14px;
             }
 
@@ -21,10 +21,15 @@
                 background-color: transparent;
             }
 
+            div { 
+                overflow: hidden; 
+                text-align: center;
+            }
+
             #startMenu {
                 margin:auto;
                 margin-top:100px;
-                width: 350px;
+                width: 30%;
                 padding: 20px;
                 background-color: #eee;
                 box-sizing: border-box;
@@ -108,13 +113,17 @@
     <body>
         <div id="startMenuWrapper">
             <div id="startMenu">
-                <button id="startButton">Join</button>
-                <br />
                 <input type="text" tabindex="0" autofocus placeholder="Enter room name" id="roomNameInput" />
                 <b class="room-error"></b>
                 <br />
                 <input type="text" tabindex="0" placeholder="Enter settings (if new room)" id="paramInput" />
                 <b class="settings-error"></b>
+                <br />
+                <button id="startButton">Create/Join Room</button>
+                <br />
+                <span>
+                    <a href="https://github.com/mattmora/interference" target="_blank">Github</a>
+                </span>
             </div>
         </div>
         <div id="logo" class="textBox bottomRight"></div>
