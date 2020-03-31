@@ -27,7 +27,6 @@ let thisPlayer = null;
 let sequences = null;
 let eggs = [];
 let paletteTable = [];
-let invertColors = [];
 let bg = 'black';
 let c1 = 'black';
 let c2 = 'black';
@@ -76,16 +75,6 @@ export default class InterferenceRenderer extends Renderer {
             c2 = paletteTable[0].colors.c2;
             c3 = paletteTable[0].colors.c3;
             c4 = paletteTable[0].colors.c4;
-
-            for (let i = 0; i < game.palettes.length; i++)
-            {
-                invertColors[i] = {};
-                invertColors[i].bg = invert(paletteTable[i].colors.bg);
-                invertColors[i].c1 = invert(paletteTable[i].colors.c1);
-                invertColors[i].c2 = invert(paletteTable[i].colors.c2);
-                invertColors[i].c3 = invert(paletteTable[i].colors.c3);
-                invertColors[i].c4 = invert(paletteTable[i].colors.c4);
-            }
         }
 
         time = client.syncClient.getSyncTime();
