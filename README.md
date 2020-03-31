@@ -1,9 +1,9 @@
 ### Interference: 
 An experimental generative music composition / game
-
 ---
 Hosted [here](interference.herokuapp.com)  
 Audio recording [here](https://soundcloud.com/user-519512177/interference-042019)
+Paper for WAC2019 [here](https://www.ntnu.edu/documents/1282113268/1290797448/WAC2019-CameraReadySubmission-43.pdf/c2dec2c2-c34a-122d-be16-465082b3afbd?t=1575329716758)
 
 Basic controls:
 - c (during setup) : Change color
