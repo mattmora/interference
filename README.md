@@ -22,6 +22,7 @@ Basic controls:
 - f : Toggle fullscreen
 - h : Toggle cursor
 - v : Toggle zoom
+- m : Mute/unmute sound
 
 To run locally (requires Node.js):
 1. Download this repo
