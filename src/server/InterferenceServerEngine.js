@@ -154,7 +154,7 @@ export default class InterferenceServerEngine extends ServerEngine {
             if (note == null) return;
             if (note.room == null) return;
             let n = Math.floor(noteX / this.gameEngine.paramsByRoom[note.room].playerWidth);
-            for (let p of this.gameEngine.queryPlayers({ number: n })) {
+            for (let p of this.gameEngine.queryPlayers({ number: n, room: player.room })) {
                 p.grid[(noteX % this.gameEngine.paramsByRoom[note.room].playerWidth) + 
                     ((noteY % this.gameEngine.paramsByRoom[note.room].playerHeight) * 
                     this.gameEngine.paramsByRoom[note.room].playerWidth)] = palette;
@@ -200,8 +200,8 @@ export default class InterferenceServerEngine extends ServerEngine {
                 });
                 newNote.inputId = inputId;
                 newNote.room = roomName;
-                this.assignObjectToRoom(newNote, roomName);
                 this.gameEngine.addObjectToWorld(newNote);
+                this.assignObjectToRoom(newNote, roomName);
             }
             this.actionCounts[roomName]++;
         });

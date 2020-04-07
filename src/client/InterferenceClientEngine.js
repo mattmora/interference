@@ -6,7 +6,7 @@ import InterferenceRenderer from '../client/InterferenceRenderer';
 import Note from '../common/Note';
 import Performer from '../common/Performer';
 import Egg from '../common/Egg';
-import { Transport, Frequency, Sequence, Synth, PolySynth, NoiseSynth, MembraneSynth, FMSynth } from 'tone';
+import { Destination, Transport, Frequency, Sequence, Synth, PolySynth, NoiseSynth, MembraneSynth, FMSynth } from 'tone';
 import { Reverb, Distortion, Volume } from 'tone';
 
 export default class InterferenceClientEngine extends ClientEngine {
@@ -39,7 +39,8 @@ export default class InterferenceClientEngine extends ClientEngine {
             'KeyV': 'ToggleView',
             'Slash': 'ToggleLock',
             'KeyX': 'ToggleEndGameControl',
-            'Digit0': 'ReleaseAll'
+            'Digit0': 'ReleaseAll',
+            'KeyM': 'ToggleMute'
         };
         this.melodySequence = null;
         this.bassSequence = null;
@@ -53,6 +54,7 @@ export default class InterferenceClientEngine extends ClientEngine {
         this.isSpectator = false;
         this.showControlText = true;
         this.isLeader = true;
+        this.muted = false;
 
         this.params = {};
 
@@ -108,11 +110,15 @@ export default class InterferenceClientEngine extends ClientEngine {
             this.viewLock = !this.viewLock;
         }
         else if (controlString === 'ToggleEndGameControl') {
-            if (this.isSpectator) return
+            if (this.isSpectator) return;
             this.optionSelection['KeyO'] = 'endGame';
             setTimeout(() => { 
                 if (this.optionSelection['KeyO'] != null) delete this.optionSelection['KeyO'];
             }, 1000);
+        }
+        else if (controlString === 'ToggleMute') {
+            this.muted = !this.muted;
+            Destination.mute = this.muted;
         }
         // else if (controlString === 'ReleaseAll')
         // {
@@ -406,11 +412,15 @@ export default class InterferenceClientEngine extends ClientEngine {
             let pal = this.gameEngine.paramsByRoom[roomName].paletteAttributes[note.palette];
             note.step = note.xPos % playerWidth;
             note.pitch = (playerHeight - note.yPos) + (pal.pitchSets[this.pitchSetIndex].length * 3);
-            let number = this.gameEngine.world.queryObject({ playerId: note.ownerId }).number;
-            if (this.sequences[number] == null) this.sequences[number] = {};
-            if (this.sequences[number][note.sound] == null) this.sequences[number][note.sound] = [];
-            if (this.sequences[number][note.sound][note.step] == null) this.sequences[number][note.sound][note.step] = [];
-            this.sequences[number][note.sound][note.step].push(note);
+            let player = this.gameEngine.world.queryObject({ playerId: note.ownerId });
+            if (player != null)
+            {
+                let number = player.number;
+                if (this.sequences[number] == null) this.sequences[number] = {};
+                if (this.sequences[number][note.sound] == null) this.sequences[number][note.sound] = [];
+                if (this.sequences[number][note.sound][note.step] == null) this.sequences[number][note.sound][note.step] = [];
+                this.sequences[number][note.sound][note.step].push(note);
+            }
         }
         //console.log(this.pitchSetIndex);
 
@@ -616,6 +626,7 @@ export default class InterferenceClientEngine extends ClientEngine {
             let p = player.number;
 
             this.melodySynth[p] = new PolySynth(FMSynth, {
+                "polyphony" : 16,
                 "volume": -3,
                 "modulationIndex": pal.melody.modulationIndex,
                 "harmonicity": pal.melody.harmonicity,
@@ -639,6 +650,7 @@ export default class InterferenceClientEngine extends ClientEngine {
     
             //this.gameEngine.paramsByRoom[roomName].playerHeight
             this.bassSynth[p] = new PolySynth(FMSynth, {
+                "polyphony" : 16,
                 "modulationIndex" : pal.bass.modulationIndex,
                 "harmonicity": pal.bass.harmonicity,
                 "oscillator": {
@@ -661,6 +673,7 @@ export default class InterferenceClientEngine extends ClientEngine {
     
             //this.gameEngine.playerHeight
             this.percSynth[p] = new PolySynth(MembraneSynth, {
+                "polyphony" : 16,
                 "volume" : -1,
                 "pitchDecay" : pal.perc.pitchDecay,//0.05,
                 "octaves" : pal.perc.octaves,//10 ,
