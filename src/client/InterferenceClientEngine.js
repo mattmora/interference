@@ -551,7 +551,7 @@ export default class InterferenceClientEngine extends ClientEngine {
             xPos: pos[0],
             yPos: pos[1]
         });
-        if (notes.length) notes[0].dur = '2n';
+        if (notes.length) notes[0].dur = '4n';
         else {
             let newNote = new Note(this.gameEngine, null, { 
                 id: shadowId,
