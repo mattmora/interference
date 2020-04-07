@@ -2,6 +2,7 @@
 
 import path from 'path';
 import express from 'express';
+import sslRedirect from 'heroku-ssl-redirect';
 import socketIO from 'socket.io';
 import { Lib } from 'lance-gg';
 import InterferenceServerEngine from './server/InterferenceServerEngine';
@@ -12,6 +13,7 @@ const INDEX = path.join(__dirname, '../dist/index.html');
 
 // define routes and socket
 const server = express();
+server.use(sslRedirect(['production', 'development']));
 server.get('/', function(req, res) { res.sendFile(INDEX); });
 server.use('/', express.static(path.join(__dirname, '../dist/')));
 let requestHandler = server.listen(PORT, () => console.log(`Listening on ${ PORT }`));
