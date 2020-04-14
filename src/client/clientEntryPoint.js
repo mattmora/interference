@@ -10,7 +10,7 @@ const qsOptions = querystring.parse(location.search);
 // is sent to both game engine and client engine
 const defaults = {
     traceLevel: Lib.Trace.TRACE_NONE,
-    delayInputCount: 5,
+    delayInputCount: 3,
     scheduler: 'render-schedule',
     syncOptions: {
         sync: qsOptions.sync || 'extrapolate',
