@@ -331,6 +331,7 @@ export default class InterferenceClientEngine extends ClientEngine {
             Object.assign(this.gameEngine.paramsByRoom[roomName], this.params)
             this.isSpectator = this.params.spectator;
             this.ringView = this.params.ringView;
+            this.rowView = this.params.rowView;
             this.isLeader = this.params.isLeader;
             this.socket.emit('assignToRoom', roomName, this.params);
         }
@@ -500,7 +501,6 @@ export default class InterferenceClientEngine extends ClientEngine {
         this.player.palette = palettes[(palettes.indexOf(this.player.palette) + 1) % palettes.length];
         this.socket.emit('updatePalette', this.player.palette);
         this.player.grid.fill(this.player.palette);
-        this.updateSound();
     }
 
     onEggBounce(e) {
@@ -602,7 +602,7 @@ export default class InterferenceClientEngine extends ClientEngine {
     initSound() {
         //this.transport.timeSignature = 4;
 
-        console.log('initSound' + this.players.length);
+        // console.log('initSound' + this.players.length);
 
         this.reverb = new Reverb(1).toDestination();
         this.distVolume = new Volume(-12).toDestination();
@@ -626,7 +626,6 @@ export default class InterferenceClientEngine extends ClientEngine {
             let p = player.number;
 
             this.melodySynth[p] = new PolySynth(FMSynth, {
-                "polyphony" : 16,
                 "volume": -3,
                 "modulationIndex": pal.melody.modulationIndex,
                 "harmonicity": pal.melody.harmonicity,
@@ -650,7 +649,6 @@ export default class InterferenceClientEngine extends ClientEngine {
     
             //this.gameEngine.paramsByRoom[roomName].playerHeight
             this.bassSynth[p] = new PolySynth(FMSynth, {
-                "polyphony" : 16,
                 "modulationIndex" : pal.bass.modulationIndex,
                 "harmonicity": pal.bass.harmonicity,
                 "oscillator": {
@@ -673,7 +671,6 @@ export default class InterferenceClientEngine extends ClientEngine {
     
             //this.gameEngine.playerHeight
             this.percSynth[p] = new PolySynth(MembraneSynth, {
-                "polyphony" : 16,
                 "volume" : -1,
                 "pitchDecay" : pal.perc.pitchDecay,//0.05,
                 "octaves" : pal.perc.octaves,//10 ,
@@ -692,7 +689,7 @@ export default class InterferenceClientEngine extends ClientEngine {
 
     initSequences()
     {
-        console.log('initSequences');
+        // console.log('initSequences');
         let roomName = this.room;
         
         let events = [];
@@ -758,7 +755,7 @@ export default class InterferenceClientEngine extends ClientEngine {
     // update sounds during the game as the stage and colors change
     updateSound()
     {
-        console.log('updateSound');
+        // console.log('updateSound');
         if (this.reverb == null) this.initSound();
         if (this.melodySequence == null) this.initSequences();
 
@@ -770,7 +767,7 @@ export default class InterferenceClientEngine extends ClientEngine {
                 this.melodySequence.playbackRate = this.gameEngine.paramsByRoom[this.room].buildRate;
                 this.bassSequence.playbackRate = this.gameEngine.paramsByRoom[this.room].buildRate;
                 this.percSequence.playbackRate = this.gameEngine.paramsByRoom[this.room].buildRate;   
-            }, this.nextDiv('1m'));
+            }, this.nextDiv('+0.1'));
             release = this.gameEngine.paramsByRoom[this.room].buildRelease;
         }
         else if (this.player.stage == "fight") {
@@ -778,7 +775,7 @@ export default class InterferenceClientEngine extends ClientEngine {
                 this.melodySequence.playbackRate = this.gameEngine.paramsByRoom[this.room].fightRate;
                 this.bassSequence.playbackRate = this.gameEngine.paramsByRoom[this.room].fightRate;
                 this.percSequence.playbackRate = this.gameEngine.paramsByRoom[this.room].fightRate;
-            }, this.nextDiv('1m'));
+            }, this.nextDiv('+0.1'));
             sustain = 0.0;
             decay = this.gameEngine.paramsByRoom[this.room].fightRelease;
         }
@@ -787,7 +784,7 @@ export default class InterferenceClientEngine extends ClientEngine {
                 this.melodySequence.playbackRate = this.gameEngine.paramsByRoom[this.room].outroRate;
                 this.bassSequence.playbackRate = this.gameEngine.paramsByRoom[this.room].outroRate;
                 this.percSequence.playbackRate = this.gameEngine.paramsByRoom[this.room].outroRate; 
-            }, this.nextDiv('1m'));
+            }, this.nextDiv('+0.1'));
             release = this.gameEngine.paramsByRoom[this.room].outroRelease;
         }
 
@@ -856,7 +853,7 @@ export default class InterferenceClientEngine extends ClientEngine {
                     }
                 });
             }
-        }, this.nextDiv('1m'));
+        }, '+0.1');
     }
 
     constructEggSynths(player, e) {

@@ -2,7 +2,7 @@
 
 import path from 'path';
 import express from 'express';
-import sslRedirect from 'heroku-ssl-redirect';
+// import sslRedirect from 'heroku-ssl-redirect';
 import socketIO from 'socket.io';
 import { Lib } from 'lance-gg';
 import InterferenceServerEngine from './server/InterferenceServerEngine';

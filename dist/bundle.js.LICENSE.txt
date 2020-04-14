@@ -1,0 +1,25 @@
+/*
+object-assign
+(c) Sindre Sorhus
+@license MIT
+*/
+
+/*!
+ * The buffer module from node.js, for the browser.
+ *
+ * @author   Feross Aboukhadijeh <http://feross.org>
+ * @license  MIT
+ */
+
+/*! @license https://github.com/onury/invert-color */
+
+/*! https://mths.be/punycode v1.4.1 by @mathias */
+
+/*! https://mths.be/utf8js v2.1.2 by @mathias */
+
+/**
+ * Tone.js
+ * @author Yotam Mann
+ * @license http://opensource.org/licenses/MIT MIT License
+ * @copyright 2014-2019 Yotam Mann
+ */

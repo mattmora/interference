@@ -94,7 +94,7 @@ export default class InterferenceServerEngine extends ServerEngine {
                         this.assignObjectToRoom(player, roomName);
                     }
                     else {
-                        console.log('found inactive');
+                        // console.log('found inactive');
                         player = inactivePlayers[0];
                         for (let n of this.gameEngine.queryNotes({ ownerId: player.playerId })) {
                             n.ownerId = socket.playerId;
@@ -116,7 +116,7 @@ export default class InterferenceServerEngine extends ServerEngine {
                 let inactivePlayers = this.gameEngine.queryPlayers({ room: roomName, active: 0 });
                 if (inactivePlayers.length === 0) socket.emit('accessDenied');
                 else {
-                    console.log('found inactive');
+                    // console.log('found inactive');
                     player = inactivePlayers[0];
                     for (let n of this.gameEngine.queryNotes({ ownerId: player.playerId })) {
                         n.ownerId = socket.playerId;
