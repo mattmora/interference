@@ -18,7 +18,7 @@
                 width: 100%; height: 100%;
                 margin: 0; padding: 0;
                 position: absolute;
-                background-color: transparent;
+                background-color: 'transparent';
             }
 
             div { 
@@ -27,8 +27,8 @@
             }
 
             #startMenu {
-                margin:auto;
-                margin-top:100px;
+                margin-top: 5%;
+                margin-left: 10%;
                 width: 30%;
                 padding: 20px;
                 background-color: #eee;
@@ -108,6 +108,20 @@
               color : #bb3030;
               font-size : 12px;
             }
+
+            #instructions {
+                width: 85%;
+                padding-left: 5%;
+                margin-left: 5%;
+                z-index: 1;
+                background-color: rgba(0, 0, 0, 0.4);
+                color: white;
+                text-align: left;
+            }
+
+            #instructions p {
+                font: sans-serif;
+            }
         </style>
     </head>
     <body>
@@ -126,7 +140,24 @@
                 </span>
             </div>
         </div>
-        <div id="logo" class="textBox bottomRight"></div>
+        <div id="instructions">
+            <p>
+                Very basic rules/objective: <br>
+                Place notes in your sequence and using your notes, try to convert all players to your color palette. <br>
+                The game ends when all players have the same color palette. 
+            </p>
+            <p>
+                Basic controls: <br>
+                v : Toggle view between the whole game and your space <br>
+                space (with a ball in your space) : Add a note to your sequence <br>
+                1 or 2 (after breaking a ball) : Start a build phase or a fight phase <br>
+                w/a/s/d : Move (cannot move horizontally during a build phase) <br>
+                h : Hide/unhide the cursor <br>
+                i : Hide/unhide these instructions <br>
+                m : Mute/unmute sound
+            </p>
+        </div>
+        <canvas id='mainCanvas'></canvas>
         <script src="bundle.js" type="text/javascript"></script>
     </body>
 </html>

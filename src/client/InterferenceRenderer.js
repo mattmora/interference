@@ -40,14 +40,15 @@ export default class InterferenceRenderer extends Renderer {
             eggNote: 10
         }
 
-        this.mainCanvas = document.createElement('canvas');
+        this.mainCanvas = document.getElementById('mainCanvas');
         this.mainCtx = this.mainCanvas.getContext('2d');
 
+        
+        this.mainCanvas.width = window.innerWidth;
+        this.mainCanvas.height = window.innerHeight;
         // could scaling this down improve performance?
-        this.w = this.canvas[0].width = this.canvas[1].width = this.mainCanvas.width = window.innerWidth;
-        this.h = this.canvas[0].height = this.canvas[1].height = this.mainCanvas.height = window.innerHeight;
-
-        document.body.insertBefore(this.mainCanvas, document.getElementById('logo'));
+        this.w = this.canvas[0].width = this.canvas[1].width = this.mainCanvas.width;
+        this.h = this.canvas[0].height = this.canvas[1].height = this.mainCanvas.height;
 
         window.addEventListener('resize', ()=>{ this.setRendererSize(); });
     }
@@ -89,7 +90,7 @@ export default class InterferenceRenderer extends Renderer {
         this.eggs = this.client.eggs;
         
         // Clear the canvas
-        this.mainCtx.clearRect(0, 0, this.w, this.h);
+        this.mainCtx.clearRect(0, 0, this.mainCanvas.width, this.mainCanvas.height);
         this.ctx[0].clearRect(0, 0, this.w, this.h);
         this.ctx[1].clearRect(0, 0, this.w, this.h);
 
@@ -104,34 +105,14 @@ export default class InterferenceRenderer extends Renderer {
 
         if (!this.client.isSpectator && this.client.showControlText) {
 
-            this.fillColor(this.thisPlayer.palette, 'c2', 1);
-            this.strokeWeight(1, 1);
-            this.ctx[1].font = "bold 20px sans serif";
+            // this.fillColor(this.thisPlayer.palette, 'c2', 1);
+            // this.strokeWeight(1, 1);
+            // this.ctx[1].font = "bold 20px sans serif";
             //ctx[1].fillText(playerId, 50, 25);
-            this.time = Number(this.time).toFixed(3);
-            let rules = ["Very basic rules/objective: ",
-            "Place notes in your sequence and using your notes, try to convert all players to your color palette.",
-            "The game ends when all players have the same color palette."];
-            let controls = [ "Basic controls:", 
-            "v : Toggle view between the whole game and your space",
-            "space (with a ball in your space) : Add a note to your sequence",
-            "1 or 2 (after breaking a ball) : Start a build phase or a fight phase",
-            "w/a/s/d : Move (cannot move horizontally during a build phase)",
-            "h : Hide/unhide this text and the cursor"];
 
-            this.ctx[1].fillText(rules[0], this.w * 0.05, this.h * 0.05);
-            this.ctx[1].fillText(rules[1], this.w * 0.05, this.h * 0.15);
-            this.ctx[1].fillText(rules[2], this.w * 0.05, this.h * 0.225);
-
-            this.ctx[1].fillText(controls[0], this.w * 0.05, this.h * 0.35);
-            this.ctx[1].fillText(controls[1], this.w * 0.05, this.h * 0.45);
-            this.ctx[1].fillText(controls[2], this.w * 0.05, this.h * 0.525);
-            this.ctx[1].fillText(controls[3], this.w * 0.05, this.h * 0.6);
-            this.ctx[1].fillText(controls[4], this.w * 0.05, this.h * 0.675)
-            this.ctx[1].fillText(controls[5], this.w * 0.05, this.h * 0.75)
-            
-            this.ctx[1].fillText(this.time, this.w * 0.05, this.h * 0.95);
-            this.ctx[1].fillText("Player " + this.thisPlayer.number, this.w * 0.05, this.h * 0.85);
+            // this.time = Number(this.time).toFixed(3);
+            // this.ctx[1].fillText(this.time, this.w * 0.05, this.h * 0.95);
+            // this.ctx[1].fillText("Player " + this.thisPlayer.number, this.w * 0.05, this.h * 0.85);
             //ctx[1].fillText(client.transport.position, 50, 75);
         }
 

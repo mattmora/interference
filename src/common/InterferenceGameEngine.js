@@ -13,7 +13,7 @@ export default class InterferenceGameEngine extends GameEngine {
         super(options);
         this.physicsEngine = new SimplePhysicsEngine({
             gameEngine: this,
-            collisions: { autoResolve: false }
+            collisions: { type: 'HSHG', autoResolve: false }
         });
 
         // game variables
