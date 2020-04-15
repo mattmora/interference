@@ -17,7 +17,8 @@ export default class InterferenceGameEngine extends GameEngine {
         });
 
         // game variables
-        Object.assign(this, { room: null,
+        Object.assign(this, {
+            room: null,
             shadowIdCount: this.options.clientIDSpace, paramsByRoom: {},
             rooms: [], playersByRoom: {}, eggsByRoom: {}, rightBoundByRoom: {}, notesByRoom: {}
         });
@@ -35,7 +36,7 @@ export default class InterferenceGameEngine extends GameEngine {
     }
 
     // based on lance findLocalShadow; instead of finding the shadow of a server obj,
-    // looks for the server copy of a shadow obj, and removes the shadow if the server copy if found
+    // looks for the server copy of a shadow obj, and removes the shadow if the server copy is found
     resolveShadowObject(shadowObj) {
         if (this.world.queryObject(shadowObj.id) == null) return null;
         for (let localId of Object.keys(this.world.objects)) {
@@ -113,57 +114,34 @@ export default class InterferenceGameEngine extends GameEngine {
                         this.notesByRoom[r][i].yPos === this.notesByRoom[r][j].yPos) {
                         if (this.notesByRoom[r][i].palette === this.notesByRoom[r][j].palette) continue;
                         // two notes of the same type collide
-                        if (this.notesByRoom[r][i].sound === this.notesByRoom[r][j].sound) {
-                            continue;
+                        if (this.notesByRoom[r][i].sound === this.notesByRoom[r][j].sound) continue;
+                        else if (this.notesByRoom[r][i].sound === 'melody' && this.notesByRoom[r][j].sound === 'perc') {
+                            this.resolveNotes(this.notesByRoom[r][i], this.notesByRoom[r][j]);
+                            break;
                         }
-                        else if (   this.notesByRoom[r][i].sound === 'melody' &&
-                                    this.notesByRoom[r][j].sound === 'perc') {
-                            if (this.world.queryObject(this.notesByRoom[r][j].id) != null) {
-                                this.removeObjectFromWorld(this.notesByRoom[r][j].id);
-                                this.notesByRoom[r][j] = null;
-                            } 
+                        else if (this.notesByRoom[r][i].sound === 'melody' && this.notesByRoom[r][j].sound === 'bass') {
+                            this.resolveNotes(this.notesByRoom[r][j], this.notesByRoom[r][i]);
+                            break;
                         }
-                        else if (   this.notesByRoom[r][i].sound === 'melody' &&
-                                    this.notesByRoom[r][j].sound === 'bass') {
-                            if (this.world.queryObject(this.notesByRoom[r][i].id) != null) {
-                                this.removeObjectFromWorld(this.notesByRoom[r][i].id);
-                                this.notesByRoom[r][i] = null;
-                                break;
-                            }
+                        else if (this.notesByRoom[r][i].sound === 'perc' && this.notesByRoom[r][j].sound === 'bass') {
+                            this.resolveNotes(this.notesByRoom[r][i], this.notesByRoom[r][j]);
+                            break;
                         }
-                        else if (   this.notesByRoom[r][i].sound === 'perc' &&
-                                    this.notesByRoom[r][j].sound === 'bass') {
-                            if (this.world.queryObject(this.notesByRoom[r][j].id) != null) {
-                                this.removeObjectFromWorld(this.notesByRoom[r][j].id);
-                                this.notesByRoom[r][j] = null;
-                            }
+                        else if (this.notesByRoom[r][i].sound === 'perc' && this.notesByRoom[r][j].sound === 'melody') {
+                            this.resolveNotes(this.notesByRoom[r][j], this.notesByRoom[r][i]);
+                            break;
                         }
-                        else if (   this.notesByRoom[r][i].sound === 'perc' &&
-                                    this.notesByRoom[r][j].sound === 'melody') {
-                            if (this.world.queryObject(this.notesByRoom[r][i].id) != null) {
-                                this.removeObjectFromWorld(this.notesByRoom[r][i].id);
-                                this.notesByRoom[r][i] = null;
-                                break;
-                            }
+                        else if (this.notesByRoom[r][i].sound === 'bass' && this.notesByRoom[r][j].sound === 'melody') {
+                            this.resolveNotes(this.notesByRoom[r][i], this.notesByRoom[r][j]);
+                            break;
                         }
-                        else if (   this.notesByRoom[r][i].sound === 'bass' &&
-                                    this.notesByRoom[r][j].sound === 'melody') {
-                            if (this.world.queryObject(this.notesByRoom[r][j].id) != null) {
-                                this.removeObjectFromWorld(this.notesByRoom[r][j].id);
-                                this.notesByRoom[r][j] = null;
-                            }
-                        }                   
-                        else if (   this.notesByRoom[r][i].sound === 'bass' &&
-                                    this.notesByRoom[r][j].sound === 'perc') {
-                            if (this.world.queryObject(this.notesByRoom[r][i].id) != null) {
-                                this.removeObjectFromWorld(this.notesByRoom[r][i].id);
-                                this.notesByRoom[r][i] = null;
-                                break;
-                            }
+                        else if (this.notesByRoom[r][i].sound === 'bass' && this.notesByRoom[r][j].sound === 'perc') {
+                            this.resolveNotes(this.notesByRoom[r][j], this.notesByRoom[r][i]);
+                            break;
                         }
                     }
                 }
-            }   
+            }
         }
 
         if (this.eggsByRoom[r]) {
@@ -182,7 +160,7 @@ export default class InterferenceGameEngine extends GameEngine {
                         e.velocity.x = Math.abs(e.velocity.x);
                         e.position.x = this.paramsByRoom[r].leftBound + this.paramsByRoom[r].eggRadius;
                         this.emit('eggBounce', e);
-                    } 
+                    }
                     else if ((e.position.x + this.paramsByRoom[r].eggRadius) > this.rightBoundByRoom[r]) {
                         e.velocity.x = -Math.abs(e.velocity.x);
                         e.position.x = this.rightBoundByRoom[r] - this.paramsByRoom[r].eggRadius;
@@ -232,7 +210,7 @@ export default class InterferenceGameEngine extends GameEngine {
 
     positionIsInPlayer(x, p) {
         let leftBound = p.xPos;
-        let rightBound = (p.xPos + Number(this.paramsByRoom[p.room].playerWidth)) % this.rightBoundByRoom[p.room];
+        let rightBound = (leftBound + Number(this.paramsByRoom[p.room].playerWidth)) % this.rightBoundByRoom[p.room];
         if (leftBound < rightBound) return (leftBound < x && x < rightBound);
         else return (x > leftBound || x < rightBound);
     }
@@ -298,6 +276,16 @@ export default class InterferenceGameEngine extends GameEngine {
         return queriedNotes;
     }
 
+    resolveNotes(remover, removed) {
+        if (removed.dur === '4n') {
+            removed.sound = remover.sound;
+            removed.dur = remover.dur;
+        }
+        else if (this.world.queryObject(removed.id) != null) {
+            this.removeObjectFromWorld(removed);
+        }
+    }
+
     processInput(inputData, playerId, isServer) {
 
         super.processInput(inputData, playerId);
@@ -318,10 +306,10 @@ export default class InterferenceGameEngine extends GameEngine {
             if (inputData.input == 'c') {
                 this.emit('updatePalette');
             }
-            else if (isServer) { 
-            // stuff that should only be processed on the server, such as randomness, which would otherwise cause discrepancies
-            // or actions that require more info than is available to one player
-            //console.log(inputData.input);
+            else if (isServer) {
+                // stuff that should only be processed on the server, such as randomness, which would otherwise cause discrepancies
+                // or actions that require more info than is available to one player
+                //console.log(inputData.input);
                 if (inputData.input == 'b') {
                     this.emit('beginPerformance', player);
                 }
@@ -332,7 +320,7 @@ export default class InterferenceGameEngine extends GameEngine {
                     if (newNumber < 0) newNumber = players.length - 1;
                     for (let p of players) {
                         if (p.number === newNumber) {
-                            p.number = player.number; 
+                            p.number = player.number;
                             newX = p.xPos;
                             newY = p.yPos;
                             p.moveTo(player.xPos, player.yPos);
@@ -346,9 +334,9 @@ export default class InterferenceGameEngine extends GameEngine {
                     let newX = null;
                     let newY = null;
                     if (newNumber >= players.length) newNumber = 0;
-                    for (let p of players) { 
+                    for (let p of players) {
                         if (p.number === newNumber) {
-                            p.number = player.number; 
+                            p.number = player.number;
                             newX = p.xPos;
                             newY = p.yPos;
                             p.moveTo(player.xPos, player.yPos);
@@ -356,7 +344,7 @@ export default class InterferenceGameEngine extends GameEngine {
                     }
                     player.moveTo(newX, newY);
                     player.number = newNumber;
-                } 
+                }
             }
         }
         else {
@@ -364,9 +352,10 @@ export default class InterferenceGameEngine extends GameEngine {
                 if (inputData.input == 'space') {
                     if (eggs != null) {
                         for (let e of eggs) {
-                            if (this.positionIsInPlayer(e.position.x, player) || player.stage === 'outro') {
+                            if (this.positionIsInPlayer(e.position.x, player)) {
                                 //player.direction = 1;
                                 this.playerHitEgg(player, e, isServer);
+                                break;
                             }
                         }
                     }
@@ -465,33 +454,33 @@ export default class InterferenceGameEngine extends GameEngine {
         this.paramsByRoom[room] = {};
         Object.assign(this.paramsByRoom[room], {
 
-            playerWidth: 16, playerHeight: 9, 
-            eggSounds: ['melody', 'bass', 'perc'], eggSoundsToUse: ['melody', 'bass', 'perc'], 
-            numStartingEggs: 2, numEggsToAdd: 1, ballWraps: false,
-            eggHPRange: 0, eggHPMin: 2, eggHPPerPlayer: 1, 
-            startingAmmo: 2, maxAmmo: 5, reloadSize: 2, // 1 5 1
+            playerWidth: 16, playerHeight: 9,
+            eggSounds: ['melody', 'bass', 'perc'], eggSoundsToUse: ['melody', 'bass', 'perc'],
+            numStartingEggs: 2, numEggsToAdd: 1, ballWraps: true,
+            eggHPRange: 0, eggHPMin: 2, eggHPPerPlayer: 1,
+            startingAmmo: 1, maxAmmo: 5, reloadSize: 2, // 1 5 1
             leftBound: 0, topBound: 0, eggDroneVolume: -4, // in decibels
-            transportSyncInterval: 200, eggRadius: 1, eggBaseVelocity: 0.1, ammoDropChance: 0.025,
-            actionThreshold: 16, progressionThreshold: 8, 
+            transportSyncInterval: 300, eggRadius: 1, eggBaseVelocity: 0.1, ammoDropChance: 0.025,
+            actionThreshold: 8, progressionThreshold: 8,
             palettes: [1, 2, 3, 4, 5], buildRate: 0.5, fightRate: 1.0, outroRate: 0.5,
-            fightRateInc: 0.5, fightRateDec:2.0, maxFightRate: 3.0, 
-            melodyBuildOctave: 0, melodyFightOctave: 1, 
-            bassBuildOctave: 0, bassFightOctave: -1, 
-            percBuildOctave: 0, percFightOctave: -1, 
+            fightRateInc: 0.5, fightRateDec: 2.0, maxFightRate: 3.0,
+            melodyBuildOctave: 0, melodyFightOctave: 1,
+            bassBuildOctave: 0, bassFightOctave: -1,
+            percBuildOctave: 0, percFightOctave: -1,
             buildRelease: 3.0, fightRelease: 0.3, outroRelease: 1.0,
             spectator: false, freezeThreshold: 4, //8
-            ringView: false, isLeader: true, inPersonPerformance: false,
+            ringView: false, numRows: 1, isLeader: true, inPersonPerformance: false,
             paletteAttributes: [
                 { //default
-                     //'default': 
+                    //'default': 
                     colors: {
-                        bg: '#000',
-                        c1: '#000',
-                        c2: '#000',
-                        c3: '#000',
-                        c4: '#000'
+                        bg: '#222',
+                        c1: '#222',
+                        c2: '#222',
+                        c3: '#222',
+                        c4: '#222'
                     },
-                    scale: [0, 2, 4, 5, 7, 9, 11], 
+                    scale: [0, 2, 4, 5, 7, 9, 11],
                     pitchSets: [
                         [0, 2, 4], //1
                         [0, 2, 4],
@@ -532,12 +521,12 @@ export default class InterferenceGameEngine extends GameEngine {
                     }
                 },
                 { //rain
-                    colors: {   
-                        bg: '#3e2f5b', 
+                    colors: {
+                        bg: '#3e2f5b',
                         c1: '#d7dedc',
                         c2: '#706563',
                         c3: '#457eac',
-                        c4: '#748386' 
+                        c4: '#748386'
                     },
                     scale: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
                     pitchSets: [
@@ -580,12 +569,12 @@ export default class InterferenceGameEngine extends GameEngine {
                     }
                 },
                 { //celeste
-                    colors: {   
-                        bg: '#a5d8ff', 
+                    colors: {
+                        bg: '#a5d8ff',
                         c1: '#ff8266',
                         c2: '#4381af',
                         c3: '#ac86b0',
-                        c4: '#4b719c' 
+                        c4: '#4b719c'
                     },
                     scale: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
                     pitchSets: [
@@ -628,14 +617,14 @@ export default class InterferenceGameEngine extends GameEngine {
                     }
                 },
                 { //pyre
-                    colors: {   
-                        bg: '#a32323', 
+                    colors: {
+                        bg: '#a32323',
                         c1: '#2375a8',
                         c2: '#fbf6f7',
                         c3: '#f0ae62',
-                        c4: '#011936' 
+                        c4: '#011936'
                     },
-                    scale: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11], 
+                    scale: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
                     pitchSets: [
                         [4, 7, 11], //1
                         [4, 7, 11],
@@ -676,12 +665,12 @@ export default class InterferenceGameEngine extends GameEngine {
                     }
                 },
                 { //journey
-                    colors: {   
-                        bg: '#fad68a', 
+                    colors: {
+                        bg: '#fad68a',
                         c1: '#7f2819',
                         c2: '#a25a11',
                         c3: '#d5a962',
-                        c4: '#fef8e8' 
+                        c4: '#fef8e8'
                     },
                     scale: [0, 2, 3, 5, 7, 9, 10], // F mixo
                     pitchSets: [
@@ -724,12 +713,12 @@ export default class InterferenceGameEngine extends GameEngine {
                     }
                 },
                 { //kirby
-                    colors: {   
-                        bg: '#a8c256', 
+                    colors: {
+                        bg: '#a8c256',
                         c1: '#f4a4a7',
                         c2: '#e84c41',
                         c3: '#f9df6a',
-                        c4: '#fa8334' 
+                        c4: '#fa8334'
                     },
                     scale: [0, 2, 4, 5, 7, 9, 11], // C diatonic (C maj)
                     pitchSets: [

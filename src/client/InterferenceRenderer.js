@@ -32,7 +32,6 @@ let c1 = 'black';
 let c2 = 'black';
 let c3 = 'black';
 let c4 = 'black';
-let verticalOffset = 0;
 
 
 export default class InterferenceRenderer extends Renderer {
@@ -82,9 +81,7 @@ export default class InterferenceRenderer extends Renderer {
         if (thisPlayer == null) return;
         players = this.gameEngine.world.queryObjects({ instanceType: Performer });
     
-        // verticalOffset = game.playerHeight;
         if (client.performanceView) {
-            verticalOffset = 0;
             // console.log(`${thisPlayer.xPos}`);
             leftViewBound = thisPlayer.xPos;
             // console.log(`${leftViewBound}`);
@@ -108,7 +105,7 @@ export default class InterferenceRenderer extends Renderer {
         ctx[0].save();
         ctx[1].save();
         //ctx.scale(this.clientEngine.zoom, this.clientEngine.zoom);  // Zoom in and flip y axis
-        // Draw all things
+        // Draw all the things
         this.drawPlayers();
         this.drawSequences();
         this.drawEggs();
@@ -154,7 +151,7 @@ export default class InterferenceRenderer extends Renderer {
     }
 
     drawPlayers() {
-        let n = players.length;
+        let n = players.length / client.numRows;
         if (client.performanceView) n = 1;
         for (let p of players) {
             if (players.length === 1) {
@@ -179,18 +176,18 @@ export default class InterferenceRenderer extends Renderer {
             }
         }
 
-        // TODO: Ring
         if (!client.isSpectator && !client.ringView) {
-            let x = (w / n) * (thisPlayer.number + 0.5);
+            let pos = this.gamePositionToCanvasPosition(thisPlayer.xPos, 0)
+            let x = (w / n) * 0.5 + pos[0];
             ctx[0].fillStyle = 'white';
-            this.drawTriangle(  x,                      (1.05 * h) / n, 
-                                x - ((0.25 * w) / n),   (1.15 * h) / n,
-                                x + ((0.25 * w) / n),   (1.15 * h) / n, true, false, 0 );   
+            this.drawTriangle(  x,                      ((0.95 * h) / n) + pos[1], 
+                                x - ((0.15 * w) / n),   (h / n) + pos[1],
+                                x + ((0.15 * w) / n),   (h / n) + pos[1], true, false, 0);   
         }
     }
 
     drawPlayer(p, wrap) {
-        let n = players.length;
+        let n = players.length / client.numRows;
         if (client.performanceView) n = 1;
         let i = p.number - (leftViewBound / game.playerWidth);
         if (wrap) i += players.length;
@@ -213,22 +210,26 @@ export default class InterferenceRenderer extends Renderer {
             }
         }
         else {  
+            let pos = this.gamePositionToCanvasPosition(p.number*game.playerWidth, 0)
+            // console.log(pos);
             let xDim = this.gameXDimToCanvasXDim(1);
             let yDim = this.gameYDimToCanvasYDim(1);
             for (let xIdx = 0; xIdx < game.playerWidth; xIdx++) {
-                let x = ((w / n) * i) + (xIdx * xDim);
+                let x = (xIdx * xDim) + pos[0];
                 for (let yIdx = 0; yIdx < game.playerHeight; yIdx++) {
-                    let y = yIdx * yDim;
+                    let y = (yIdx * yDim) + pos[1];
                     this.fillColor(p.grid[xIdx + (yIdx * game.playerWidth)], 'bg', 0);
                     this.drawRect(x, y, xDim, yDim, true, false, 0);
                 }
             }
+            this.fillColor(0, 'bg', 1);
+            this.drawRect(pos[0], pos[1]-4, xDim*game.playerWidth, 8, true, false, 1);
+            this.drawRect(pos[0], pos[1]-4+(yDim*game.playerHeight), xDim*game.playerWidth, 8, true, false, 1);
             if (client.player.stage != "outro") {
-                this.fillColor(0, 'bg', 1);
+                // this.fillColor(0, 'bg', 1);
                 for (let a = 0; a < p.ammo; a++) {
-                    let x = ((w / n) * i);
-                    let x1 = x + ((a + 1) * ((w / n) / (p.ammo + 1)));
-                    let y1 = (h / n) * 0.92;
+                    let x1 = pos[0] + ((a + 1) * ((w / n) / (p.ammo + 1)));
+                    let y1 = (h / n) * 0.92 + pos[1];
                     this.drawTriangle(  x1, y1, 
                                         x1 - ((0.02 * w) / n), y1 + ((0.04 * h) / n),
                                         x1 + ((0.02 * w) / n), y1 + ((0.04 * h) / n), true, false, 1);
@@ -334,6 +335,7 @@ export default class InterferenceRenderer extends Renderer {
             let m2 = this.gamePositionToCanvasPosition(shift + client.melodyStep + 0.5, game.playerHeight);
             let p2 = this.gamePositionToCanvasPosition(shift + client.percStep + 0.5, game.playerHeight);
             let b2 = this.gamePositionToCanvasPosition(shift + client.bassStep + 0.5, game.playerHeight);
+            console.log(m1);
             this.strokeColor(0, 'c1', 1);
             this.drawLine(m1[0], m1[1], m2[0], m2[1], width*0.1, 'round', 1);
             this.strokeColor(0, 'c2', 1);
@@ -397,7 +399,7 @@ export default class InterferenceRenderer extends Renderer {
                 //dimX *= this.mapToRange(n.animFrame, 0, animLengths.eggNote, playerWidth, 1);
                 // rDim *= this.mapToRange(n.animFrame, 0, animLengths.eggNote, playerHeight, 1);
                 c = 'c1';
-                if (n.dur === '2n') { 
+                if (n.dur === '4n') { 
                     c = 'c2'; 
                     r *= 2;
                     layer = 0; 
@@ -416,7 +418,7 @@ export default class InterferenceRenderer extends Renderer {
                 let pos3 = [];
                 let pos4 = [];
                 c = 'c2';
-                if (n.dur === '2n') { 
+                if (n.dur === '4n') { 
                     pos1 = this.gamePositionToCanvasPosition(n.xPos - 0.2, n.yPos - 0.2);
                     pos2 = this.gamePositionToCanvasPosition(n.xPos - 0.2, n.yPos + 1.2);
                     pos3 = this.gamePositionToCanvasPosition(n.xPos + 1.2, n.yPos + 1.2);
@@ -444,7 +446,7 @@ export default class InterferenceRenderer extends Renderer {
                 let pos3 = [];
                 let pos4 = [];
                 c = 'c3'
-                if (n.dur === '2n') { 
+                if (n.dur === '4n') { 
                     pos1 = this.gamePositionToCanvasPosition(n.xPos + 0.5, n.yPos - 0.3);
                     pos2 = this.gamePositionToCanvasPosition(n.xPos + 1.3, n.yPos + 0.5);
                     pos3 = this.gamePositionToCanvasPosition(n.xPos + 0.5, n.yPos + 1.3);
@@ -484,7 +486,7 @@ export default class InterferenceRenderer extends Renderer {
                 //dimX *= this.mapToRange(n.animFrame, 0, animLengths.eggNote, playerWidth, 1);
                 dimY *= this.mapToRange(n.animFrame, 0, animLengths.eggNote, playerHeight, 1);
                 c = 'c1';
-                if (n.dur === '2n') { 
+                if (n.dur === '4n') { 
                     c = 'c2'; 
                     dimX *= 2;
                     dimY *= 2;
@@ -502,7 +504,7 @@ export default class InterferenceRenderer extends Renderer {
                 y = this.mapToRange(n.animFrame, 0, animLengths.eggNote, 0, y);
                 dimY *= this.mapToRange(n.animFrame, 0, animLengths.eggNote, playerHeight, 1);
                 c = 'c2';
-                if (n.dur === '2n') { 
+                if (n.dur === '4n') { 
                     c = 'c3'; 
                     dimX *= (playerWidth / 4); 
                     layer = 0; 
@@ -528,7 +530,7 @@ export default class InterferenceRenderer extends Renderer {
                 let x4 = x;
                 let y4 = y + (dimY * 0.5);
                 c = 'c3'
-                if (n.dur === '2n') { 
+                if (n.dur === '4n') { 
                     c = 'c1'; 
                     x2 += dimX;
                     x4 -= dimX
@@ -552,7 +554,7 @@ export default class InterferenceRenderer extends Renderer {
     }
 
     gamePositionToCanvasPosition(gameX, gameY) {
-        let div = players.length;
+        let div = players.length / client.numRows;
         if (client.ringView && !client.performanceView) {
             let rDim = (h * 0.5) / game.playerHeight;
             if (div > 2 && div < 7) rDim *= 0.5;
@@ -570,21 +572,32 @@ export default class InterferenceRenderer extends Renderer {
         else {
             if (client.performanceView) div = 1;
             let hi = rightViewBound;
+            let playerCanvasHeight = h / div;
             if (leftViewBound >= rightViewBound) hi += players.length * game.playerWidth;
-            let canvasX = Math.floor(this.mapToRange(gameX, leftViewBound, hi, 0, w));
-            let canvasY = Math.floor(this.mapToRange(gameY, 0, game.playerHeight, 0, h / div)); 
-            return [canvasX, canvasY];
+            let canvasX = this.mapToRange(gameX, leftViewBound, hi, 0, w);
+            let canvasY = this.mapToRange(gameY, 0, game.playerHeight, 0, playerCanvasHeight); 
+            if (!client.performanceView) {
+                let yOffset = h * 0.5 - (playerCanvasHeight * client.numRows) * 0.5;
+                let row = 0;
+                canvasX *= client.numRows;
+                while (canvasX >= w) {
+                    canvasX -= w;
+                    row += 1;
+                }
+                canvasY += (playerCanvasHeight * row) + yOffset;
+            }
+            return [Math.floor(canvasX), Math.floor(canvasY)];
         }
     }
 
     gameXDimToCanvasXDim(gameX) {
-        let div = players.length;
+        let div = players.length / client.numRows;
         if (client.performanceView) div = 1;
         return this.mapToRange(gameX, 0, game.playerWidth, 0, w / div);
     }
 
     gameYDimToCanvasYDim(gameY) {
-        let div = players.length;
+        let div = players.length / client.numRows;
         if (client.performanceView) div = 1;
         return this.mapToRange(gameY, 0, game.playerHeight, 0, h / div);
     }

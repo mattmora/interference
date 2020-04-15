@@ -4,8 +4,8 @@ import { ClientEngine, KeyboardControls, TwoVector } from 'lance-gg';
 import SyncClient from '@ircam/sync/client';
 import InterferenceRenderer from '../client/InterferenceRenderer';
 import Note from '../common/Note';
-import Performer from '../common/Performer';
-import Egg from '../common/Egg';
+// import Performer from '../common/Performer';
+// import Egg from '../common/Egg';
 import { Destination, Transport, Frequency, Sequence, Synth, PolySynth, NoiseSynth, MembraneSynth, FMSynth } from 'tone';
 import { Reverb, Distortion, Volume } from 'tone';
 
@@ -26,7 +26,10 @@ export default class InterferenceClientEngine extends ClientEngine {
         this.soundingPlayers = [];
         this.eggs = [];
         this.eggSynths = {};
+        this.notes = [];
         this.performanceView = false;
+        this.ringView = false;
+        this.numRows = 1;
         this.viewLock = false;
         this.controls = new KeyboardControls(this);
         this.prevStage = 'setup';
@@ -39,7 +42,7 @@ export default class InterferenceClientEngine extends ClientEngine {
             'KeyV': 'ToggleView',
             'Slash': 'ToggleLock',
             'KeyX': 'ToggleEndGameControl',
-            'Digit0': 'ReleaseAll',
+            // 'Digit0': 'ReleaseAll',
             'KeyM': 'ToggleMute'
         };
         this.melodySequence = null;
@@ -50,6 +53,8 @@ export default class InterferenceClientEngine extends ClientEngine {
         this.percStep = 0;
         this.sequences = {};
         this.pitchSetIndex = 0;
+
+        this.lastPalettes = {};
 
         this.isSpectator = false;
         this.showControlText = true;
@@ -244,7 +249,7 @@ export default class InterferenceClientEngine extends ClientEngine {
                 this.params = params;
                 // console.log(`params=${this.params}`);
                 Object.assign(this.gameEngine.paramsByRoom[roomName], this.params);
-
+                
                //if (this.isLeader) this.controls.bindKey('b', 'b'); // begin
 
                 if (!this.isSpectator) {
@@ -328,11 +333,10 @@ export default class InterferenceClientEngine extends ClientEngine {
     assignToRoom(roomName) {
         if (this.socket) {
             this.gameEngine.setRoomParamsToDefault(roomName);
-            Object.assign(this.gameEngine.paramsByRoom[roomName], this.params)
-            this.isSpectator = this.params.spectator;
-            this.ringView = this.params.ringView;
-            this.rowView = this.params.rowView;
-            this.isLeader = this.params.isLeader;
+            if (this.params.spectator != null) this.isSpectator = this.params.spectator;
+            if (this.params.ringView != null) this.ringView = this.params.ringView;
+            if (this.params.numRows != null) this.numRows = this.params.numRows;
+            if (this.params.isLeader != null) this.isLeader = this.params.isLeader;
             this.socket.emit('assignToRoom', roomName, this.params);
         }
     } 
@@ -344,6 +348,7 @@ export default class InterferenceClientEngine extends ClientEngine {
     preStepLogic() {
         if (this.room == null) return; //if we've yet to be assigned a room, don't do this stuff
 
+        // Sync the transport every so often
         if (this.transport.state === 'started') {
             if (this.transportSyncCount >= this.gameEngine.paramsByRoom[this.room].transportSyncInterval) {
                 this.transport.seconds = this.syncClient.getSyncTime();
@@ -353,36 +358,50 @@ export default class InterferenceClientEngine extends ClientEngine {
             this.transportSyncCount++;
         }
 
-        this.player = this.gameEngine.world.queryObject({ playerId: this.gameEngine.playerId });
-        if (this.player == null && this.isSpectator) 
-            this.player = this.gameEngine.world.queryObjects({ instanceType: Performer })[0];
-
-        if (this.player != null) this.player.room = this.room;
-
-        let palettes = []
-        for (let player of this.soundingPlayers)
-        {
-            palettes[player.number] = player.palette;
+        let numPlayers = this.players.length;
+        // Get all players
+        if (this.gameEngine.playersByRoom[this.room] != null) this.players = this.gameEngine.playersByRoom[this.room];
+        else this.players = [];
+        if (!this.ringView) {
+            if (numPlayers != this.players.length) {
+                let factor = Math.floor(Math.sqrt(this.players.length));
+                while (factor > 0 && !Number.isInteger(this.players.length/factor)) factor -= 1;
+                this.numRows = factor;
+            }
         }
 
-        let numPlayers = this.players.length;
-        this.players = this.gameEngine.world.queryObjects({ instanceType: Performer });
+        // Get all eggs
+        if (this.gameEngine.eggsByRoom[this.room] != null) this.eggs = this.gameEngine.eggsByRoom[this.room];
+        else this.eggs = [];
 
-        if (this.gameEngine.paramsByRoom[this.room].inPersonPerformance)
-        {
-            this.soundingPlayers = [];
-            this.soundingPlayers.push(this.player);
+        // Get all notes
+        if (this.gameEngine.notesByRoom[this.room] != null) this.notes = this.gameEngine.notesByRoom[this.room];
+        else this.notes = [];
+
+        // Get this player
+        if (this.isSpectator && this.players != null) {
+            this.player = this.players[0];
+        }
+        else {
+            for (let p of this.players) {
+                if (p.playerId === this.gameEngine.playerId) {
+                    this.player = p;
+                    break;
+                }
+            }
+        }
+
+        // Store number of sounding players so we can tell if it changed later
+        let numSounding = this.soundingPlayers.length;
+
+        // Get the sounding players
+        if (this.gameEngine.paramsByRoom[this.room].inPersonPerformance) {
+            this.soundingPlayers = [this.player];
         }
         else this.soundingPlayers = this.players;
 
-        if (numPlayers != this.players.length || this.reverb == null) this.initSound();
-
-        let palettesChanged = false;
-        for (let player of this.soundingPlayers)
-        {
-            if (palettes[player.number] != player.palette) palettesChanged = true;
-        }
-        if (palettesChanged) this.updateSound();
+        // Init the sound if we haven't yet or reinit if the number of sounding players changed
+        if (numSounding != this.soundingPlayers.length || this.reverb == null) this.initSound();
     }
 
     postStepLogic() {
@@ -390,27 +409,29 @@ export default class InterferenceClientEngine extends ClientEngine {
         if (this.player == null) return;
         if (this.melodySequence == null) this.initSequences();
 
-        let roomName = this.player.room;
-
-        if (this.gameEngine.paramsByRoom[roomName] == null) return;
-
-        this.eggs = this.gameEngine.world.queryObjects({ instanceType: Egg });
+        // Check if palettes have changed and update sounds if they have
+        let palettesChanged = false;
+        for (let player of this.soundingPlayers)
+        {
+            if (this.lastPalettes[player.number] != player.palette) {
+                palettesChanged = true;
+                this.lastPalettes[player.number] = player.palette;
+            }
+        }
+        if (palettesChanged) this.updateSound();
 
         let stage = this.player.stage;
 
         this.pitchSetIndex = this.player.pitchSet;
 
         this.sequences = {};
-        for (let note of this.gameEngine.world.queryObjects({ instanceType: Note })) {
+        for (let note of this.notes) {
             if (note.id >= this.gameEngine.options.clientIDSpace) {
-                let serverCopy = this.gameEngine.resolveShadowObject(note);
-                if (serverCopy != null) {
-                    serverCopy.animFrame = note.animFrame;
-                }
+                this.gameEngine.resolveShadowObject(note);
             }
-            let playerWidth = this.gameEngine.paramsByRoom[roomName].playerWidth;
-            let playerHeight = Number(this.gameEngine.paramsByRoom[roomName].playerHeight);
-            let pal = this.gameEngine.paramsByRoom[roomName].paletteAttributes[note.palette];
+            let playerWidth = this.gameEngine.paramsByRoom[this.room].playerWidth;
+            let playerHeight = Number(this.gameEngine.paramsByRoom[this.room].playerHeight);
+            let pal = this.gameEngine.paramsByRoom[this.room].paletteAttributes[note.palette];
             note.step = note.xPos % playerWidth;
             note.pitch = (playerHeight - note.yPos) + (pal.pitchSets[this.pitchSetIndex].length * 3);
             let player = this.gameEngine.world.queryObject({ playerId: note.ownerId });
@@ -442,7 +463,7 @@ export default class InterferenceClientEngine extends ClientEngine {
                 this.bassSequence.start(this.nextDiv('4m'));
             }
             if (this.percSequence.state !== 'started') {
-                //console.log('start seq');
+                //console.log('start seq'); 
                 this.percSequence.start(this.nextDiv('2m'));
             }
 
@@ -452,14 +473,14 @@ export default class InterferenceClientEngine extends ClientEngine {
                     let p = player.number;
                     if (this.eggSynths[p] == null) this.constructEggSynths(player, e);
                     else if (this.eggSynths[p][e.toString()] == null) this.constructEggSynths(player, e);
-                    let playerWidth = this.gameEngine.paramsByRoom[roomName].playerWidth;
+                    let playerWidth = this.gameEngine.paramsByRoom[this.room].playerWidth;
                     let eggPlayerDistance = Math.abs(p - (e.position.x / playerWidth));
                     if (eggPlayerDistance > (this.players.length * 0.5)) 
                         eggPlayerDistance = this.players.length - eggPlayerDistance;
-                    let vol = (this.gameEngine.paramsByRoom[roomName].eggDroneVolume * eggPlayerDistance) - 3;
+                    let vol = (this.gameEngine.paramsByRoom[this.room].eggDroneVolume * eggPlayerDistance) - 3;
                     
                     this.eggSynths[p][e.toString()].drone.volume.value = vol;
-                    let pal = this.gameEngine.paramsByRoom[roomName].paletteAttributes[player.palette];
+                    let pal = this.gameEngine.paramsByRoom[this.room].paletteAttributes[player.palette];
                     let pitch = pal.scale[pal.pitchSets[this.pitchSetIndex][0]];
                     if (e.sound === 'melody') {
                         this.eggSynths[p][e.toString()].drone.setNote(Frequency(pitch + 72, 'midi'));
@@ -480,12 +501,12 @@ export default class InterferenceClientEngine extends ClientEngine {
         }
         else if (stage == 'fightEnd') {
             if (this.prevStage == 'fight') {
-                this.gameEngine.paramsByRoom[roomName].fightRate = 
-                Number(this.gameEngine.paramsByRoom[roomName].fightRate) +
-                Number(this.gameEngine.paramsByRoom[roomName].fightRateInc);
-                if (this.gameEngine.paramsByRoom[roomName].fightRate > this.gameEngine.paramsByRoom[roomName].maxFightRate) {
-                    this.gameEngine.paramsByRoom[roomName].fightRate = 
-                    this.gameEngine.paramsByRoom[roomName].maxFightRate - this.gameEngine.paramsByRoom[roomName].fightRateDec;
+                this.gameEngine.paramsByRoom[this.room].fightRate = 
+                Number(this.gameEngine.paramsByRoom[this.room].fightRate) +
+                Number(this.gameEngine.paramsByRoom[this.room].fightRateInc);
+                if (this.gameEngine.paramsByRoom[this.room].fightRate > this.gameEngine.paramsByRoom[this.room].maxFightRate) {
+                    this.gameEngine.paramsByRoom[this.room].fightRate = 
+                    this.gameEngine.paramsByRoom[this.room].maxFightRate - this.gameEngine.paramsByRoom[this.room].fightRateDec;
                 }
 
             }
@@ -497,7 +518,7 @@ export default class InterferenceClientEngine extends ClientEngine {
     /// GAME EVENTS
 
     onUpdatePalette() {
-        let palettes = this.gameEngine.paramsByRoom[this.player.room].palettes;
+        let palettes = this.gameEngine.paramsByRoom[this.room].palettes;
         this.player.palette = palettes[(palettes.indexOf(this.player.palette) + 1) % palettes.length];
         this.socket.emit('updatePalette', this.player.palette);
         this.player.grid.fill(this.player.palette);
@@ -510,7 +531,7 @@ export default class InterferenceClientEngine extends ClientEngine {
             if (this.eggSynths[p] == null) this.constructEggSynths(player, e);
             else if (this.eggSynths[p][e.toString()] == null) this.constructEggSynths(player, e);
             if (this.gameEngine.positionIsInPlayer(e.position.x, player)) {
-                let pal = this.gameEngine.paramsByRoom[player.room].paletteAttributes[player.palette];
+                let pal = this.gameEngine.paramsByRoom[this.room].paletteAttributes[player.palette];
                 let scale = pal.scale;
                 let chord = pal.pitchSets[this.pitchSetIndex];
                 let pitch = Math.floor(Math.random() * chord.length);
@@ -534,41 +555,39 @@ export default class InterferenceClientEngine extends ClientEngine {
         p.ammo--;
         e.hp--;
 
-        let playerWidth = this.gameEngine.paramsByRoom[p.room].playerWidth;
-        let playerHeight = this.gameEngine.paramsByRoom[p.room].playerHeight;
-        let pal = this.gameEngine.paramsByRoom[p.room].paletteAttributes[p.palette];
+        let playerWidth = this.gameEngine.paramsByRoom[this.room].playerWidth;
+        let playerHeight = this.gameEngine.paramsByRoom[this.room].playerHeight;
+        let pal = this.gameEngine.paramsByRoom[this.room].paletteAttributes[p.palette];
         let shadowId = this.gameEngine.getNewShadowId();
         this.socket.emit('playerHitEgg', p.ammo, e.id, e.hp, e.position.x, e.position.y, e.sound, shadowId);
-        let pos = this.gameEngine.quantizedPosition(e.position.x, e.position.y, playerWidth, playerHeight, p.room);
+        let pos = this.gameEngine.quantizedPosition(e.position.x, e.position.y, playerWidth, playerHeight, this.room);
         let dur = pal[e.sound].subdivision;
 
-        let notes = this.gameEngine.queryNotes({            
+        // let notes = this.gameEngine.queryNotes({            
+        //     ownerId: p.playerId, 
+        //     //palette: p.grid[pos[0]%playerWidth + ((pos[1]%playerHeight) * playerWidth)],
+        //     palette: p.palette,
+        //     sound: e.sound, 
+        //     //vel: 1, 
+        //     xPos: pos[0],
+        //     yPos: pos[1]
+        // });
+        // if (notes.length) notes[0].dur = '4n';
+        if ((e.hp % 7) === 0) dur = '4n';
+        let newNote = new Note(this.gameEngine, null, { 
+            id: shadowId,
             ownerId: p.playerId, 
             //palette: p.grid[pos[0]%playerWidth + ((pos[1]%playerHeight) * playerWidth)],
             palette: p.palette,
             sound: e.sound, 
-            //vel: 1, 
+            dur: dur,
+            vel: 1, 
             xPos: pos[0],
-            yPos: pos[1]
+            yPos: pos[1],
+            position: new TwoVector(pos[0], pos[1])
         });
-        if (notes.length) notes[0].dur = '4n';
-        else {
-            let newNote = new Note(this.gameEngine, null, { 
-                id: shadowId,
-                ownerId: p.playerId, 
-                //palette: p.grid[pos[0]%playerWidth + ((pos[1]%playerHeight) * playerWidth)],
-                palette: p.palette,
-                sound: e.sound, 
-                sound: e.sound, 
-                dur: dur,
-                vel: 1, 
-                xPos: pos[0],
-                yPos: pos[1],
-                position: new TwoVector(pos[0], pos[1])
-            });
-            newNote.inputId = shadowId;
-            this.gameEngine.addObjectToWorld(newNote);
-        }
+        newNote.inputId = shadowId;
+        this.gameEngine.addObjectToWorld(newNote);
     }
 
     onEggBroke(e) {
@@ -582,6 +601,7 @@ export default class InterferenceClientEngine extends ClientEngine {
             this.eggSynths[p][e.toString()].drone.triggerRelease();
             if (this.gameEngine.positionIsInPlayer(e.position.x, player)) {
                 this.eggSynths[p][e.toString()].break.start(this.nextDiv('4n'));
+                delete this.eggSynths[p][e.toString()];
                 if (p == this.player.number)
                 {
                     this.optionSelection['Digit1'] = 'build';
@@ -613,15 +633,13 @@ export default class InterferenceClientEngine extends ClientEngine {
         this.eggVolume = new Volume(0).toDestination();
         this.eggVolume.connect(this.reverb);
 
-        let roomName = this.room;
-
         this.melodySynth = {};
         this.bassSynth = {};
         this.percSynth = {};
 
         for (let player of this.soundingPlayers)
         {
-            let pal = this.gameEngine.paramsByRoom[roomName].paletteAttributes[player.palette];
+            let pal = this.gameEngine.paramsByRoom[this.room].paletteAttributes[player.palette];
 
             let p = player.number;
 
@@ -690,14 +708,13 @@ export default class InterferenceClientEngine extends ClientEngine {
     initSequences()
     {
         // console.log('initSequences');
-        let roomName = this.room;
         
         let events = [];
-        for (let i = 0; i < this.gameEngine.paramsByRoom[roomName].playerWidth; i++) {
+        for (let i = 0; i < this.gameEngine.paramsByRoom[this.room].playerWidth; i++) {
            events.push(i);
         }
 
-        let pal = this.gameEngine.paramsByRoom[roomName].paletteAttributes[this.player.palette];
+        let pal = this.gameEngine.paramsByRoom[this.room].paletteAttributes[this.player.palette];
 
         this.melodySequence = new Sequence((time, step) => {
             this.melodyStep = step;
@@ -709,9 +726,9 @@ export default class InterferenceClientEngine extends ClientEngine {
                 if (this.sequences[p].melody == null) continue;
                 if (this.melodySynth[p] == null) continue;
                 let seqStep = this.sequences[p].melody[this.melodyStep];
-                let octaveShift = this.gameEngine.paramsByRoom[roomName].melodyBuildOctave;
+                let octaveShift = this.gameEngine.paramsByRoom[this.room].melodyBuildOctave;
                 if (this.player.stage == "fight" || this.player.stage == "fightEnd") 
-                    octaveShift = this.gameEngine.paramsByRoom[roomName].melodyFightOctave;
+                    octaveShift = this.gameEngine.paramsByRoom[this.room].melodyFightOctave;
                 if (seqStep) this.playNoteArrayOnSynth(this.melodySynth[p], seqStep, octaveShift, time, true);
             }
         }, events, pal.melody.subdivision);
@@ -726,9 +743,9 @@ export default class InterferenceClientEngine extends ClientEngine {
                 if (this.sequences[p].bass == null) continue;
                 if (this.bassSynth[p] == null) continue;
                 let seqStep = this.sequences[p].bass[this.bassStep];
-                let octaveShift = this.gameEngine.paramsByRoom[roomName].bassBuildOctave;
+                let octaveShift = this.gameEngine.paramsByRoom[this.room].bassBuildOctave;
                 if (this.player.stage == "fight" || this.player.stage == "fightEnd") 
-                    octaveShift = this.gameEngine.paramsByRoom[roomName].bassFightOctave;
+                    octaveShift = this.gameEngine.paramsByRoom[this.room].bassFightOctave;
                 if (seqStep) this.playNoteArrayOnSynth(this.bassSynth[p], seqStep, octaveShift, time, true);       
             }
         }, events, pal.bass.subdivision);
@@ -744,9 +761,9 @@ export default class InterferenceClientEngine extends ClientEngine {
                 if (this.sequences[p].perc == null) continue;
                 if (this.percSynth[p] == null) continue;
                 let seqStep = this.sequences[p].perc[this.percStep];
-                let octaveShift = this.gameEngine.paramsByRoom[roomName].percBuildOctave;
+                let octaveShift = this.gameEngine.paramsByRoom[this.room].percBuildOctave;
                 if (player.stage == "fight" || player.stage == "fightEnd") 
-                    octaveShift = this.gameEngine.paramsByRoom[roomName].percFightOctave;
+                    octaveShift = this.gameEngine.paramsByRoom[this.room].percFightOctave;
                 if (seqStep) this.playNoteArrayOnSynth(this.percSynth[p], seqStep, octaveShift, time, true);
             }
         }, events, pal.perc.subdivision);

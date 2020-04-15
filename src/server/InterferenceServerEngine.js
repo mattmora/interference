@@ -176,33 +176,34 @@ export default class InterferenceServerEngine extends ServerEngine {
             let pos = this.gameEngine.quantizedPosition(x, y, playerWidth, playerHeight, roomName);
             let dur = this.gameEngine.paramsByRoom[roomName].paletteAttributes[player.palette][sound].subdivision;
 
-            let notes = this.gameEngine.queryNotes({            
-                ownerId: p.playerId,
+            // let notes = this.gameEngine.queryNotes({            
+            //     ownerId: p.playerId,
+            //     //palette: p.grid[(pos[0] % playerWidth) + ((pos[1] % playerHeight) * playerWidth)],
+            //     palette: p.palette,
+            //     sound: sound, 
+            //     //vel: 1, 
+            //     xPos: pos[0],
+            //     yPos: pos[1]
+            // });
+            // if (notes.length) notes[0].dur = '2n';
+            if ((e.hp % 7) === 0) dur = '4n';
+
+            let newNote = new Note(this.gameEngine, null, { 
+                ownerId: p.playerId, 
                 //palette: p.grid[(pos[0] % playerWidth) + ((pos[1] % playerHeight) * playerWidth)],
                 palette: p.palette,
                 sound: sound, 
-                //vel: 1, 
+                dur: dur,
+                vel: 1, 
                 xPos: pos[0],
-                yPos: pos[1]
+                yPos: pos[1],
+                position: new TwoVector(pos[0], pos[1])
             });
-            if (notes.length) notes[0].dur = '2n';
-            else {
-                let newNote = new Note(this.gameEngine, null, { 
-                    ownerId: p.playerId, 
-                    //palette: p.grid[(pos[0] % playerWidth) + ((pos[1] % playerHeight) * playerWidth)],
-                    palette: p.palette,
-                    sound: sound, 
-                    dur: dur,
-                    vel: 1, 
-                    xPos: pos[0],
-                    yPos: pos[1],
-                    position: new TwoVector(pos[0], pos[1])
-                });
-                newNote.inputId = inputId;
-                newNote.room = roomName;
-                this.gameEngine.addObjectToWorld(newNote);
-                this.assignObjectToRoom(newNote, roomName);
-            }
+            newNote.inputId = inputId;
+            newNote.room = roomName;
+            this.gameEngine.addObjectToWorld(newNote);
+            this.assignObjectToRoom(newNote, roomName);
+            
             this.actionCounts[roomName]++;
         });
 
