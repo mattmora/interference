@@ -31,6 +31,9 @@ export default class Note extends DynamicObject {
         this.xPos = (props && props.xPos) ? props.xPos : -1;
         this.yPos = (props && props.yPos) ? props.yPos : -1;
         this.animFrame = (props && props.animFrame) ? props.animFrame : 0;
+        this.prevX = null;
+        this.prevY = null;
+        this.prevPalette = null;
     }
 
     move(xStep, yStep) {
@@ -46,14 +49,18 @@ export default class Note extends DynamicObject {
     }
 
     paint() {
-        if (this.room == null) return;
-        let playerWidth = Number(this.gameEngine.paramsByRoom[this.room].playerWidth);
-        let playerHeight = Number(this.gameEngine.paramsByRoom[this.room].playerHeight);
-        let n = Math.floor(this.xPos / playerWidth);
-        for (let p of this.gameEngine.queryPlayers({ number: n })) {
-
-            p.grid[(this.xPos % playerWidth) + ((this.yPos % playerHeight) * playerWidth)] = this.palette;
-
+        if (this.room == null) return false;
+        if (this.prevPalette != this.palette || this.prevX != this.xPos || this.prevY != this.yPos) {
+            let playerWidth = Number(this.gameEngine.paramsByRoom[this.room].playerWidth);
+            let playerHeight = Number(this.gameEngine.paramsByRoom[this.room].playerHeight);
+            let n = Math.floor(this.xPos / playerWidth);
+            for (let p of this.gameEngine.queryPlayers({ number: n })) {
+                p.grid[(this.xPos % playerWidth) + ((this.yPos % playerHeight) * playerWidth)] = this.palette;
+            }
+            this.prevX = this.xPos;
+            this.prevY = this.yPos;
+            this.prevPalette = this.palette;
+            return true;
         }
     }
 

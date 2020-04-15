@@ -6,7 +6,7 @@ import InterferenceRenderer from '../client/InterferenceRenderer';
 import Note from '../common/Note';
 // import Performer from '../common/Performer';
 // import Egg from '../common/Egg';
-import { Destination, Transport, Frequency, Sequence, Synth, PolySynth, NoiseSynth, MembraneSynth, FMSynth } from 'tone';
+import { Destination, Transport, Frequency, Sequence, Synth, NoiseSynth, MembraneSynth, FMSynth } from 'tone';
 import { Reverb, Distortion, Volume } from 'tone';
 
 export default class InterferenceClientEngine extends ClientEngine {
@@ -597,7 +597,8 @@ export default class InterferenceClientEngine extends ClientEngine {
             if (this.eggSynths[p] == null) this.constructEggSynths(player, e);
             else if (this.eggSynths[p][e.toString()] == null) this.constructEggSynths(player, e);
 
-            this.eggSynths[p][e.toString()].drone.triggerRelease();
+            this.eggSynths[p][e.toString()].drone.disconnect(this.eggVolume);
+            this.eggSynths[p][e.toString()].bounce.disconnect(this.eggVolume);
             if (this.gameEngine.positionIsInPlayer(e.position.x, player)) {
                 this.eggSynths[p][e.toString()].break.start(this.nextDiv('4n'));
                 delete this.eggSynths[p][e.toString()];
@@ -629,7 +630,7 @@ export default class InterferenceClientEngine extends ClientEngine {
         this.distortion = new Distortion(1).connect(this.distVolume);
         this.reverb.generate();
 
-        this.eggVolume = new Volume(0).toDestination();
+        this.eggVolume = new Volume(-4).toDestination();
         this.eggVolume.connect(this.reverb);
 
         this.melodySynth = {};
@@ -642,65 +643,73 @@ export default class InterferenceClientEngine extends ClientEngine {
 
             let p = player.number;
 
-            this.melodySynth[p] = new PolySynth(FMSynth, {
-                "volume": -3,
-                "modulationIndex": pal.melody.modulationIndex,
-                "harmonicity": pal.melody.harmonicity,
-                "oscillator": {
-                    "type" : pal.melody.osc
-                },
-                "envelope" : {
-                    "attack" : 0.01,
-                    "decay" : 0.1,
-                    "sustain": 0.2
-                },
-                "modulation" : {
-                    "type" : pal.melody.modType
-                },
-                "modulationEnvelope" : {
-                    "attack" : 0.03,
-                    "decay" : 0.7
-                }
-            }).toDestination();
-            this.melodySynth[p].connect(this.reverb);
-    
-            //this.gameEngine.paramsByRoom[roomName].playerHeight
-            this.bassSynth[p] = new PolySynth(FMSynth, {
-                "modulationIndex" : pal.bass.modulationIndex,
-                "harmonicity": pal.bass.harmonicity,
-                "oscillator": {
-                    "type" : pal.bass.osc
-                },
-                "envelope" : {
-                    "attack" : 0.01,
-                    "decay" : 0.1,
-                    "sustain": 0.5
-                },
-                "modulation" : {
-                    "type" : pal.bass.modType
-                },
-                "modulationEnvelope" : {
-                    "attack" : 0.01,
-                    "decay" : 0.07
-                }
-            }).toDestination();
-            this.bassSynth[p].connect(this.reverb);
-    
-            //this.gameEngine.playerHeight
-            this.percSynth[p] = new PolySynth(MembraneSynth, {
-                "volume" : -1,
-                "pitchDecay" : pal.perc.pitchDecay,//0.05,
-                "octaves" : pal.perc.octaves,//10 ,
-                "oscillator" : {
-                    "type" : pal.perc.osc//sine
-                },
-                "envelope" : {
-                    "attack" : 0.001 ,
-                    "decay" : 0.4 ,
-                    "sustain" : 0.01 
-                }
-            });//.toDestination();
-            this.percSynth[p].connect(this.distortion);
+            this.melodySynth[p] = [];
+            this.bassSynth[p] = [];
+            this.percSynth[p] = [];
+
+            for (let row = 0; row < this.gameEngine.paramsByRoom[this.room].playerHeight; row++)
+            {
+                this.melodySynth[p][row] = new FMSynth({
+                    "volume": -7,
+                    "modulationIndex": pal.melody.modulationIndex,
+                    "harmonicity": pal.melody.harmonicity,
+                    "oscillator": {
+                        "type" : pal.melody.osc
+                    },
+                    "envelope" : {
+                        "attack" : 0.01,
+                        "decay" : 0.1,
+                        "sustain": 0.2
+                    },
+                    "modulation" : {
+                        "type" : pal.melody.modType
+                    },
+                    "modulationEnvelope" : {
+                        "attack" : 0.03,
+                        "decay" : 0.7
+                    }
+                }).toDestination();
+                this.melodySynth[p][row].connect(this.reverb);
+        
+                //this.gameEngine.paramsByRoom[roomName].playerHeight
+                this.bassSynth[p][row] = new FMSynth({
+                    "volume": -4,
+                    "modulationIndex" : pal.bass.modulationIndex,
+                    "harmonicity": pal.bass.harmonicity,
+                    "oscillator": {
+                        "type" : pal.bass.osc
+                    },
+                    "envelope" : {
+                        "attack" : 0.01,
+                        "decay" : 0.1,
+                        "sustain": 0.5
+                    },
+                    "modulation" : {
+                        "type" : pal.bass.modType
+                    },
+                    "modulationEnvelope" : {
+                        "attack" : 0.01,
+                        "decay" : 0.07
+                    }
+                }).toDestination();
+                this.bassSynth[p][row].connect(this.reverb);
+        
+                //this.gameEngine.playerHeight
+                this.percSynth[p][row] = new MembraneSynth({
+                    "volume" : -6,
+                    "pitchDecay" : pal.perc.pitchDecay,//0.05,
+                    "octaves" : pal.perc.octaves,//10 ,
+                    "oscillator" : {
+                        "type" : pal.perc.osc//sine
+                    },
+                    "envelope" : {
+                        "attack" : 0.001 ,
+                        "decay" : 0.4 ,
+                        "sustain" : 0.01 
+                    }
+                });//.toDestination();
+                this.percSynth[p][row].connect(this.distortion);
+            }
         }
     }
 
@@ -728,7 +737,7 @@ export default class InterferenceClientEngine extends ClientEngine {
                 let octaveShift = this.gameEngine.paramsByRoom[this.room].melodyBuildOctave;
                 if (this.player.stage == "fight" || this.player.stage == "fightEnd") 
                     octaveShift = this.gameEngine.paramsByRoom[this.room].melodyFightOctave;
-                if (seqStep) this.playNoteArrayOnSynth(this.melodySynth[p], seqStep, octaveShift, time, true);
+                if (seqStep) this.playNoteArrayWithSynthArray(this.melodySynth[p], seqStep, octaveShift, time, true);
             }
         }, events, pal.melody.subdivision);
 
@@ -741,11 +750,12 @@ export default class InterferenceClientEngine extends ClientEngine {
                 if (this.sequences[p] == null) continue;
                 if (this.sequences[p].bass == null) continue;
                 if (this.bassSynth[p] == null) continue;
+                if (this.bassSynth[p][step] == null) continue;
                 let seqStep = this.sequences[p].bass[this.bassStep];
                 let octaveShift = this.gameEngine.paramsByRoom[this.room].bassBuildOctave;
                 if (this.player.stage == "fight" || this.player.stage == "fightEnd") 
                     octaveShift = this.gameEngine.paramsByRoom[this.room].bassFightOctave;
-                if (seqStep) this.playNoteArrayOnSynth(this.bassSynth[p], seqStep, octaveShift, time, true);       
+                if (seqStep) this.playNoteArrayWithSynthArray(this.bassSynth[p], seqStep, octaveShift, time, true);       
             }
         }, events, pal.bass.subdivision);
 
@@ -759,11 +769,12 @@ export default class InterferenceClientEngine extends ClientEngine {
                 if (this.sequences[p] == null) continue;
                 if (this.sequences[p].perc == null) continue;
                 if (this.percSynth[p] == null) continue;
+                if (this.percSynth[p][step] == null) continue;
                 let seqStep = this.sequences[p].perc[this.percStep];
                 let octaveShift = this.gameEngine.paramsByRoom[this.room].percBuildOctave;
                 if (player.stage == "fight" || player.stage == "fightEnd") 
                     octaveShift = this.gameEngine.paramsByRoom[this.room].percFightOctave;
-                if (seqStep) this.playNoteArrayOnSynth(this.percSynth[p], seqStep, octaveShift, time, true);
+                if (seqStep) this.playNoteArrayWithSynthArray(this.percSynth[p], seqStep, octaveShift, time, true);
             }
         }, events, pal.perc.subdivision);
     }
@@ -810,64 +821,70 @@ export default class InterferenceClientEngine extends ClientEngine {
                 let pal = this.gameEngine.paramsByRoom[this.room].paletteAttributes[player.palette];
                 let p = player.number;
 
-                this.melodySynth[p].set({
-                    "modulationIndex" : pal.melody.modulationIndex,
-                    "harmonicity": pal.melody.harmonicity,
-                    "oscillator": {
-                        "type" : pal.melody.osc
-                    },
-                    "envelope" : {
-                        "sustain" : sustain,
-                        "release" : release
-                    },
+                for (let synth of this.melodySynth[p]) {
+                    synth.set({
+                        "modulationIndex" : pal.melody.modulationIndex,
+                        "harmonicity": pal.melody.harmonicity,
+                        "oscillator": {
+                            "type" : pal.melody.osc
+                        },
+                        "envelope" : {
+                            "sustain" : sustain,
+                            "release" : release
+                        },
+    
+                        "modulation" : {
+                            "type" : pal.melody.modType
+                        },
+                        "modulationEnvelope" : {
+                            "attack" : 0.03,
+                            "decay" : 0.7,
+                            "sustain" : sustain,
+                            "release" : release
+                        }
+                    });
+                }
 
-                    "modulation" : {
-                        "type" : pal.melody.modType
-                    },
-                    "modulationEnvelope" : {
-                        "attack" : 0.03,
-                        "decay" : 0.7,
-                        "sustain" : sustain,
-                        "release" : release
-                    }
-                });
+                for (let synth of this.bassSynth[p]) {
+                    synth.set({
+                        "modulationIndex" : pal.bass.modulationIndex,
+                        "harmonicity": pal.bass.harmonicity,
+                        "oscillator": {
+                            "type" : pal.bass.osc
+                        },
+                        "envelope" : {
+                            "attack" : 0.01,
+                            "decay" : decay,
+                            "sustain" : sustain,
+                            "release" : release
+                        },
+                        "modulation" : {
+                            "type" : pal.bass.modType
+                        },
+                        "modulationEnvelope" : {
+                            "attack" : 0.01,
+                            "decay" : 0.14,
+                            "sustain" : sustain,
+                            "release" : release
+                        }
+                    });
+                }
 
-                this.bassSynth[p].set({
-                    "modulationIndex" : pal.bass.modulationIndex,
-                    "harmonicity": pal.bass.harmonicity,
-                    "oscillator": {
-                        "type" : pal.bass.osc
-                    },
-                    "envelope" : {
-                        "attack" : 0.01,
-                        "decay" : decay,
-                        "sustain" : sustain,
-                        "release" : release
-                    },
-                    "modulation" : {
-                        "type" : pal.bass.modType
-                    },
-                    "modulationEnvelope" : {
-                        "attack" : 0.01,
-                        "decay" : 0.07,
-                        "sustain" : sustain,
-                        "release" : release
-                    }
-                });
-            
-                this.percSynth[p].set({
-                    "pitchDecay" : pal.perc.pitchDecay,//0.05,
-                    "octaves" : pal.perc.octaves,//10 ,
-                    "oscillator" : {
-                        "type" : pal.perc.osc//sine
-                    },
-                    "envelope" : {
-                        "attack" : 0.001 ,
-                        "decay" : 0.4 ,
-                        "sustain" : 0.01 ,
-                        "release" : release
-                    }
-                });
+                for (let synth of this.percSynth[p]) {
+                    synth.set({
+                        "pitchDecay" : pal.perc.pitchDecay,//0.05,
+                        "octaves" : pal.perc.octaves,//10 ,
+                        "oscillator" : {
+                            "type" : pal.perc.osc//sine
+                        },
+                        "envelope" : {
+                            "attack" : 0.001 ,
+                            "decay" : 0.4 ,
+                            "sustain" : 0.01 ,
+                            "release" : release
+                        }
+                    });
+                }
             }
         }, '+0.1');
     }
@@ -1064,20 +1081,19 @@ export default class InterferenceClientEngine extends ClientEngine {
         synth.triggerAttackRelease(midi, dur, time, vel);
     }
 
-    playNoteArrayOnSynth(synth, noteArray, octaveShift, time) {
+    playNoteArrayWithSynthArray(synth, noteArray, octaveShift, time) {
         if (!noteArray) return;
         let idArray = [];
         let pitchArray = [];
-        let i = 0;
         for (let note of noteArray) {
             if (note.room == null) continue;
             let pal = this.gameEngine.paramsByRoom[note.room].paletteAttributes[note.palette];
+            let i = note.pitch % this.gameEngine.paramsByRoom[note.room].playerHeight
             if (!pitchArray.includes(note.pitch)) {
-                this.playPitchOnSynth(synth, note.pitch, pal.pitchSets[this.pitchSetIndex], pal.scale, octaveShift, note.dur, time + (i*0.0001), note.vel);
+                this.playPitchOnSynth(synth[i], note.pitch, pal.pitchSets[this.pitchSetIndex], pal.scale, octaveShift, note.dur, time, note.vel);
             }
             idArray.push(note.id);
             pitchArray.push(note.pitch);
-            i++;
         }
 
         //this.socket.emit('paintStep', idArray);
@@ -1085,8 +1101,7 @@ export default class InterferenceClientEngine extends ClientEngine {
 
     paintNote(n) {
         if (this.isSpectator) return;
-        n.paint();
-        this.socket.emit('paintCell', n.id, n.xPos, n.yPos, n.palette);
+        if (n.paint()) this.socket.emit('paintCell', n.id, n.xPos, n.yPos, n.palette);
     }
 
     nextDiv(div) {

@@ -38,7 +38,7 @@ export default class InterferenceGameEngine extends GameEngine {
     // based on lance findLocalShadow; instead of finding the shadow of a server obj,
     // looks for the server copy of a shadow obj, and removes the shadow if the server copy is found
     resolveShadowObject(shadowObj) {
-        if (this.world.queryObject(shadowObj.id) == null) return null;
+        if (this.world.queryObject({ id: shadowObj.id }) == null) return null;
         for (let localId of Object.keys(this.world.objects)) {
             if (Number(localId) >= this.options.clientIDSpace) continue;
             let serverObj = this.world.objects[localId];
@@ -87,6 +87,12 @@ export default class InterferenceGameEngine extends GameEngine {
         for (let r of this.rooms) {
             if (this.paramsByRoom[r] == null) continue;
             this.rightBoundByRoom[r] = this.playersByRoom[r].length * this.paramsByRoom[r].playerWidth;
+            if (this.notesByRoom[r] != null) {
+                if (this.notesByRoom[r].length > this.paramsByRoom[r].maxNotes) {
+                    // let note = this.notesByRoom[r][Math.floor(Math.random()*this.notesByRoom[r].length)];
+                    this.removeObjectFromWorld(this.notesByRoom[r][0].id); 
+                }
+            }
         }
     }
 
@@ -281,8 +287,8 @@ export default class InterferenceGameEngine extends GameEngine {
             removed.sound = remover.sound;
             removed.dur = remover.dur;
         }
-        else if (this.world.queryObject(removed.id) != null) {
-            this.removeObjectFromWorld(removed);
+        else if (this.world.queryObject({ instanceType: Note, id: removed.id }) != null) {
+            this.removeObjectFromWorld(removed.id);
         }
     }
 
@@ -290,7 +296,7 @@ export default class InterferenceGameEngine extends GameEngine {
 
         super.processInput(inputData, playerId);
 
-        let player = this.world.queryObject({ playerId });
+        let player = this.world.queryObject({ playerId: playerId });
         if (player == null) return;
         if (!isServer) player.room = this.room;
         let players = this.playersByRoom[player.room];
@@ -454,13 +460,13 @@ export default class InterferenceGameEngine extends GameEngine {
         this.paramsByRoom[room] = {};
         Object.assign(this.paramsByRoom[room], {
 
-            playerWidth: 12, playerHeight: 7,
+            playerWidth: 16, playerHeight: 9, maxNotes: 100,
             eggSounds: ['melody', 'bass', 'perc'], eggSoundsToUse: ['melody', 'bass', 'perc'],
             numStartingEggs: 2, numEggsToAdd: 1, ballWraps: true,
             eggHPRange: 0, eggHPMin: 2, eggHPPerPlayer: 1,
             startingAmmo: 1, maxAmmo: 5, reloadSize: 2, // 1 5 1
-            leftBound: 0, topBound: 0, eggDroneVolume: -4, // in decibels
-            transportSyncInterval: 300, eggRadius: 1, eggBaseVelocity: 0.1, ammoDropChance: 0.025,
+            leftBound: 0, topBound: 0, eggDroneVolume: -8, // in decibels
+            transportSyncInterval: 180, eggRadius: 1, eggBaseVelocity: 0.1, ammoDropChance: 0.025,
             actionThreshold: 8, progressionThreshold: 8,
             palettes: [1, 2, 3, 4, 5], buildRate: 0.5, fightRate: 1.0, outroRate: 0.5,
             fightRateInc: 0.5, fightRateDec: 2.0, maxFightRate: 3.0,

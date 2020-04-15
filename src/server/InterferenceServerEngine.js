@@ -300,7 +300,7 @@ export default class InterferenceServerEngine extends ServerEngine {
 
     onPlayerDisconnected(socketId, playerId) {
         super.onPlayerDisconnected(socketId, playerId);
-        let player = this.gameEngine.world.queryObject({ playerId });
+        let player = this.gameEngine.world.queryObject({ playerId: playerId });
         if (player != null) { 
             let room = player.room;
             if (this.roomStages[room] === 'setup') {

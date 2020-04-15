@@ -6,6 +6,15 @@ import InterferenceClientEngine from '../client/InterferenceClientEngine';
 import InterferenceGameEngine from '../common/InterferenceGameEngine';
 const qsOptions = querystring.parse(location.search);
 
+if(process.env.NODE_ENV === 'development'){
+    if(!window.console) window.console = {};
+    var methods = ["log", "debug", "warn", "info"];
+    for(var i=0;i<methods.length;i++){
+        console[methods[i]] = function(){};
+    }
+}
+console.log(process.env.NODE_ENV);
+
 // default options, overwritten by query-string options
 // is sent to both game engine and client engine
 const defaults = {
