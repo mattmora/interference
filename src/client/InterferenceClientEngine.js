@@ -40,7 +40,7 @@ export default class InterferenceClientEngine extends ClientEngine {
             'KeyF': 'ToggleFullscreen',
             'KeyH': 'ToggleCursor',
             'KeyV': 'ToggleView',
-            'Slash': 'ToggleLock',
+            // 'Slash': 'ToggleLock',
             'KeyX': 'ToggleEndGameControl',
             // 'Digit0': 'ReleaseAll',
             'KeyM': 'ToggleMute'
@@ -116,9 +116,9 @@ export default class InterferenceClientEngine extends ClientEngine {
         }
         else if (controlString === 'ToggleEndGameControl') {
             if (this.isSpectator) return;
-            this.optionSelection['KeyO'] = 'endGame';
+            this.optionSelection['Backslash'] = 'endGame';
             setTimeout(() => { 
-                if (this.optionSelection['KeyO'] != null) delete this.optionSelection['KeyO'];
+                if (this.optionSelection['Backslash'] != null) delete this.optionSelection['Backslash'];
             }, 1000);
         }
         else if (controlString === 'ToggleMute') {
@@ -167,7 +167,7 @@ export default class InterferenceClientEngine extends ClientEngine {
         else if (optionString === 'endGame') {
             if (!this.isLeader) return;
             this.socket.emit('endGame');
-            delete this.optionSelection['KeyO'];
+            delete this.optionSelection['Backslash'];
         }
     }
 
@@ -259,19 +259,18 @@ export default class InterferenceClientEngine extends ClientEngine {
                     //this.controls.bindKey('space', 'space');
                     this.controls.bindKey('open bracket', '[');
                     this.controls.bindKey('close bracket / å', ']');
-                    this.controls.bindKey('n', 'n');
                     this.controls.bindKey('c', 'c'); // change color
                     this.controls.bindKey('space', 'space');
-                    this.controls.bindKey('q', 'q');
+                    // this.controls.bindKey('q', 'q');
                     this.controls.bindKey('b', 'b'); // begin
                     this.controls.bindKey('r', 'r'); // remove note in outro
                     this.controls.bindKey('w', 'w');
-                    this.controls.bindKey('e', 'e');
+                    // this.controls.bindKey('e', 'e');
                     this.controls.bindKey('a', 'a');
                     this.controls.bindKey('s', 's');
                     this.controls.bindKey('d', 'd');
                     this.controls.bindKey('p', 'p');
-                    this.controls.bindKey('back slash', 'back slash');
+                    // this.controls.bindKey('back slash', 'back slash');
                 }
                 this.startSyncClient(this.socket);
                 this.room = roomName;
