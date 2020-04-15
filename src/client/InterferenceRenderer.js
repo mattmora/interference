@@ -176,7 +176,7 @@ export default class InterferenceRenderer extends Renderer {
             }
         }
 
-        if (!client.isSpectator && !client.ringView) {
+        if (!client.isSpectator && !client.ringView && !client.performanceView) {
             let pos = this.gamePositionToCanvasPosition(thisPlayer.xPos, 0)
             let x = (w / n) * 0.5 + pos[0];
             ctx[0].fillStyle = 'white';
@@ -189,8 +189,6 @@ export default class InterferenceRenderer extends Renderer {
     drawPlayer(p, wrap) {
         let n = players.length / client.numRows;
         if (client.performanceView) n = 1;
-        let i = p.number - (leftViewBound / game.playerWidth);
-        if (wrap) i += players.length;
         let pal = game.paletteAttributes[p.palette];
         if (client.ringView && !client.performanceView) {
             let rDim = (h * 0.5) / game.playerHeight;
@@ -210,7 +208,9 @@ export default class InterferenceRenderer extends Renderer {
             }
         }
         else {  
-            let pos = this.gamePositionToCanvasPosition(p.number*game.playerWidth, 0)
+            let xPos = p.number*game.playerWidth;
+            if (wrap) xPos += game.playerWidth*players.length;
+            let pos = this.gamePositionToCanvasPosition(xPos, 0)
             // console.log(pos);
             let xDim = this.gameXDimToCanvasXDim(1);
             let yDim = this.gameYDimToCanvasYDim(1);

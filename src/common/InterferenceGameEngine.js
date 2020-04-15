@@ -454,7 +454,7 @@ export default class InterferenceGameEngine extends GameEngine {
         this.paramsByRoom[room] = {};
         Object.assign(this.paramsByRoom[room], {
 
-            playerWidth: 16, playerHeight: 9,
+            playerWidth: 12, playerHeight: 7,
             eggSounds: ['melody', 'bass', 'perc'], eggSoundsToUse: ['melody', 'bass', 'perc'],
             numStartingEggs: 2, numEggsToAdd: 1, ballWraps: true,
             eggHPRange: 0, eggHPMin: 2, eggHPPerPlayer: 1,
