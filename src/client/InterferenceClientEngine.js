@@ -750,7 +750,6 @@ export default class InterferenceClientEngine extends ClientEngine {
                 if (this.sequences[p] == null) continue;
                 if (this.sequences[p].bass == null) continue;
                 if (this.bassSynth[p] == null) continue;
-                if (this.bassSynth[p][step] == null) continue;
                 let seqStep = this.sequences[p].bass[this.bassStep];
                 let octaveShift = this.gameEngine.paramsByRoom[this.room].bassBuildOctave;
                 if (this.player.stage == "fight" || this.player.stage == "fightEnd") 
@@ -769,7 +768,6 @@ export default class InterferenceClientEngine extends ClientEngine {
                 if (this.sequences[p] == null) continue;
                 if (this.sequences[p].perc == null) continue;
                 if (this.percSynth[p] == null) continue;
-                if (this.percSynth[p][step] == null) continue;
                 let seqStep = this.sequences[p].perc[this.percStep];
                 let octaveShift = this.gameEngine.paramsByRoom[this.room].percBuildOctave;
                 if (player.stage == "fight" || player.stage == "fightEnd") 
