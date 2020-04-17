@@ -149,7 +149,7 @@ export default class InterferenceRenderer extends Renderer {
             }
         }
 
-        if (!this.client.isSpectator && !this.client.ringView && !this.client.performanceView) {
+        if (!this.client.isSpectator && !this.client.ringView && !this.client.performanceView && this.thisPlayer.palette != 0) {
             let pos = this.gamePositionToCanvasPosition(this.thisPlayer.xPos, 0)
             let x = (this.w / n) * 0.5 + pos[0];
             this.ctx[0].fillStyle = 'white';

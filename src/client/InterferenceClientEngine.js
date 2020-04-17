@@ -133,12 +133,12 @@ export default class InterferenceClientEngine extends ClientEngine {
 
     executeOption(optionString) {
         if (optionString === 'build') {
-            if (this.room != 'outro') this.socket.emit('startBuildStage');
+            if (this.player.stage != 'outro') this.socket.emit('startBuildStage');
             else this.socket.emit('clearBrokenEggs');
             this.optionSelection = {};
         }
         else if (optionString === 'fight') {
-            if (this.room != 'outro') this.socket.emit('startFightStage');
+            if (this.player.stage != 'outro') this.socket.emit('startFightStage');
             else this.socket.emit('clearBrokenEggs');
             this.optionSelection = {};
         }
@@ -405,6 +405,12 @@ export default class InterferenceClientEngine extends ClientEngine {
         }
         if (palettesChanged) this.updateSound();
 
+        if (this.player.palette == 0)
+        {
+            Destination.mute = true;
+        }
+        else Destination.mute = false;
+
         let stage = this.player.stage;
 
         this.pitchSetIndex = this.player.pitchSet;
@@ -590,6 +596,7 @@ export default class InterferenceClientEngine extends ClientEngine {
             let p = player.number;
 
             if (this.gameEngine.positionIsInPlayer(e.position.x, player)) {
+                this.eggSynths[p][e.sound].break.stop();
                 this.eggSynths[p][e.sound].break.start(this.nextDiv('4n'));
                 if (p == this.player.number)
                 {

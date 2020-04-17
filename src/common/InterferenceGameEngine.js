@@ -469,7 +469,7 @@ export default class InterferenceGameEngine extends GameEngine {
             transportSyncInterval: 180, eggRadius: 1, eggBaseVelocity: 0.1, ammoDropChance: 0.025,
             actionThreshold: 8, progressionThreshold: 8,
             palettes: [1, 2, 3, 4, 5], buildRate: 0.5, fightRate: 1.0, outroRate: 0.5,
-            fightRateInc: 0.5, fightRateDec: 2.0, maxFightRate: 3.0,
+            fightRateInc: 0.5, fightRateDec: 1.0, maxFightRate: 2.0,
             melodyBuildOctave: 0, melodyFightOctave: 1,
             bassBuildOctave: 0, bassFightOctave: -1,
             percBuildOctave: 0, percFightOctave: -1,
@@ -480,11 +480,11 @@ export default class InterferenceGameEngine extends GameEngine {
                 { //default
                     //'default': 
                     colors: {
-                        bg: '#222',
-                        c1: '#222',
-                        c2: '#222',
-                        c3: '#222',
-                        c4: '#222'
+                        bg: '#000',
+                        c1: '#000',
+                        c2: '#000',
+                        c3: '#000',
+                        c4: '#000'
                     },
                     scale: [0, 2, 4, 5, 7, 9, 11],
                     pitchSets: [
