@@ -373,7 +373,7 @@ export default class InterferenceRenderer extends Renderer {
                 c = 'c1';
                 if (n.dur === '4n') { 
                     c = 'c2'; 
-                    r *= 2;
+                    r *= 1.5;
                     layer = 0; 
                 }
                 if (n.step === this.client.melodyStep) {
@@ -460,8 +460,8 @@ export default class InterferenceRenderer extends Renderer {
                 c = 'c1';
                 if (n.dur === '4n') { 
                     c = 'c2'; 
-                    dimX *= 2;
-                    dimY *= 2;
+                    dimX *= 1.5;
+                    dimY *= 1.5;
                     layer = 0; 
                 }
                 if (n.step === this.client.melodyStep) {
@@ -476,9 +476,10 @@ export default class InterferenceRenderer extends Renderer {
                 y = this.mapToRange(n.animFrame, 0, this.animLengths.eggNote, 0, y);
                 dimY *= this.mapToRange(n.animFrame, 0, this.animLengths.eggNote, playerHeight, 1);
                 c = 'c2';
+                let f = 0;
                 if (n.dur === '4n') { 
                     c = 'c3'; 
-                    dimX *= (playerWidth / 4); 
+                    f = 1;
                     layer = 0; 
                 }
                 if (n.step === this.client.bassStep) {
@@ -487,7 +488,7 @@ export default class InterferenceRenderer extends Renderer {
                 }
                 this.fillColor(n.palette, c, layer);
                 this.strokeColor(n.palette, 'bg', layer);
-                this.drawRect(x + (0.1*dimX), y + (0.1*dimY), dimX*0.8, dimY*0.8, true, true, layer);
+                this.drawRect(x + (0.1*dimX), y + (0.1*dimY), dimX*(0.8+f), dimY*0.8, true, true, layer);
             }
             else if (n.sound === 'perc') {
                 x += dimX * 0.5;
