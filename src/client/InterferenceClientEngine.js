@@ -409,7 +409,7 @@ export default class InterferenceClientEngine extends ClientEngine {
         {
             Destination.mute = true;
         }
-        else Destination.mute = false;
+        else Destination.mute = this.muted;
 
         let stage = this.player.stage;
 
