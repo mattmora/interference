@@ -1,9 +1,11 @@
 "use strict";
 
-import { GameEngine, SimplePhysicsEngine, TwoVector } from 'lance-gg';
+import { GameEngine, TwoVector } from 'lance-gg';
+import InterferencePhysicsEngine from './InterferencePhysicsEngine';
 import Note from './Note';
 import Performer from './Performer';
 import Egg from './Egg';
+
 
 //const palettes = ['rain', 'celeste', 'pyre', 'journey', 'kirby'];
 
@@ -11,9 +13,9 @@ export default class InterferenceGameEngine extends GameEngine {
 
     constructor(options) {
         super(options);
-        this.physicsEngine = new SimplePhysicsEngine({
+        // an even simpler physics engine
+        this.physicsEngine = new InterferencePhysicsEngine({
             gameEngine: this,
-            collisions: { type: 'HSHG', autoResolve: false }
         });
 
         // game variables
