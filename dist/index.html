@@ -26,10 +26,15 @@
                 text-align: center;
             }
 
+            #startMenuWrapper {
+                width: 45%;
+                float: left;
+            }
+
             #startMenu {
                 margin-top: 5%;
                 margin-left: 10%;
-                width: 30%;
+                width: 80%;
                 padding: 20px;
                 background-color: #eee;
                 box-sizing: border-box;
@@ -110,13 +115,15 @@
             }
 
             #instructions {
-                width: 85%;
+                width: 40%;
                 padding-left: 5%;
+                padding-right: 5%;
                 margin-left: 5%;
                 z-index: 1;
                 background-color: rgba(0, 0, 0, 0.4);
                 color: white;
                 text-align: left;
+                float: left;
             }
 
             #instructions p {
@@ -163,7 +170,7 @@
                 Refresh the page if you want to join a different room or encounter errors. <br>
                 A room will reset when all its players leave. <br>
                 If players leave or disconnect from a room, they can rejoin even if the game has already started. <br>
-                If you are experience performance issues such as glitchy audio, try closing other other applications/tabs.
+                If you experience performance issues such as glitchy audio, try closing other other applications/tabs.
             </p>
         </div>
         <canvas id='mainCanvas'></canvas>
