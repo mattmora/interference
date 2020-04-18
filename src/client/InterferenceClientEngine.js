@@ -476,15 +476,6 @@ export default class InterferenceClientEngine extends ClientEngine {
                         eggPlayerDistance = this.players.length - eggPlayerDistance;
                     let vol = (this.gameEngine.paramsByRoom[this.room].eggDroneVolume * eggPlayerDistance) - 3;
                     highestVol[e.sound] = Math.max(highestVol[e.sound], vol);
-
-                    let pal = this.gameEngine.paramsByRoom[this.room].paletteAttributes[player.palette];
-                    let pitch = pal.scale[pal.pitchSets[this.pitchSetIndex][0]];
-                    if (e.sound === 'melody') {
-                        this.eggSynths[p][e.sound].drone.setNote(Frequency(pitch + 72, 'midi'));
-                    }
-                    else if (e.sound === 'bass') {
-                        this.eggSynths[p][e.sound].drone.setNote(Frequency(pitch + 48, 'midi'));
-                    }
                 }
                 this.eggSynths[p].melody.drone.volume.value = highestVol.melody;
                 this.eggSynths[p].bass.drone.volume.value = highestVol.bass;
@@ -783,6 +774,20 @@ export default class InterferenceClientEngine extends ClientEngine {
         // if (this.melodySequence == null) this.initSequences();
         // if (this.eggVolume == null) this.constructEggSynths();
 
+        for (let player of this.soundingPlayers)
+        {
+            for (let e of this.eggs)
+            {
+                let pal = this.gameEngine.paramsByRoom[this.room].paletteAttributes[player.palette];
+                let pitch = pal.scale[pal.pitchSets[this.pitchSetIndex][0]];
+                if (e.sound === 'melody') {
+                    this.eggSynths[p][e.sound].drone.setNote(Frequency(pitch + 72, 'midi'));
+                }
+                else if (e.sound === 'bass') {
+                    this.eggSynths[p][e.sound].drone.setNote(Frequency(pitch + 48, 'midi'));
+                }
+            }
+        }
 
         let release = 0.5;
         let sustain = 0.5;
