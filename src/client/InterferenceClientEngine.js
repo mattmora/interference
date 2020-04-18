@@ -430,7 +430,7 @@ export default class InterferenceClientEngine extends ClientEngine {
             return;
         }
         else {
-            if (this.reverb == null) this.initSound();
+            if (this.limiter == null) this.initSound();
 
             if (this.melodySequence == null) this.initSequences();
 
@@ -519,7 +519,7 @@ export default class InterferenceClientEngine extends ClientEngine {
     }
 
     onEggBounce(e) {
-        if (this.reverb == null) return; 
+        if (this.limiter == null) return; 
         for (let player of this.soundingPlayers)
         {
             let p = player.number
@@ -616,12 +616,15 @@ export default class InterferenceClientEngine extends ClientEngine {
 
         // console.log('initSound' + this.players.length);
 
-        this.limiter = new Limiter(-3.).toDestination();
-        this.reverb = new Reverb(1).connect(this.limiter);
-        this.distVolume = new Volume(-12).connect(this.limiter);
-        this.distVolume.connect(this.reverb);
-        this.distortion = new Distortion(1).connect(this.distVolume);
+        this.limiter = new Limiter(-8).toDestination();
+        this.reverb = new Reverb(1).toDestination();
         this.reverb.generate();
+        this.limiter.connect(this.reverb);
+        
+        this.distVolume = new Volume(-12).connect(this.limiter);
+        // this.distVolume.connect(this.reverb);
+        this.distVolume.connect(this.limiter);
+        this.distortion = new Distortion(1).connect(this.distVolume);
 
         this.melodySynth = {};
         this.bassSynth = {};
@@ -659,7 +662,7 @@ export default class InterferenceClientEngine extends ClientEngine {
                         "decay" : 0.7
                     }
                 }).connect(this.limiter);
-                this.melodySynth[p][row].connect(this.reverb);
+                // this.melodySynth[p][row].connect(this.reverb);
         
                 this.bassSynth[p][row] = new FMSynth({
                     "volume": -4,
@@ -681,7 +684,7 @@ export default class InterferenceClientEngine extends ClientEngine {
                         "decay" : 0.07
                     }
                 }).connect(this.limiter);
-                this.bassSynth[p][row].connect(this.reverb);
+                // this.bassSynth[p][row].connect(this.reverb);
         
                 this.percSynth[p][row] = new MembraneSynth({
                     "volume" : -6,
@@ -896,8 +899,8 @@ export default class InterferenceClientEngine extends ClientEngine {
     constructEggSynths() {
         if (this.gameEngine.paramsByRoom[this.room] == null) return;
 
-        this.eggVolume = new Volume(-6).connect(this.limiter);
-        this.eggVolume.connect(this.reverb);
+        this.eggVolume = new Volume(-4).connect(this.limiter);
+        // this.eggVolume.connect(this.reverb);
 
         this.eggSynths = {};
         this.droneGain = {};
