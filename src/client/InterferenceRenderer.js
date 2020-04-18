@@ -100,8 +100,11 @@ export default class InterferenceRenderer extends Renderer {
         //ctx.scale(this.clientEngine.zoom, this.clientEngine.zoom);  // Zoom in and flip y axis
         // Draw all the things
         this.drawPlayers();
-        this.drawSequences();
-        this.drawEggs();
+        if (this.client.reverb != null)
+        {
+            this.drawSequences();
+            this.drawEggs();
+        }
 
         if (!this.client.isSpectator && this.client.showControlText) {
 
@@ -197,7 +200,7 @@ export default class InterferenceRenderer extends Renderer {
             this.fillColor(0, 'bg', 1);
             this.drawRect(pos[0], pos[1]-4, xDim*this.game.playerWidth, 8, true, false, 1);
             this.drawRect(pos[0], pos[1]-4+(yDim*this.game.playerHeight), xDim*this.game.playerWidth, 8, true, false, 1);
-            if (this.client.player.stage != "outro") {
+            if (this.client.player.stage != 'outro' && this.client.reverb != null) {
                 // this.fillColor(0, 'bg', 1);
                 for (let a = 0; a < p.ammo; a++) {
                     let x1 = pos[0] + ((a + 1) * ((this.w / n) / (p.ammo + 1)));

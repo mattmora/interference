@@ -31,7 +31,7 @@ export default class InterferenceClientEngine extends ClientEngine {
         this.numRows = 1;
         this.viewLock = false;
         this.controls = new KeyboardControls(this);
-        this.prevStage = 'setup';
+        this.prevStage = 'build';
         this.fullscreen = false;
         this.optionSelection = {};
         this.localControls = {
@@ -386,24 +386,13 @@ export default class InterferenceClientEngine extends ClientEngine {
         else this.soundingPlayers = this.players;
 
         // Init the sound if we haven't yet or reinit if the number of sounding players changed
-        if (numSounding != this.soundingPlayers.length || this.reverb == null) this.initSound();
+        // if (numSounding != this.soundingPlayers.length || this.reverb == null) 
     }
 
     postStepLogic() {
         if (this.room == null) return; //if we've yet to be assigned a room, don't do this stuff
         if (this.player == null) return;
-        if (this.melodySequence == null) this.initSequences();
-
-        // Check if palettes have changed and update sounds if they have
-        let palettesChanged = false;
-        for (let player of this.soundingPlayers)
-        {
-            if (this.lastPalettes[player.number] != player.palette) {
-                palettesChanged = true;
-                this.lastPalettes[player.number] = player.palette;
-            }
-        }
-        if (palettesChanged) this.updateSound();
+        
 
         if (this.player.palette == 0)
         {
@@ -438,9 +427,24 @@ export default class InterferenceClientEngine extends ClientEngine {
         //console.log(this.pitchSetIndex);
 
         if (stage === 'setup') {
-
+            return;
         }
         else {
+            if (this.reverb == null) this.initSound();
+
+            if (this.melodySequence == null) this.initSequences();
+
+            // Check if palettes have changed and update sounds if they have
+            // let palettesChanged = false;
+            // for (let player of this.soundingPlayers)
+            // {
+            //     if (this.lastPalettes[player.number] != player.palette) {
+            //         palettesChanged = true;
+            //         this.lastPalettes[player.number] = player.palette;
+            //     }
+            // }
+            // if (palettesChanged) this.updateSound();
+
             if (this.transport.state !== 'started') {// && this.prevStage !== stage) {
                 this.transport.start('+1');
                 this.transport.seconds = this.syncClient.getSyncTime();
@@ -524,6 +528,7 @@ export default class InterferenceClientEngine extends ClientEngine {
     }
 
     onEggBounce(e) {
+        if (this.reverb == null) return; 
         for (let player of this.soundingPlayers)
         {
             let p = player.number
@@ -776,9 +781,9 @@ export default class InterferenceClientEngine extends ClientEngine {
     updateSound()
     {
         // console.log('updateSound');
-        if (this.reverb == null) this.initSound();
-        if (this.melodySequence == null) this.initSequences();
-        if (this.eggVolume == null) this.constructEggSynths();
+        // if (this.reverb == null) this.initSound();
+        // if (this.melodySequence == null) this.initSequences();
+        // if (this.eggVolume == null) this.constructEggSynths();
 
 
         let release = 0.5;
