@@ -896,7 +896,7 @@ export default class InterferenceClientEngine extends ClientEngine {
     constructEggSynths() {
         if (this.gameEngine.paramsByRoom[this.room] == null) return;
 
-        this.eggVolume = new Volume(-4).connect(this.limiter);
+        this.eggVolume = new Volume(-6).connect(this.limiter);
         this.eggVolume.connect(this.reverb);
 
         this.eggSynths = {};
