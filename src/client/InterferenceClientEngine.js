@@ -776,6 +776,7 @@ export default class InterferenceClientEngine extends ClientEngine {
 
         for (let player of this.soundingPlayers)
         {
+            let p = player.number
             for (let e of this.eggs)
             {
                 let pal = this.gameEngine.paramsByRoom[this.room].paletteAttributes[player.palette];
