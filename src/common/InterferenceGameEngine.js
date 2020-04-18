@@ -180,7 +180,7 @@ export default class InterferenceGameEngine extends GameEngine {
                 }
                 else if ((e.position.y + this.paramsByRoom[r].eggRadius) > this.paramsByRoom[r].playerHeight) {
                     e.velocity.y = -Math.abs(e.velocity.y);
-                    e.position.y = Number(this.paramsByRoom[r].playerHeight) - Number(this.paramsByRoom[r].eggRadius);
+                    e.position.y = this.paramsByRoom[r].playerHeight - this.paramsByRoom[r].eggRadius;
                     this.emit('eggBounce', e);
                 }
                 // check if broken
@@ -460,7 +460,8 @@ export default class InterferenceGameEngine extends GameEngine {
         this.paramsByRoom[room] = {};
         Object.assign(this.paramsByRoom[room], {
 
-            playerWidth: 16, playerHeight: 9, maxNotes: 100,
+            // if synthsPerSound is less than playerHeight, some notes might not be played, but it can improve performance
+            playerWidth: 16, playerHeight: 9, maxNotes: 100, synthsPerSound: 5, 
             eggSounds: ['melody', 'bass', 'perc'], eggSoundsToUse: ['melody', 'bass', 'perc'],
             numStartingEggs: 2, numEggsToAdd: 1, ballWraps: true,
             eggHPRange: 0, eggHPMin: 2, eggHPPerPlayer: 1,

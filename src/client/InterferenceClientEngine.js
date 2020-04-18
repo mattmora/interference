@@ -625,8 +625,9 @@ export default class InterferenceClientEngine extends ClientEngine {
 
         // console.log('initSound' + this.players.length);
 
-        this.reverb = new Reverb(1).toDestination();
-        this.distVolume = new Volume(-12).toDestination();
+        this.limiter = new Limiter(-3.).toDestination();
+        this.reverb = new Reverb(1).connect(this.limiter);
+        this.distVolume = new Volume(-12).connect(this.limiter);
         this.distVolume.connect(this.reverb);
         this.distortion = new Distortion(1).connect(this.distVolume);
         this.reverb.generate();
@@ -645,7 +646,7 @@ export default class InterferenceClientEngine extends ClientEngine {
             this.bassSynth[p] = [];
             this.percSynth[p] = [];
 
-            for (let row = 0; row < this.gameEngine.paramsByRoom[this.room].playerHeight; row++)
+            for (let row = 0; row < this.gameEngine.paramsByRoom[this.room].synthsPerSound; row++)
             {
                 this.melodySynth[p][row] = new FMSynth({
                     "volume": -7,
@@ -666,10 +667,9 @@ export default class InterferenceClientEngine extends ClientEngine {
                         "attack" : 0.03,
                         "decay" : 0.7
                     }
-                }).toDestination();
+                }).connect(this.limiter);
                 this.melodySynth[p][row].connect(this.reverb);
         
-                //this.gameEngine.paramsByRoom[roomName].playerHeight
                 this.bassSynth[p][row] = new FMSynth({
                     "volume": -4,
                     "modulationIndex" : pal.bass.modulationIndex,
@@ -689,10 +689,9 @@ export default class InterferenceClientEngine extends ClientEngine {
                         "attack" : 0.01,
                         "decay" : 0.07
                     }
-                }).toDestination();
+                }).connect(this.limiter);
                 this.bassSynth[p][row].connect(this.reverb);
         
-                //this.gameEngine.playerHeight
                 this.percSynth[p][row] = new MembraneSynth({
                     "volume" : -6,
                     "pitchDecay" : pal.perc.pitchDecay,//0.05,
@@ -705,8 +704,7 @@ export default class InterferenceClientEngine extends ClientEngine {
                         "decay" : 0.4 ,
                         "sustain" : 0.01 
                     }
-                });//.toDestination();
-                this.percSynth[p][row].connect(this.distortion);
+                }).connect(this.distortion);
             }
         }
 
@@ -892,7 +890,7 @@ export default class InterferenceClientEngine extends ClientEngine {
     constructEggSynths() {
         if (this.gameEngine.paramsByRoom[this.room] == null) return;
 
-        this.eggVolume = new Volume(-4).toDestination();
+        this.eggVolume = new Volume(-4).connect(this.limiter);
         this.eggVolume.connect(this.reverb);
 
         this.eggSynths = {};
@@ -1095,7 +1093,7 @@ export default class InterferenceClientEngine extends ClientEngine {
         for (let note of noteArray) {
             if (note.room == null) continue;
             let pal = this.gameEngine.paramsByRoom[note.room].paletteAttributes[note.palette];
-            let i = note.pitch % this.gameEngine.paramsByRoom[note.room].playerHeight
+            let i = note.pitch % synth.length;
             if (!pitchArray.includes(note.pitch)) {
                 this.playPitchOnSynth(synth[i], note.pitch, pal.pitchSets[this.pitchSetIndex], pal.scale, octaveShift, note.dur, time, note.vel);
             }
