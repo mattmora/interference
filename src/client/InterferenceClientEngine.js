@@ -6,7 +6,7 @@ import InterferenceRenderer from '../client/InterferenceRenderer';
 import Note from '../common/Note';
 // import Performer from '../common/Performer';
 // import Egg from '../common/Egg';
-import { Destination, Transport, Frequency, Sequence, Synth, NoiseSynth, MembraneSynth, FMSynth } from 'tone';
+import { Destination, Limiter, Transport, Frequency, Sequence, Synth, NoiseSynth, MembraneSynth, FMSynth } from 'tone';
 import { Reverb, Distortion, Volume, Gain } from 'tone';
 
 export default class InterferenceClientEngine extends ClientEngine {
