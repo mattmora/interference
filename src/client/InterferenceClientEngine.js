@@ -86,7 +86,8 @@ export default class InterferenceClientEngine extends ClientEngine {
         }
         else if (controlString === 'ToggleFullscreen') {
             if (!this.viewLock) {
-                let elem = this.renderer.canvas;
+                console.log('fullscreen');
+                let elem = this.renderer.mainCanvas;
                 if (!document.fullscreenElement) {
                     elem.requestFullscreen({navigationUI: 'hide'}).then({}).catch(err => {
                         //alert(`Error attempting to enable full-screen mode: ${err.message} (${err.name})`);
