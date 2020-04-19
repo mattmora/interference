@@ -38,7 +38,7 @@ export default class InterferenceClientEngine extends ClientEngine {
             //'Backquote': 'ToggleTransport',
             'KeyF': 'ToggleFullscreen',
             'KeyH': 'ToggleCursor',
-            'KeyI': 'ToggleInstructions',
+            'KeyI': 'ToggleInstructions', 
             'KeyV': 'ToggleView',
             // 'Slash': 'ToggleLock',
             'KeyX': 'ToggleEndGameControl',
@@ -48,6 +48,9 @@ export default class InterferenceClientEngine extends ClientEngine {
         this.melodySequence = null;
         this.bassSequence = null;
         this.percSequence = null;
+        this.melodyStarted = false;
+        this.bassStarted = false;
+        this.percStarted = false;
         this.melodyStep = 0;
         this.bassStep = 0;
         this.percStep = 0;
@@ -376,9 +379,6 @@ export default class InterferenceClientEngine extends ClientEngine {
             }
         }
 
-        // Store number of sounding players so we can tell if it changed later
-        let numSounding = this.soundingPlayers.length;
-
         // Get the sounding players
         if (this.gameEngine.paramsByRoom[this.room].inPersonPerformance) {
             this.soundingPlayers = [this.player];
@@ -426,14 +426,18 @@ export default class InterferenceClientEngine extends ClientEngine {
         }
         //console.log(this.pitchSetIndex);
 
+        if (this.limiter == null) this.initSound();
+        for (let player of this.soundingPlayers) {
+            let p = player.number;
+            if (this.percSynth[p] == null) this.initPlayerSound(player);
+            if (this.droneGain[p] == null) this.constructPlayerEggSynths(player);
+        }
+        if (this.percSequence == null) this.initSequences();
+
         if (stage === 'setup') {
             return;
         }
         else {
-            if (this.limiter == null) this.initSound();
-
-            if (this.melodySequence == null) this.initSequences();
-
             // Check if palettes have changed and update sounds if they have
             // let palettesChanged = false;
             // for (let player of this.soundingPlayers)
@@ -446,20 +450,23 @@ export default class InterferenceClientEngine extends ClientEngine {
             // if (palettesChanged) this.updateSound();
 
             if (this.transport.state !== 'started') {// && this.prevStage !== stage) {
-                this.transport.start('+1');
+                this.transport.start();
                 this.transport.seconds = this.syncClient.getSyncTime();
             }
-            if (this.melodySequence.state !== 'started') {
+            if (!this.melodyStarted) {
                 //console.log('start seq');
                 this.melodySequence.start(this.nextDiv('1m'));
+                this.melodyStarted = true;
             }
-            if (this.bassSequence.state !== 'started') {
+            if (!this.bassStarted) {
                 //console.log('start seq');
                 this.bassSequence.start(this.nextDiv('4m'));
+                this.bassStarted = true;
             }
-            if (this.percSequence.state !== 'started') {
+            if (!this.percStarted) {
                 //console.log('start seq'); 
                 this.percSequence.start(this.nextDiv('2m'));
+                this.percStarted = true;
             }
 
             for (let player of this.soundingPlayers) {
@@ -634,77 +641,82 @@ export default class InterferenceClientEngine extends ClientEngine {
 
         for (let player of this.soundingPlayers)
         {
-            let pal = this.gameEngine.paramsByRoom[this.room].paletteAttributes[player.palette];
-
-            let p = player.number;
-
-            this.melodySynth[p] = [];
-            this.bassSynth[p] = [];
-            this.percSynth[p] = [];
-
-            for (let row = 0; row < this.gameEngine.paramsByRoom[this.room].synthsPerSound; row++)
-            {
-                this.melodySynth[p][row] = new FMSynth({
-                    "volume": -7,
-                    "modulationIndex": pal.melody.modulationIndex,
-                    "harmonicity": pal.melody.harmonicity,
-                    "oscillator": {
-                        "type" : pal.melody.osc
-                    },
-                    "envelope" : {
-                        "attack" : 0.01,
-                        "decay" : 0.1,
-                        "sustain": 0.2
-                    },
-                    "modulation" : {
-                        "type" : pal.melody.modType
-                    },
-                    "modulationEnvelope" : {
-                        "attack" : 0.03,
-                        "decay" : 0.7
-                    }
-                }).connect(this.limiter);
-                // this.melodySynth[p][row].connect(this.reverb);
-        
-                this.bassSynth[p][row] = new FMSynth({
-                    "volume": -4,
-                    "modulationIndex" : pal.bass.modulationIndex,
-                    "harmonicity": pal.bass.harmonicity,
-                    "oscillator": {
-                        "type" : pal.bass.osc
-                    },
-                    "envelope" : {
-                        "attack" : 0.01,
-                        "decay" : 0.1,
-                        "sustain": 0.5
-                    },
-                    "modulation" : {
-                        "type" : pal.bass.modType
-                    },
-                    "modulationEnvelope" : {
-                        "attack" : 0.01,
-                        "decay" : 0.07
-                    }
-                }).connect(this.limiter);
-                // this.bassSynth[p][row].connect(this.reverb);
-        
-                this.percSynth[p][row] = new MembraneSynth({
-                    "volume" : -6,
-                    "pitchDecay" : pal.perc.pitchDecay,//0.05,
-                    "octaves" : pal.perc.octaves,//10 ,
-                    "oscillator" : {
-                        "type" : pal.perc.osc//sine
-                    },
-                    "envelope" : {
-                        "attack" : 0.001 ,
-                        "decay" : 0.4 ,
-                        "sustain" : 0.01 
-                    }
-                }).connect(this.distortion);
-            }
+            this.initPlayerSound(player);
         }
 
         this.constructEggSynths();
+    }
+
+    initPlayerSound(player)
+    {
+        let pal = this.gameEngine.paramsByRoom[this.room].paletteAttributes[player.palette];
+
+        let p = player.number;
+
+        this.melodySynth[p] = [];
+        this.bassSynth[p] = [];
+        this.percSynth[p] = [];
+
+        for (let row = 0; row < this.gameEngine.paramsByRoom[this.room].synthsPerSound; row++)
+        {
+            this.melodySynth[p][row] = new FMSynth({
+                "volume": -7,
+                "modulationIndex": pal.melody.modulationIndex,
+                "harmonicity": pal.melody.harmonicity,
+                "oscillator": {
+                    "type" : pal.melody.osc
+                },
+                "envelope" : {
+                    "attack" : 0.01,
+                    "decay" : 0.1,
+                    "sustain": 0.2
+                },
+                "modulation" : {
+                    "type" : pal.melody.modType
+                },
+                "modulationEnvelope" : {
+                    "attack" : 0.03,
+                    "decay" : 0.7
+                }
+            }).connect(this.limiter);
+            // this.melodySynth[p][row].connect(this.reverb);
+    
+            this.bassSynth[p][row] = new FMSynth({
+                "volume": -4,
+                "modulationIndex" : pal.bass.modulationIndex,
+                "harmonicity": pal.bass.harmonicity,
+                "oscillator": {
+                    "type" : pal.bass.osc
+                },
+                "envelope" : {
+                    "attack" : 0.01,
+                    "decay" : 0.1,
+                    "sustain": 0.5
+                },
+                "modulation" : {
+                    "type" : pal.bass.modType
+                },
+                "modulationEnvelope" : {
+                    "attack" : 0.01,
+                    "decay" : 0.07
+                }
+            }).connect(this.limiter);
+            // this.bassSynth[p][row].connect(this.reverb);
+    
+            this.percSynth[p][row] = new MembraneSynth({
+                "volume" : -6,
+                "pitchDecay" : pal.perc.pitchDecay,//0.05,
+                "octaves" : pal.perc.octaves,//10 ,
+                "oscillator" : {
+                    "type" : pal.perc.osc//sine
+                },
+                "envelope" : {
+                    "attack" : 0.001 ,
+                    "decay" : 0.4 ,
+                    "sustain" : 0.01 
+                }
+            }).connect(this.distortion);
+        }
     }
 
     initSequences()
@@ -908,187 +920,192 @@ export default class InterferenceClientEngine extends ClientEngine {
         this.droneGain = {};
 
         for (let player of this.soundingPlayers) {
-            let p = player.number
-            this.eggSynths[p] = {};
-            this.droneGain[p] = {};
-            this.droneGain[p].melody = new Gain(0).connect(this.eggVolume);
-            this.droneGain[p].bass = new Gain(0).connect(this.eggVolume);
-            this.droneGain[p].perc = new Gain(0).connect(this.eggVolume);
-            let pal = this.gameEngine.paramsByRoom[this.room].paletteAttributes[player.palette];
-
-            // Melody
-            this.melodyBreakSynth = new Synth({
-                oscillator: {
-                    type: 'triangle',
-                },
-                envelope: {
-                    attack: 0.005,
-                    decay: 0.5,
-                    sustain: 0,
-                    release: 0.1,
-                }
-            }).connect(this.eggVolume);
-
-            this.eggSynths[p].melody = {
-                drone: new FMSynth({
-                    "modulationIndex" : 4,
-                    "harmonicity": 4,
-                    "oscillator": {
-                        "type" : "sawtooth2",
-                    },
-                    "envelope" : {
-                        "attack" : 0.5,
-                        "decay" : 0.1,
-                        "sustain": 0.5
-                    },
-                    "modulation" : {
-                        "type" : "sine"
-                    },
-                    "modulationEnvelope" : {
-                        "attack" : 0.03,
-                        "decay" : 0.7,
-                        "sustain" : 0.5
-                    }
-                }).connect(this.droneGain[p].melody),
-                bounce: new FMSynth({
-                    "modulationIndex" : 4,
-                    "harmonicity": 4,
-                    "oscillator": {
-                        "type" : "sawtooth4",
-                    },
-                    "envelope" : {
-                        "attack" : 0.01,
-                        "decay" : 0.1,
-                        "sustain" : 0.0
-                    },
-                    "modulation" : {
-                        "type" : "sine"
-                    },
-                    "modulationEnvelope" : {
-                        "attack" : 0.03,
-                        "decay" : 0.7
-                    }
-                }).connect(this.eggVolume),
-                break: new Sequence((time, pitch) => {
-                    let scale = pal.scale;
-                    let chord = pal.pitchSets[this.pitchSetIndex];
-                    this.playPitchOnSynth(this.melodyBreakSynth, pitch, chord, scale, 6, '4n', time, 0.1);
-                }, [[4, 2, 3, 1, 3, 1, 2, 0], null, null, null], '4n')
-            };
-
-            // Bass
-            this.bassBreakSynth = new Synth({
-                oscillator: {
-                    type: 'triangle',
-                },
-                envelope: {
-                    attack: 0.005,
-                    decay: 0.5,
-                    sustain: 0,
-                    release: 0.1,
-                }
-            }).connect(this.eggVolume);
-
-            this.eggSynths[p].bass = {
-                drone: new FMSynth({
-                    "modulationIndex" : 4,
-                    "harmonicity": 5,
-                    "oscillator": {
-                        "type" : "sawtooth2",
-                    },
-                    "envelope" : {
-                        "attack" : 0.5,
-                        "decay" : 0.28,
-                        "sustain": 0.5
-                    },
-                    "modulation" : {
-                        "type" : "square"
-                    },
-                    "modulationEnvelope" : {
-                        "attack" : 0.5,
-                        "decay" : 0.06, 
-                        "sustain" : 0.5
-                    }
-                }).connect(this.droneGain[p].bass),
-                bounce: new FMSynth({
-                    "modulationIndex" : 6,
-                    "harmonicity": 1.5,
-                    "oscillator": {
-                        "type" : "sawtooth4",
-                    },
-                    "envelope" : {
-                        "attack" : 0.01,
-                        "decay" : 0.48,
-                        "sustain": 0.0
-                    },
-                    "modulation" : {
-                        "type" : "square"
-                    },
-                    "modulationEnvelope" : {
-                        "attack" : 0.01,
-                        "decay" : 0.12
-                    }
-                }).connect(this.eggVolume),
-                break: new Sequence((time, pitch) => {
-                    let scale = pal.scale;
-                    let chord = pal.pitchSets[this.pitchSetIndex];
-                    this.playPitchOnSynth(this.bassBreakSynth, pitch, chord, scale, 6, '4n', time, 0.1);
-                }, [[0, 1, 2, 3, 1, 2, 3, 4], null, null, null], '4n')
-            };
-
-            // Perc
-            this.percBreakSynth = new Synth({
-                oscillator: {
-                    type: 'triangle',
-                },
-                envelope: {
-                    attack: 0.005,
-                    decay: 0.5,
-                    sustain: 0,
-                    release: 0.1,
-                }
-            }).connect(this.eggVolume); 
-
-            this.eggSynths[p].perc = {
-                drone: new NoiseSynth({
-                    noise: {
-                        type: 'pink',
-                    },
-                    envelope: {
-                        attack: 1,
-                        decay: 0.1,
-                        sustain: 1,
-                        release: 0.5,
-                    }
-                }).connect(this.droneGain[p].perc),
-                bounce: new NoiseSynth({
-                    noise: {
-                        type: 'pink',
-                    },
-                    envelope: {
-                        attack: 0.01,
-                        decay: 0.3,
-                        sustain: 0.0,
-                        release: 0.5,
-                    }
-                }).connect(this.eggVolume),
-                break: new Sequence((time, pitch) => {
-                    let scale = pal.scale;
-                    let chord = pal.pitchSets[this.pitchSetIndex];
-                    this.playPitchOnSynth(this.percBreakSynth, pitch, chord, scale, 6, '4n', time, 0.1);
-                }, [[0, 4, null, null, null, null, 1, 5], null, null, null], '4n')
-            };
-
-            this.eggSynths[p].melody.break.loop = 1;
-            this.eggSynths[p].bass.break.loop = 1;
-            this.eggSynths[p].perc.break.loop = 1;
-
-            let pitch = pal.scale[pal.pitchSets[this.pitchSetIndex][0]];
-            this.eggSynths[p].melody.drone.triggerAttack(Frequency(pitch + 72, 'midi'), '+0.01', 0.2);
-            this.eggSynths[p].bass.drone.triggerAttack(Frequency(pitch + 48, 'midi'), '+0.01', 0.4);    
-            this.eggSynths[p].perc.drone.triggerAttack('+0.01', 0.02);
+           this.constructPlayerEggSynths(player);
         }        
     }
+
+    constructPlayerEggSynths(player) {
+        let p = player.number
+        this.eggSynths[p] = {};
+        this.droneGain[p] = {};
+        this.droneGain[p].melody = new Gain(0).connect(this.eggVolume);
+        this.droneGain[p].bass = new Gain(0).connect(this.eggVolume);
+        this.droneGain[p].perc = new Gain(0).connect(this.eggVolume);
+        let pal = this.gameEngine.paramsByRoom[this.room].paletteAttributes[player.palette];
+
+        // Melody
+        this.melodyBreakSynth = new Synth({
+            oscillator: {
+                type: 'triangle',
+            },
+            envelope: {
+                attack: 0.005,
+                decay: 0.5,
+                sustain: 0,
+                release: 0.1,
+            }
+        }).connect(this.eggVolume);
+
+        this.eggSynths[p].melody = {
+            drone: new FMSynth({
+                "modulationIndex" : 4,
+                "harmonicity": 4,
+                "oscillator": {
+                    "type" : "sawtooth2",
+                },
+                "envelope" : {
+                    "attack" : 0.5,
+                    "decay" : 0.1,
+                    "sustain": 0.5
+                },
+                "modulation" : {
+                    "type" : "sine"
+                },
+                "modulationEnvelope" : {
+                    "attack" : 0.03,
+                    "decay" : 0.7,
+                    "sustain" : 0.5
+                }
+            }).connect(this.droneGain[p].melody),
+            bounce: new FMSynth({
+                "modulationIndex" : 4,
+                "harmonicity": 4,
+                "oscillator": {
+                    "type" : "sawtooth4",
+                },
+                "envelope" : {
+                    "attack" : 0.01,
+                    "decay" : 0.1,
+                    "sustain" : 0.0
+                },
+                "modulation" : {
+                    "type" : "sine"
+                },
+                "modulationEnvelope" : {
+                    "attack" : 0.03,
+                    "decay" : 0.7
+                }
+            }).connect(this.eggVolume),
+            break: new Sequence((time, pitch) => {
+                let scale = pal.scale;
+                let chord = pal.pitchSets[this.pitchSetIndex];
+                this.playPitchOnSynth(this.melodyBreakSynth, pitch, chord, scale, 6, '4n', time, 0.1);
+            }, [[4, 2, 3, 1, 3, 1, 2, 0], null, null, null], '4n')
+        };
+
+        // Bass
+        this.bassBreakSynth = new Synth({
+            oscillator: {
+                type: 'triangle',
+            },
+            envelope: {
+                attack: 0.005,
+                decay: 0.5,
+                sustain: 0,
+                release: 0.1,
+            }
+        }).connect(this.eggVolume);
+
+        this.eggSynths[p].bass = {
+            drone: new FMSynth({
+                "modulationIndex" : 4,
+                "harmonicity": 5,
+                "oscillator": {
+                    "type" : "sawtooth2",
+                },
+                "envelope" : {
+                    "attack" : 0.5,
+                    "decay" : 0.28,
+                    "sustain": 0.5
+                },
+                "modulation" : {
+                    "type" : "square"
+                },
+                "modulationEnvelope" : {
+                    "attack" : 0.5,
+                    "decay" : 0.06, 
+                    "sustain" : 0.5
+                }
+            }).connect(this.droneGain[p].bass),
+            bounce: new FMSynth({
+                "modulationIndex" : 6,
+                "harmonicity": 1.5,
+                "oscillator": {
+                    "type" : "sawtooth4",
+                },
+                "envelope" : {
+                    "attack" : 0.01,
+                    "decay" : 0.48,
+                    "sustain": 0.0
+                },
+                "modulation" : {
+                    "type" : "square"
+                },
+                "modulationEnvelope" : {
+                    "attack" : 0.01,
+                    "decay" : 0.12
+                }
+            }).connect(this.eggVolume),
+            break: new Sequence((time, pitch) => {
+                let scale = pal.scale;
+                let chord = pal.pitchSets[this.pitchSetIndex];
+                this.playPitchOnSynth(this.bassBreakSynth, pitch, chord, scale, 6, '4n', time, 0.1);
+            }, [[0, 1, 2, 3, 1, 2, 3, 4], null, null, null], '4n')
+        };
+
+        // Perc
+        this.percBreakSynth = new Synth({
+            oscillator: {
+                type: 'triangle',
+            },
+            envelope: {
+                attack: 0.005,
+                decay: 0.5,
+                sustain: 0,
+                release: 0.1,
+            }
+        }).connect(this.eggVolume); 
+
+        this.eggSynths[p].perc = {
+            drone: new NoiseSynth({
+                noise: {
+                    type: 'pink',
+                },
+                envelope: {
+                    attack: 1,
+                    decay: 0.1,
+                    sustain: 1,
+                    release: 0.5,
+                }
+            }).connect(this.droneGain[p].perc),
+            bounce: new NoiseSynth({
+                noise: {
+                    type: 'pink',
+                },
+                envelope: {
+                    attack: 0.01,
+                    decay: 0.3,
+                    sustain: 0.0,
+                    release: 0.5,
+                }
+            }).connect(this.eggVolume),
+            break: new Sequence((time, pitch) => {
+                let scale = pal.scale;
+                let chord = pal.pitchSets[this.pitchSetIndex];
+                this.playPitchOnSynth(this.percBreakSynth, pitch, chord, scale, 6, '4n', time, 0.1);
+            }, [[0, 4, null, null, null, null, 1, 5], null, null, null], '4n')
+        };
+
+        this.eggSynths[p].melody.break.loop = 1;
+        this.eggSynths[p].bass.break.loop = 1;
+        this.eggSynths[p].perc.break.loop = 1;
+
+        let pitch = pal.scale[pal.pitchSets[this.pitchSetIndex][0]];
+        this.eggSynths[p].melody.drone.triggerAttack(Frequency(pitch + 72, 'midi'), '+0.01', 0.2);
+        this.eggSynths[p].bass.drone.triggerAttack(Frequency(pitch + 48, 'midi'), '+0.01', 0.4);    
+        this.eggSynths[p].perc.drone.triggerAttack('+0.01', 0.02);
+    }
+    
 
     playPitchOnSynth(synth, pitch, chord, scale, octaveShift, dur, time, vel) {
         let degree = pitch % chord.length;

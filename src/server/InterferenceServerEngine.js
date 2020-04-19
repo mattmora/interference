@@ -70,7 +70,7 @@ export default class InterferenceServerEngine extends ServerEngine {
             }
             if (this.roomStages[roomName] === 'setup') {
                 if (!params.spectator) {
-                    let inactivePlayers = this.gameEngine.queryPlayers({ room: roomName, active: 0 });
+                    let inactivePlayers = this.gameEngine.queryPlayers({ room: roomName, active: false });
                     if (inactivePlayers.length === 0) {
                         player = new Performer(this.gameEngine, null, {});
                         player.playerId = socket.playerId;
@@ -86,8 +86,8 @@ export default class InterferenceServerEngine extends ServerEngine {
                                             this.gameEngine.paramsByRoom[roomName].playerHeight).fill(player.palette);
                         player.gridChanged = false;
                         player.pitchSet = 0;
-                        player.active = 1;
-                        if (soloSpectator) player.active = 0;
+                        player.active = true;
+                        if (soloSpectator) player.active = false;
                         this.myRooms[roomName].push(player);
                         this.gameEngine.addObjectToWorld(player);
                         player.room = roomName;
@@ -100,7 +100,7 @@ export default class InterferenceServerEngine extends ServerEngine {
                             n.ownerId = socket.playerId;
                         }
                         player.playerId = socket.playerId;
-                        player.active = 1;
+                        player.active = true;
                     }
                 }
                 this.assignPlayerToRoom(socket.playerId, roomName);
@@ -113,7 +113,7 @@ export default class InterferenceServerEngine extends ServerEngine {
                 socket.emit('assignedRoom', roomName, this.gameEngine.paramsByRoom[roomName]);
             }
             else {
-                let inactivePlayers = this.gameEngine.queryPlayers({ room: roomName, active: 0 });
+                let inactivePlayers = this.gameEngine.queryPlayers({ room: roomName, active: false });
                 if (inactivePlayers.length === 0) socket.emit('accessDenied');
                 else {
                     // console.log('found inactive');
@@ -122,7 +122,7 @@ export default class InterferenceServerEngine extends ServerEngine {
                         n.ownerId = socket.playerId;
                     }
                     player.playerId = socket.playerId;
-                    player.active = 1;
+                    player.active = true;
                     this.assignPlayerToRoom(player.playerId, roomName);
                     this.assignPlayerToSyncServer(socket, roomName);
 
@@ -315,9 +315,10 @@ export default class InterferenceServerEngine extends ServerEngine {
                 } 
             }
             else {
-                player.active = 0;
+                player.active = false;
+                player.ammo = 0;
             }
-            let activePlayers = this.gameEngine.queryPlayers({ room: room, active: 1 });
+            let activePlayers = this.gameEngine.queryPlayers({ room: room, active: true });
             if (activePlayers.length === 0) {
                 this.gameEngine.world.forEachObject((objId, obj) => { 
                     if (obj.room === room) this.gameEngine.removeObjectFromWorld(objId);
@@ -402,7 +403,11 @@ export default class InterferenceServerEngine extends ServerEngine {
     onEggBounce(e) {
         for (let p of this.myRooms[e.room]) {
             if (p.ammo < this.gameEngine.paramsByRoom[e.room].maxAmmo && 
-                Math.random() < this.gameEngine.paramsByRoom[e.room].ammoDropChance) p.ammo++;
+                Math.random() < this.gameEngine.paramsByRoom[e.room].ammoDropChance &&
+                p.active) {
+                    p.ammo++;
+                }
+                
         }
     }
 
