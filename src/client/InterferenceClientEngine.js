@@ -464,6 +464,8 @@ export default class InterferenceClientEngine extends ClientEngine {
 
             for (let player of this.soundingPlayers) {
                 let p = player.number;
+                if (this.droneGain == null) continue;
+                if (this.droneGain[p] == null) continue;
                 let shouldMute = { 'melody': true, 'bass': true, 'perc': true };
                 let highestVol = { 'melody': -100, 'bass': -100, 'perc': -100 };
                 for (let e of this.eggs) {

@@ -459,7 +459,8 @@ export default class InterferenceRenderer extends Renderer {
                 x += dimX * 0.5;
                 y += dimY * 0.5;
                 //dimX *= this.mapToRange(n.animFrame, 0, animLengths.eggNote, playerWidth, 1);
-                dimY *= this.mapToRange(n.animFrame, 0, this.animLengths.eggNote, playerHeight, 1);
+                dimX *= 0.8;
+                dimY *= 0.8 * this.mapToRange(n.animFrame, 0, this.animLengths.eggNote, playerHeight, 1);
                 c = 'c1';
                 if (n.dur === '4n') { 
                     c = 'c2'; 
