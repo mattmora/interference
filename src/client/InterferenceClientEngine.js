@@ -86,7 +86,7 @@ export default class InterferenceClientEngine extends ClientEngine {
         }
         else if (controlString === 'ToggleFullscreen') {
             if (!this.viewLock) {
-                console.log('fullscreen');
+                // console.log('fullscreen');
                 let elem = this.renderer.mainCanvas;
                 if (!document.fullscreenElement) {
                     elem.requestFullscreen({navigationUI: 'hide'}).then({}).catch(err => {
@@ -235,6 +235,7 @@ export default class InterferenceClientEngine extends ClientEngine {
             this.socket.on('assignedRoom', (roomName, params) => { 
                 document.getElementById('startMenuWrapper').style.display = 'none';
                 document.getElementById('instructions').style.position = 'absolute';
+                document.getElementById('instructions').style.visibility = 'hidden';
 
                 this.params = params;
                 // console.log(`params=${this.params}`);
