@@ -235,7 +235,7 @@ export default class InterferenceClientEngine extends ClientEngine {
             this.socket.on('assignedRoom', (roomName, params) => { 
                 document.getElementById('startMenuWrapper').style.display = 'none';
                 document.getElementById('instructions').style.position = 'absolute';
-                document.getElementById('instructions').style.visibility = 'hidden';
+                if (this.isSpectator) document.getElementById('instructions').style.visibility = 'hidden';
 
                 this.params = params;
                 // console.log(`params=${this.params}`);
