@@ -3,7 +3,8 @@ An experimental generative music composition / game
 ---
 Hosted [here](interference.herokuapp.com)  
 Audio recording [here](https://soundcloud.com/user-519512177/interference-042019)  
-Video recording [here](https://www.youtube.com/watch?v=C-5P3hXuGfs)  
+Video recording [here](https://www.youtube.com/watch?v=C-5P3hXuGfs) (Princeton Laptop Orchestra Concert 4/20/2019) and [here](https://youtu.be/uD4tDYiHQnM) (Princeton Laptop Orchestra Livestream 4/20/2020)  
+
 Paper for WAC2019 [here](https://www.ntnu.edu/documents/1282113268/1290797448/WAC2019-CameraReadySubmission-43.pdf/c2dec2c2-c34a-122d-be16-465082b3afbd?t=1575329716758)  
 
 If you're interested Interference seriously performing/playing it, get in touch with me at mjw7@princeton.edu.
