@@ -24,6 +24,7 @@ Basic controls:
 - h : Toggle cursor
 - v : Toggle zoom
 - m : Mute/unmute sound
+- x shorty followed by o : Force the game to end, all players are converted to the most prevalent color (for the purpose of controlling the length of performances)
 
 To run locally (requires Node.js):
 1. Download this repo
