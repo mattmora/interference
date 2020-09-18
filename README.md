@@ -1,7 +1,7 @@
 ### Interference: 
 An experimental generative music composition / game
 ---
-Hosted [here](interference.herokuapp.com)  
+Hosted [here](https://interference.herokuapp.com)  
 Audio recording [here](https://soundcloud.com/user-519512177/interference-042019)  
 Video recording [here](https://www.youtube.com/watch?v=C-5P3hXuGfs) (Princeton Laptop Orchestra Concert 4/20/2019) and [here](https://youtu.be/uD4tDYiHQnM) (Princeton Laptop Orchestra Livestream 4/20/2020)  
 
