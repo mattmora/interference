@@ -7,7 +7,7 @@ Video recording [here](https://www.youtube.com/watch?v=C-5P3hXuGfs) (Princeton L
 
 Paper for WAC2019 [here](https://www.ntnu.edu/documents/1282113268/1290797448/WAC2019-CameraReadySubmission-43.pdf/c2dec2c2-c34a-122d-be16-465082b3afbd?t=1575329716758)  
 
-If you're interested Interference seriously performing/playing it, get in touch with me at mjw7@princeton.edu.
+If you're interested in seriously performing/playing it, get in touch with me at mjw7@princeton.edu.
 I generally leave the Heroku app at the free level of server usage which doesn't always run Interference reliably.
 
 Basic controls:
