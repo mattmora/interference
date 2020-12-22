@@ -137,7 +137,7 @@
                 <input type="text" tabindex="0" autofocus placeholder="Enter room name" id="roomNameInput" />
                 <b class="room-error"></b>
                 <br />
-                <input type="text" tabindex="0" placeholder="Enter settings (if new room)" id="paramInput" />
+                <input type="text" tabindex="0" placeholder="Settings" id="paramInput" />
                 <b class="settings-error"></b>
                 <br />
                 <button id="startButton">Create/Join Room</button>
@@ -151,7 +151,7 @@
             <p>
                 Very basic rules/objective: <br>
                 The game alternates between build and fight phases with short transition sections when moving from a fight phase to a build phase. <br>
-                During build phases, place notes in your sequence. During fight phases, use your notes to paint and try to convert all players to your color palette. During transition sections, press several times "p" to progress into the next phase. <br>
+                During build phases, place notes in your sequence. During fight phases, use your notes to paint and try to convert all players to your color palette. During transition sections, press "p" several times to progress into the next phase. <br>
                 The game ends when all players are the same color. 
             </p>
             <p>
@@ -159,7 +159,7 @@
                 space (with a ball in your area) : Add a note to your sequence. <br>
                 1 or 2 (after breaking a ball) : Start a build phase or a fight phase. <br>
                 w/a/s/d : Move (cannot move horizontally during a build phase). <br>
-                p : After a several presses, progress the harmony, and at the end of a fight phase (locked movement and inverted colors), progress to the next build phase. <br>
+                p : After several presses, progress the harmony, and at the end of a fight phase (locked movement and inverted colors), progress to the next build phase. <br>
                 v : Toggle view between the whole game and your area. <br>
                 f : Toggle fullscreen. <br>
                 h : Hide/unhide the cursor. <br>
@@ -171,9 +171,9 @@
                 Additional Notes: <br>
                 This is really only tested for Chrome and may not work in other browsers. <br>
                 Refresh the page if you want to join a different room or encounter errors. <br>
-                A room will reset when all its players leave. <br>
-                If players leave or disconnect from a room, they can rejoin even if the game has already started. <br>
-                If you experience performance issues such as glitchy audio, try closing other other applications/tabs, or if possible, reduce the number of players. <br> 
+                If players leave or disconnect from a game in progress, they can rejoin so long as other players remain in the room. <br>
+                A room will reset when all its players have left. <br>
+                If you experience performance issues, try closing other applications/tabs, or if possible, reduce the number of players. <br> 
             </p>
         </div>
         <canvas id='mainCanvas'></canvas>
