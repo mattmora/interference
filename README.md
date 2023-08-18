@@ -7,10 +7,11 @@ Video recording [here](https://www.youtube.com/watch?v=C-5P3hXuGfs) (Princeton L
 
 Paper for WAC2019 [here](https://www.ntnu.edu/documents/1282113268/1290797448/WAC2019-CameraReadySubmission-43.pdf/c2dec2c2-c34a-122d-be16-465082b3afbd?t=1575329716758)  
 
-If you're interested in performing/playing it, feel free to get in touch with me at mjw7@princeton.edu.
-I generally leave the Heroku app at the free level of server usage which doesn't always seem to perform reliably.
+If you're interested in performing/playing it, feel free to get in touch with me at mattwmora@gmail.com.<br>
+~~I generally leave the Heroku app at the free level of server usage which doesn't always seem to perform reliably.~~<br>
+Since Heroku removed their free tier, my hosted version may not always be enabled.
 
-Basic controls:
+### Basic controls:
 - c (during setup) : Change color
 - [ and ] (during setup) : Change player position
 - b (during setup) : Start the game!
@@ -26,7 +27,7 @@ Basic controls:
 - m : Mute/unmute sound
 - x followed shortly by o : Force the game to end - all players are converted to the most prevalent color (for the purpose of controlling the length of performances)
 
-To run locally (requires Node.js):
+### To run locally (requires Node.js):
 1. Download this repo
 2. Navigate to the project folder in terminal
 3. Install dependencies: `npm install`
