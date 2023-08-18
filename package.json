@@ -2,7 +2,7 @@
   "name": "interference",
   "version": "0.1.0",
   "engines": {
-    "node": ">=8.0.0"
+    "node": "16.14.2"
   },
   "description": "",
   "main": "main.js",
