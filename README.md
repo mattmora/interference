@@ -27,12 +27,13 @@ Since Heroku removed their free tier, my hosted version may not always be enable
 - m : Mute/unmute sound
 - x followed shortly by o : Force the game to end - all players are converted to the most prevalent color (for the purpose of controlling the length of performances)
 
-### To run locally (requires Node.js):
-1. Download this repo
+### To run locally (requires Node.js v16, higher will produce a build error):
+1. Download or clone this repo
 2. Navigate to the project folder in terminal
 3. Install dependencies: `npm install`
 4. Build: `npm run build`
 5. Run on localhost:8080: `npm start`
+6. Go to http://localhost:8080/ in your browser
 
 Note:
 Might not work in browsers other than Chrome
