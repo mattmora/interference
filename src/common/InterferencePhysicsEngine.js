@@ -19,7 +19,6 @@ class InterferencePhysicsEngine {
   // isRotatingRight, isRotatingLeft, isAccelerating, current velocity
   // wrap-around the world if necessary
   objectStep(o, dt) {
-    console.log(dt);
     // calculate factor
     if (dt === 0) return;
 

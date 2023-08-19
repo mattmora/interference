@@ -355,7 +355,6 @@ export default class InterferenceGameEngine extends GameEngine {
             for (let e of eggs) {
               if (this.positionIsInPlayer(e.position.x, player) && !e.broken) {
                 //player.direction = 1;
-                console.log(e);
                 this.playerHitEgg(player, e, isServer);
                 break;
               }
